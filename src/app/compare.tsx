@@ -64,13 +64,11 @@ function CompareBody({ places, disclaimer }: { places: PlaceCompare[]; disclaime
       </Section>
 
       <Section title="파고">
-        <HourlyTable a={findSeries(a, 'wave_height', 'observed')} b={findSeries(b, 'wave_height', 'observed')} />
-        <ForecastNote a={findSeries(a, 'wave_height', 'forecast')} />
+        <ObservedAndForecast a={a} b={b} metric="wave_height" />
       </Section>
 
       <Section title="풍속">
-        <HourlyTable a={findSeries(a, 'wind_speed', 'observed')} b={findSeries(b, 'wind_speed', 'observed')} />
-        <ForecastNote a={findSeries(a, 'wind_speed', 'forecast')} />
+        <ObservedAndForecast a={a} b={b} metric="wind_speed" />
       </Section>
 
       <Section title="수온">
@@ -211,12 +209,24 @@ function SourceText({ s, prefix }: { s: Series | undefined; prefix?: string }) {
   );
 }
 
-function ForecastNote({ a }: { a: Series | undefined }) {
-  if (!a || a.status === 'ok') return null;
+/**
+ * 실측 표와 예보 표를 따로 보여준다 (한 표에 섞지 않음, TC-03).
+ * 오늘: 지난 시간 실측 + 예보 / 미래 날짜: 예보만 / 둘 다 없으면 사유 표시
+ */
+function ObservedAndForecast({ a, b, metric }: { a: PlaceCompare; b: PlaceCompare; metric: Series['metric'] }) {
+  const oa = findSeries(a, metric, 'observed');
+  const ob = findSeries(b, metric, 'observed');
+  const fa = findSeries(a, metric, 'forecast');
+  const fb = findSeries(b, metric, 'forecast');
+  const hasObs = oa?.status === 'ok' || ob?.status === 'ok';
+  const hasFc = fa?.status === 'ok' || fb?.status === 'ok';
+
+  if (!hasObs && !hasFc) return <HourlyTable a={oa} b={ob} />;
   return (
-    <ThemedText type="small" themeColor="textSecondary">
-      예보: {a.reason ? REASON_TEXT[a.reason] : '자료 없음'}
-    </ThemedText>
+    <>
+      {hasObs && <HourlyTable a={oa} b={ob} />}
+      {hasFc && <HourlyTable a={fa} b={fb} />}
+    </>
   );
 }
 
