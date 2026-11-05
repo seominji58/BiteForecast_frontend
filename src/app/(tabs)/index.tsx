@@ -1,150 +1,225 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { Keyboard, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { useConditions, useDateRange, usePlaces } from '@/api/queries';
+import { useDateRange, usePlaces, usePlacesSummary } from '@/api/queries';
 import type { Place } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
-import { Chip } from '@/components/form';
 import { PlacePicker } from '@/components/place-picker';
-import { Card, Loading, TabScreen } from '@/components/screen';
+import { Card, TabScreen } from '@/components/screen';
 import { SearchBar } from '@/components/search-bar';
-import { SeaSummaryCard } from '@/components/sea-summary-card';
 import { ThemedText } from '@/components/themed-text';
-import { matches, PLACE_IMAGE, PLACE_TYPE_LABEL, sidoOf } from '@/lib/place';
+import type { AppIconName } from '@/constants/icons';
+import { Brand } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+import { WARNING_SHORT } from '@/lib/criteria';
+import { matches, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
 import { useHomePlace } from '@/lib/prefs';
 
-// SCR-01 홈 (재설계 v2 §4): 첫 실행이면 지역·낚시터 선택, 아니면 기준 낚시터 요약 카드 한 장.
-// 상세(실측·예보 표, 물때, 지수 어종별, 자료 출처, 가까운 낚시터)는 /place/[id] 상세 해황 화면에서 본다.
+// SCR-01 홈 (사용자 제안 구조, 2026-11-05): 해황 데이터를 먼저 보여주지 않고 「오늘 어디서 어떻게」를 고르는 출발점.
+// 검색 · 내 주변(GPS, 누를 때만) · 지도 → 낚시터 목록+지도 → 상세 해황 / 비교
 export default function HomeScreen() {
+  const theme = useTheme();
   const places = usePlaces();
   const range = useDateRange();
-  const [homeId, setHomeId, homeLoaded] = useHomePlace();
-  const [picker, setPicker] = useState<{ open: boolean; sido: string | null }>({ open: false, sido: null });
+  const summary = usePlacesSummary(range.data?.today);
+  const [homeId, setHomeId] = useHomePlace();
+  const [query, setQuery] = useState('');
+  const [picker, setPicker] = useState(false);
 
-  // 링크로 낚시터를 지정해 열 수 있다: /?place=147
+  // 링크로 기준 낚시터 지정: /?place=147
   const linkPlace = useLocalSearchParams<{ place?: string }>().place;
   useEffect(() => {
     const id = Number(linkPlace);
-    if (linkPlace && homeLoaded && places.data?.some((p) => p.id === id) && id !== homeId) setHomeId(id);
-  }, [linkPlace, homeLoaded, places.data, homeId, setHomeId]);
+    if (linkPlace && places.data?.some((p) => p.id === id) && id !== homeId) setHomeId(id);
+  }, [linkPlace, places.data, homeId, setHomeId]);
 
-  // 저장된 기준이 없거나 지원하지 않는 장소면 임의로 고르지 않고 선택을 안내 (P0-2)
-  const place = places.data?.find((p) => p.id === homeId) ?? null;
-  const today = range.data?.today;
-  const cond = useConditions(place?.id ?? null, today);
+  const home = places.data?.find((p) => p.id === homeId) ?? null;
+  const homeSummary = summary.data?.places.find((s) => s.place_id === homeId);
+  const results = query.trim() ? (places.data ?? []).filter((p) => matches(p, query)).slice(0, 6) : [];
 
-  const choose = (p: Place) => {
-    setHomeId(p.id);
+  const openPlace = (p: Place) => {
+    setHomeId(p.id); // 마지막으로 본 낚시터 = 기준 낚시터 (비교 A 자동 입력에 쓰임)
+    setQuery('');
     Keyboard.dismiss();
+    router.push({ pathname: '/place/[id]', params: { id: String(p.id) } });
   };
 
   return (
     <TabScreen title="입질예보" logo>
-      {!homeLoaded || places.isPending ? <Loading /> : null}
+      <View style={styles.hero}>
+        <Text style={styles.heroTitle}>오늘 어디로 낚시 가시나요?</Text>
+        <Text style={styles.heroSub}>지역을 찾거나 현재 위치 주변을 살펴보세요.</Text>
+      </View>
 
-      {homeLoaded && places.isSuccess && !place ? (
-        <FirstRun places={places.data} onChoose={choose} onBrowse={(sido) => setPicker({ open: true, sido })} />
+      <SearchBar value={query} onChangeText={setQuery} onClear={() => setQuery('')} placeholder="지역·낚시터 검색 (예: 태안, 대천)" />
+      {query.trim() ? (
+        <Card>
+          {results.length === 0 ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              맞는 낚시터가 없어요. 「지도로 찾기」에서 지역별로 둘러보세요.
+            </ThemedText>
+          ) : (
+            results.map((p) => (
+              <Pressable
+                key={p.id}
+                accessibilityRole="button"
+                onPress={() => openPlace(p)}
+                style={({ pressed }) => [styles.resultRow, pressed && styles.pressed]}>
+                <AppIcon name={PLACE_IMAGE[p.type]} size={26} />
+                <View style={styles.flex}>
+                  <ThemedText type="smallBold" numberOfLines={1}>
+                    {p.name}
+                  </ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                    {p.region_name} · {PLACE_TYPE_LABEL[p.type]}
+                  </ThemedText>
+                </View>
+                <ThemedText themeColor="textSecondary">›</ThemedText>
+              </Pressable>
+            ))
+          )}
+        </Card>
       ) : null}
 
-      {place ? (
-        <SeaSummaryCard
-          place={place}
-          pc={cond.data?.place}
-          generatedAt={cond.data?.generated_at}
-          today={today}
-          loading={cond.isPending}
-          error={cond.isError ? { message: cond.error.message, retry: () => cond.refetch() } : null}
-          onChangePlace={() => setPicker({ open: true, sido: null })}
-          onDetail={() => router.push({ pathname: '/place/[id]', params: { id: String(place.id) } })}
-          onCompare={() => router.push({ pathname: '/compare', params: { a: String(place.id) } })}
+      <View style={styles.tiles}>
+        <Tile
+          icon="◎"
+          title="내 주변 찾기"
+          sub="현재 위치 기준"
+          onPress={() => router.push({ pathname: '/explore', params: { near: '1' } })}
         />
+        <Tile icon="▦" title="지도로 찾기" sub="지역별 탐색" onPress={() => router.push('/explore')} />
+      </View>
+
+      <ThemedText type="sectionTitle">어떤 정보가 궁금하세요?</ThemedText>
+      <MenuRow
+        image="fishing-index"
+        title="내 조건에 맞는 곳 찾기"
+        sub="특보·파고·바람 기준과 공식 낚시지수로 거르기"
+        onPress={() => router.push({ pathname: '/explore', params: { mode: 'criteria' } })}
+      />
+      <MenuRow
+        image="wave"
+        title="선택한 낚시터 해황 보기"
+        sub={home ? `${home.name} · 물때·파고·풍속·수온 상세` : '물때·파고·풍속·수온 상세'}
+        onPress={() =>
+          home ? router.push({ pathname: '/place/[id]', params: { id: String(home.id) } }) : setPicker(true)
+        }
+      />
+      <MenuRow
+        image="tab-compare"
+        tint={theme.tint}
+        title="두 낚시터 비교하기"
+        sub="같은 날 조건을 나란히 비교"
+        onPress={() => router.push(home ? { pathname: '/compare', params: { a: String(home.id) } } : '/compare')}
+      />
+
+      {/* 최근 본 낚시터: 한 줄만. 특보 단계는 안전 정보라 함께 표시 */}
+      {home ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push({ pathname: '/place/[id]', params: { id: String(home.id) } })}
+          style={({ pressed }) => [styles.recent, { borderColor: theme.border }, pressed && styles.pressed]}>
+          <ThemedText type="small" themeColor="textSecondary">
+            최근 본 곳
+          </ThemedText>
+          <ThemedText type="smallBold" numberOfLines={1} style={styles.flex}>
+            {home.name}
+          </ThemedText>
+          {homeSummary ? (
+            <ThemedText type="smallBold" themeColor={WARNING_SHORT[homeSummary.warning_level].color}>
+              {WARNING_SHORT[homeSummary.warning_level].text}
+            </ThemedText>
+          ) : null}
+          <ThemedText themeColor="textSecondary">›</ThemedText>
+        </Pressable>
       ) : null}
+
+      <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
+        국립해양조사원·기상청 공공데이터 · 조과를 보장하지 않으며 출조 전 특보를 꼭 확인하세요
+      </ThemedText>
 
       <PlacePicker
-        visible={picker.open}
-        title="기준 낚시터 선택"
-        selectedId={place?.id}
-        initialSido={picker.sido}
-        onSelect={choose}
-        onClose={() => setPicker({ open: false, sido: null })}
+        visible={picker}
+        title="해황을 볼 낚시터"
+        selectedId={home?.id}
+        onSelect={openPlace}
+        onClose={() => setPicker(false)}
       />
     </TabScreen>
   );
 }
 
-/** 첫 실행: 질문 + 검색 + 지역 칩을 한 화면에 (단계를 나누지 않음) */
-function FirstRun({
-  places,
-  onChoose,
-  onBrowse,
-}: {
-  places: Place[];
-  onChoose: (p: Place) => void;
-  onBrowse: (sido: string | null) => void;
-}) {
-  const [query, setQuery] = useState('');
-  const results = query.trim() ? places.filter((p) => matches(p, query)).slice(0, 6) : [];
-  const sidos = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const p of places) counts.set(sidoOf(p), (counts.get(sidoOf(p)) ?? 0) + 1);
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
-  }, [places]);
-
+function Tile({ icon, title, sub, onPress }: { icon: string; title: string; sub: string; onPress: () => void }) {
+  const theme = useTheme();
   return (
-    <Card style={styles.firstRun}>
-      <ThemedText type="sectionTitle">어느 바다로 나가실 계획인가요?</ThemedText>
-      <ThemedText themeColor="textSecondary">
-        낚시터를 하나 고르면 그곳 기준으로 특보·파고·바람·물때를 보여드려요. 나중에 언제든 바꿀 수 있어요.
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${title}, ${sub}`}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.tile,
+        { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+        pressed && styles.pressed,
+      ]}>
+      <ThemedText style={styles.tileIcon} themeColor="tint">
+        {icon}
       </ThemedText>
-      <SearchBar
-        value={query}
-        onChangeText={setQuery}
-        onClear={() => setQuery('')}
-        placeholder="낚시터·지역 검색 (예: 태안, 대천)"
-      />
-      {query.trim() ? (
-        results.length === 0 ? (
-          <ThemedText type="small" themeColor="textSecondary">
-            맞는 낚시터가 없어요. 아래 지역에서 찾아보세요.
-          </ThemedText>
-        ) : (
-          results.map((p) => (
-            <Pressable
-              key={p.id}
-              accessibilityRole="button"
-              onPress={() => onChoose(p)}
-              style={({ pressed }) => [styles.resultRow, pressed && styles.pressed]}>
-              <AppIcon name={PLACE_IMAGE[p.type]} size={28} />
-              <View style={styles.flex}>
-                <ThemedText type="smallBold" numberOfLines={1}>
-                  {p.name}
-                </ThemedText>
-                <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                  {p.region_name} · {PLACE_TYPE_LABEL[p.type]}
-                </ThemedText>
-              </View>
-            </Pressable>
-          ))
-        )
-      ) : null}
-      <ThemedText type="smallBold" themeColor="textSecondary">
-        지역으로 찾기
+      <ThemedText type="smallBold">{title}</ThemedText>
+      <ThemedText type="small" themeColor="textSecondary">
+        {sub}
       </ThemedText>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-        {sidos.map(([s, n]) => (
-          <Chip key={s} label={`${s} ${n}`} selected={false} onPress={() => onBrowse(s)} />
-        ))}
-        <Chip label="전체 보기" selected={false} onPress={() => onBrowse(null)} />
-      </ScrollView>
-    </Card>
+    </Pressable>
+  );
+}
+
+function MenuRow({
+  image,
+  tint,
+  title,
+  sub,
+  onPress,
+}: {
+  image: AppIconName;
+  tint?: string;
+  title: string;
+  sub: string;
+  onPress: () => void;
+}): ReactNode {
+  const theme = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.menu,
+        { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+        pressed && styles.pressed,
+      ]}>
+      <AppIcon name={image} size={26} tint={tint} />
+      <View style={styles.flex}>
+        <ThemedText type="smallBold">{title}</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+          {sub}
+        </ThemedText>
+      </View>
+      <ThemedText themeColor="textSecondary">›</ThemedText>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  pressed: { opacity: 0.6 },
-  firstRun: { gap: 10 },
+  pressed: { opacity: 0.7 },
+  center: { textAlign: 'center' },
+  hero: { backgroundColor: Brand.navy, borderRadius: 12, padding: 16, gap: 4 },
+  heroTitle: { color: Brand.onNavy, fontSize: 19, fontWeight: '800', letterSpacing: -0.3 },
+  heroSub: { color: Brand.onNavySecondary, fontSize: 13 },
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
-  chips: { gap: 8 },
+  tiles: { flexDirection: 'row', gap: 12 },
+  tile: { flex: 1, alignItems: 'center', gap: 2, borderWidth: 1, borderRadius: 12, paddingVertical: 16 },
+  tileIcon: { fontSize: 22, lineHeight: 28 },
+  menu: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 12, padding: 14 },
+  recent: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, padding: 12 },
 });

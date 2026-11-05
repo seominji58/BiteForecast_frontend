@@ -11,6 +11,7 @@ import type {
   MyTitle,
   Place,
   PlaceConditions,
+  PlacesSummary,
   PostCategory,
   PostDetail,
   PostInput,
@@ -44,6 +45,7 @@ export const api = {
 
   dateRange: () => request<DateRange>('/meta/date-range'),
   sources: () => request<DataSource[]>('/meta/sources'),
+  placesSummary: (date: string) => request<PlacesSummary>(`/places-summary?date=${date}`),
   conditions: (placeId: number, date: string) =>
     request<PlaceConditions>(`/places/${placeId}/conditions?date=${date}`),
   compare: (placeA: number, placeB: number, date: string) =>

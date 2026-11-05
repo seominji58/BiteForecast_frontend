@@ -207,6 +207,29 @@ export type CompareResult = {
 
 export type DateRange = { today: string; min: string; max: string; timezone: string };
 
+// --- 전체 낚시터 요약 (지도·주변·조건으로 찾기). 실측(obs)과 예보(fc)는 다른 필드 ---
+export type ValueAt = { v: number; t: string };
+export type PlaceSummary = {
+  place_id: number;
+  warning_level: Warning['level'];
+  warning_types: string[];
+  wave_obs: ValueAt | null;
+  wave_obs_km: number | null;
+  wave_fc_max: ValueAt | null;
+  wind_obs: ValueAt | null;
+  wind_fc_max: ValueAt | null;
+  temp_obs: ValueAt | null;
+  index: {
+    period: string;
+    tide_phase: string | null;
+    best: FishingIndexLevel;
+    worst: FishingIndexLevel;
+    species_count: number;
+    station_km: number | null;
+  } | null;
+};
+export type PlacesSummary = { date: string; generated_at: string; places: PlaceSummary[]; disclaimer: string };
+
 export type PlaceConditions = {
   date: string;
   timezone: string;

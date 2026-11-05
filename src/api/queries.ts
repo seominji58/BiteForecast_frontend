@@ -46,6 +46,15 @@ export const useConditions = (placeId: number | null, date: string | undefined) 
     enabled: placeId != null && !!date,
   });
 
+/** 전체 낚시터 요약 (서버 10분 캐시) */
+export const usePlacesSummary = (date: string | undefined) =>
+  useQuery({
+    queryKey: ['places-summary', date],
+    queryFn: () => api.placesSummary(date!),
+    enabled: !!date,
+    staleTime: 5 * 60_000,
+  });
+
 export const useSources = () => useQuery({ queryKey: ['meta', 'sources'], queryFn: api.sources, staleTime: Infinity });
 
 export const useMyTitle = () => useQuery({ queryKey: queryKeys.myTitle, queryFn: api.myTitle });

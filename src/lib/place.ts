@@ -27,7 +27,8 @@ export const PLACE_TYPE_LABEL: Record<PlaceType, string> = {
 /** 「충남 태안군」 → 「충남」 */
 export const sidoOf = (p: Place) => p.region_name.split(' ')[0];
 
-function km(a: Place, b: Place): number {
+/** 좌표 두 개 사이 직선거리(km). 좌표가 없으면 Infinity */
+export function km(a: { lat: number | null; lon: number | null }, b: { lat: number | null; lon: number | null }): number {
   if (a.lat == null || a.lon == null || b.lat == null || b.lon == null) return Infinity;
   const r = Math.PI / 180;
   const dLat = (b.lat - a.lat) * r;

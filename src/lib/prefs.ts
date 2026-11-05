@@ -2,6 +2,8 @@ import * as SecureStore from 'expo-secure-store';
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
+import { type Criteria, DEFAULT_CRITERIA } from '@/lib/criteria';
+
 /** 기기에만 저장하는 작은 설정값 (홈 화면 기준 낚시터 등) */
 async function read(key: string): Promise<string | null> {
   if (Platform.OS === 'web') return globalThis.localStorage?.getItem(key) ?? null;
@@ -39,6 +41,29 @@ export async function pushRecent(key: string, value: string, max = RECENT_MAX): 
 }
 
 export const pushRecentPlace = (id: number) => pushRecent(RECENT_PLACES, String(id));
+
+const CRITERIA = 'biteforecast.criteria';
+
+/** 「조건으로 찾기」 기준 (기기 저장) */
+export function useCriteria(): [Criteria, (c: Criteria) => void] {
+  const [c, setC] = useState<Criteria>(DEFAULT_CRITERIA);
+  useEffect(() => {
+    let alive = true;
+    read(CRITERIA)
+      .then((v) => {
+        if (alive && v) setC({ ...DEFAULT_CRITERIA, ...JSON.parse(v) });
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const update = (next: Criteria) => {
+    setC(next);
+    write(CRITERIA, JSON.stringify(next)).catch(() => undefined);
+  };
+  return [c, update];
+}
 
 /** 홈 화면 기준 낚시터. 저장된 값이 없으면 null → 홈에서 첫 실행 선택 화면을 보여준다 */
 export function useHomePlace(): [number | null, (id: number) => void, boolean] {
