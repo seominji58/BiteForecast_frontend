@@ -114,8 +114,8 @@ function Slot({ label, place, onPress }: { label: string; place: Place | null; o
         <ThemedText type="smallBold" numberOfLines={1}>
           {place?.name ?? '선택하기'}
         </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          {place ? '눌러서 변경' : '낚시터 고르기'}
+        <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+          {place ? place.region_name : '낚시터 고르기'}
         </ThemedText>
       </View>
     </Pressable>

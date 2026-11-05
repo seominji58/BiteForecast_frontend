@@ -25,7 +25,7 @@ import {
   sourceLine,
   timeLabel,
 } from '@/lib/compare';
-import { PLACE_IMAGE } from '@/lib/place';
+import { nearby, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
 import { useHomePlace } from '@/lib/prefs';
 
 // SCR-01 홈: 기준 낚시터의 오늘 조건 요약 + 공식 바다낚시지수 + 낚시터 선택
@@ -50,7 +50,9 @@ export default function HomeScreen() {
             onPress={() => setPicker(true)}
             style={styles.placeButton}>
             <MaterialCommunityIcons name="map-marker" size={18} color={Brand.orange} />
-            <ThemedText type="sectionTitle">{place ? `${pc?.region_name ?? ''} ${place.name}`.trim() : '낚시터 선택'}</ThemedText>
+            <ThemedText type="sectionTitle" numberOfLines={1} style={styles.shrink}>
+              {place ? place.name : '낚시터 선택'}
+            </ThemedText>
             <MaterialCommunityIcons name="chevron-down" size={18} />
           </Pressable>
           {today ? (
@@ -59,6 +61,12 @@ export default function HomeScreen() {
             </ThemedText>
           ) : null}
         </View>
+        {place ? (
+          <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+            {place.region_name} · {PLACE_TYPE_LABEL[place.type]}
+            {place.address ? ` · ${place.address}` : ''}
+          </ThemedText>
+        ) : null}
         {places.isError && <ErrorView message={places.error.message} onRetry={() => places.refetch()} />}
         {cond.isPending && place && <Loading />}
         {cond.isError && <ErrorView message={cond.error.message} onRetry={() => cond.refetch()} />}
@@ -76,11 +84,11 @@ export default function HomeScreen() {
       <SectionHeader image="wave" title="오늘의 주요 해황" />
       {pc && <SeaTiles pc={pc} />}
 
-      <SectionHeader image="place-wharf" title="낚시터" actionLabel="전체보기" onAction={() => setPicker(true)} />
-      {places.data && (
+      <SectionHeader image="place-wharf" title="가까운 낚시터" actionLabel="검색" onAction={() => setPicker(true)} />
+      {places.data && place && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.placeRow}>
-          {places.data.map((p) => (
-            <PlaceCard key={p.id} p={p} selected={p.id === place?.id} onPress={() => setHomeId(p.id)} />
+          {nearby(place, places.data, 10).map(({ place: p, km }) => (
+            <PlaceCard key={p.id} p={p} km={km} selected={p.id === place.id} onPress={() => setHomeId(p.id)} />
           ))}
         </ScrollView>
       )}
@@ -221,7 +229,7 @@ function Tile({ icon, title, value, note }: { icon: AppIconName; title: string; 
   );
 }
 
-function PlaceCard({ p, selected, onPress }: { p: Place; selected: boolean; onPress: () => void }) {
+function PlaceCard({ p, km, selected, onPress }: { p: Place; km: number; selected: boolean; onPress: () => void }) {
   const theme = useTheme();
   return (
     <Pressable
@@ -235,9 +243,11 @@ function PlaceCard({ p, selected, onPress }: { p: Place; selected: boolean; onPr
         {selected ? <MaterialCommunityIcons name="star" size={18} color={Brand.orange} style={styles.star} /> : null}
       </View>
       <View style={styles.placeInfo}>
-        <ThemedText type="smallBold">{p.name}</ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          {selected ? '기준 낚시터' : '눌러서 기준으로'}
+        <ThemedText type="smallBold" numberOfLines={1}>
+          {p.name}
+        </ThemedText>
+        <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+          {selected ? '기준 낚시터' : `${PLACE_TYPE_LABEL[p.type]} · ${km < 1 ? '1km 미만' : `${Math.round(km)}km`}`}
         </ThemedText>
       </View>
     </Pressable>
@@ -247,6 +257,7 @@ function PlaceCard({ p, selected, onPress }: { p: Place; selected: boolean; onPr
 const styles = StyleSheet.create({
   between: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: Spacing.two },
   placeButton: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 },
+  shrink: { flexShrink: 1 },
   stats: { flexDirection: 'row', gap: Spacing.two, marginTop: Spacing.two },
   stat: { flex: 1, gap: 2 },
   statLabel: { flexDirection: 'row', alignItems: 'center', gap: 4 },

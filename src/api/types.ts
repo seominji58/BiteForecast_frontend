@@ -4,15 +4,18 @@ export type Health = { status: string; env: string };
 
 export type Region = { id: number; name: string };
 
-export type PlaceType = 'breakwater' | 'rock' | 'wharf' | 'beach' | 'other';
+export type PlaceType = 'breakwater' | 'rock' | 'wharf' | 'beach' | 'paid' | 'point' | 'boat' | 'other';
 
 export type Place = {
   id: number;
   region_id: number;
+  /** 예: 「충남 태안군」 */
+  region_name: string;
   name: string;
   type: PlaceType;
   lat: number | null;
   lon: number | null;
+  address: string | null;
 };
 
 export type Species = { code: string; name_ko: string };
