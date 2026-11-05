@@ -96,7 +96,7 @@ export default function NewPostScreen() {
         </ThemedText>
 
         {error ? <ThemedText themeColor="danger">{error}</ThemedText> : null}
-        <Button label={create.isPending ? '등록 중…' : '등록하기'} icon="send" onPress={submit} disabled={create.isPending} />
+        <Button label={create.isPending ? '등록 중…' : '등록하기'} onPress={submit} disabled={create.isPending} />
       </View>
     </StackScreen>
   );

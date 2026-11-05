@@ -1,9 +1,9 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { type ReactNode } from 'react';
 import { Pressable, StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 
-import type { IconName } from '@/components/screen';
+import { AppIcon } from '@/components/app-icon';
 import { ThemedText } from '@/components/themed-text';
+import type { AppIconName } from '@/constants/icons';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -67,7 +67,7 @@ type ButtonProps = {
   disabled?: boolean;
   /** primary = 주황(주요 동작), secondary = 틸, danger = 빨강 */
   variant?: 'primary' | 'secondary' | 'danger';
-  icon?: IconName;
+  icon?: AppIconName;
 };
 
 export function Button({ label, onPress, disabled, variant = 'primary', icon }: ButtonProps) {
@@ -81,7 +81,7 @@ export function Button({ label, onPress, disabled, variant = 'primary', icon }: 
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [styles.button, { backgroundColor: bg, opacity: disabled ? 0.4 : pressed ? 0.85 : 1 }]}>
-      {icon ? <MaterialCommunityIcons name={icon} size={20} color={theme[fg]} /> : null}
+      {icon ? <AppIcon name={icon} size={22} badge /> : null}
       <ThemedText type="smallBold" themeColor={fg}>
         {label}
       </ThemedText>

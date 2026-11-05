@@ -1,4 +1,3 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useMemo, useState } from 'react';
 import { FlatList, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -50,14 +49,15 @@ export function PlacePicker({ visible, title, selectedId, disabledId, onSelect, 
       <ThemedView style={[styles.sheet, { paddingBottom: insets.bottom }]}>
         <View style={styles.header}>
           <ThemedText type="sectionTitle">{title}</ThemedText>
-          <Pressable accessibilityRole="button" accessibilityLabel="닫기" hitSlop={12} onPress={onClose}>
-            <MaterialCommunityIcons name="close" size={24} color={theme.text} />
+          <Pressable accessibilityRole="button" hitSlop={12} onPress={onClose}>
+            <ThemedText type="smallBold" themeColor="tint">
+              닫기
+            </ThemedText>
           </Pressable>
         </View>
 
         <View style={[styles.search, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
-          <MaterialCommunityIcons name="magnify" size={20} color={theme.textSecondary} />
-          <TextInput
+                    <TextInput
             value={query}
             onChangeText={setQuery}
             placeholder="낚시터·지역 검색 (예: 태안, 대천, 좌대)"
@@ -131,7 +131,11 @@ export function PlacePicker({ visible, title, selectedId, disabledId, onSelect, 
                       </ThemedText>
                     ) : null}
                   </View>
-                  {selected ? <MaterialCommunityIcons name="check-circle" size={22} color={Brand.orange} /> : null}
+                  {selected ? (
+  <ThemedText type="small" themeColor="accent" style={styles.bold}>
+    선택됨
+  </ThemedText>
+) : null}
                 </Pressable>
               );
             }}
@@ -146,6 +150,7 @@ const styles = StyleSheet.create({
   sheet: { flex: 1 },
   flex: { flex: 1 },
   dim: { opacity: 0.5 },
+  bold: { fontWeight: '700' },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

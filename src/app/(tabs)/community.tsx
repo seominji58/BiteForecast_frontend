@@ -1,4 +1,3 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -58,10 +57,10 @@ export default function CommunityScreen() {
         <View style={[styles.segment, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
           {(
             [
-              ['latest', '최신', 'clock-outline'],
-              ['popular', '인기', 'fire'],
+              ['latest', '최신'],
+              ['popular', '인기'],
             ] as const
-          ).map(([key, label, icon]) => {
+            ).map(([key, label]) => {
             const on = sort === key;
             return (
               <Pressable
@@ -70,8 +69,7 @@ export default function CommunityScreen() {
                 accessibilityState={{ selected: on }}
                 onPress={() => setSort(key)}
                 style={[styles.segItem, on && { backgroundColor: Brand.navy }]}>
-                <MaterialCommunityIcons name={icon} size={16} color={on ? Brand.orange : theme.textSecondary} />
-                <ThemedText type="smallBold" style={on ? { color: Brand.onNavy } : undefined} themeColor="textSecondary">
+                                <ThemedText type="smallBold" style={on ? { color: Brand.onNavy } : undefined} themeColor="textSecondary">
                   {label}
                 </ThemedText>
               </Pressable>

@@ -1,4 +1,3 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import Constants from 'expo-constants';
 import { StyleSheet, View } from 'react-native';
 
@@ -7,14 +6,12 @@ import { useSources } from '@/api/queries';
 import { Card, ErrorView, Loading, StackScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
 import { KIND_TEXT } from '@/lib/compare';
 
 // SCR-07 설정·법적 안내 (FR-15)
 // TODO: 이용약관·개인정보 처리방침 링크, 문의처, 내 데이터 삭제 (배포 전 필수)
 export default function SettingsScreen() {
   const sources = useSources();
-  const theme = useTheme();
 
   return (
     <StackScreen>
@@ -24,11 +21,9 @@ export default function SettingsScreen() {
         {sources.isError && <ErrorView message={sources.error.message} onRetry={() => sources.refetch()} />}
         {sources.data?.map((s) => (
           <View key={s.dataset} style={styles.row}>
-            <MaterialCommunityIcons
-              name={s.connected ? 'check-circle' : 'clock-outline'}
-              size={18}
-              color={s.connected ? theme.success : theme.textSecondary}
-            />
+            <ThemedText type="small" themeColor={s.connected ? 'success' : 'textSecondary'} style={styles.status}>
+              {s.connected ? '연결' : '준비'}
+            </ThemedText>
             <View style={styles.flex}>
               <ThemedText type="smallBold">
                 {s.agency} · {s.dataset}
@@ -70,4 +65,5 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   row: { flexDirection: 'row', gap: Spacing.two, alignItems: 'flex-start' },
+  status: { fontWeight: '700', width: 30 },
 });

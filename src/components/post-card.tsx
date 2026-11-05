@@ -1,4 +1,3 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -16,7 +15,7 @@ export function AuthorLine({ author, createdAt, right }: { author: Author; creat
   return (
     <View style={styles.author}>
       <View style={[styles.avatar, { backgroundColor: theme.tintSoft }]}>
-        <MaterialCommunityIcons name="account" size={20} color={theme.tint} />
+        <AppIcon name="tab-me-active" size={16} tint={theme.tint} />
       </View>
       <ThemedText type="smallBold">{author.nickname}</ThemedText>
       <View style={[styles.titleBadge, { backgroundColor: theme.backgroundSelected }]}>
@@ -34,11 +33,11 @@ export function AuthorLine({ author, createdAt, right }: { author: Author; creat
 }
 
 export function Tag({ icon, text }: { icon: 'map-marker' | 'fish'; text: string }) {
-  const image = icon === 'fish' ? 'total-fish' : null;
+  const image = icon === 'fish' ? 'total-fish' : 'place-wharf';
   const theme = useTheme();
   return (
     <View style={[styles.tag, { backgroundColor: theme.background }]}>
-      {image ? <AppIcon name={image} size={15} /> : <MaterialCommunityIcons name={icon} size={13} color={theme.tint} />}
+      <AppIcon name={image} size={16} />
       <ThemedText type="small" style={styles.tagText}>
         {text}
       </ThemedText>
@@ -54,7 +53,7 @@ export function PostCard({ p }: { p: PostSummary }) {
       <View style={styles.badges}>
         {p.popular ? (
           <View style={[styles.hot, { backgroundColor: Brand.orange }]}>
-            <MaterialCommunityIcons name="crown" size={12} color="#fff" />
+            <AppIcon name="medal" size={12} badge />
             <ThemedText type="small" style={styles.hotText}>
               인기글
             </ThemedText>

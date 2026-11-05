@@ -1,4 +1,3 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Link, router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -8,7 +7,7 @@ import { AppIcon } from '@/components/app-icon';
 import { Button } from '@/components/form';
 import { Card, EmptyView, ErrorView, Loading, SectionHeader, TabScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
-import { Brand, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { formatDateTime } from '@/lib/format';
 
@@ -18,7 +17,7 @@ export default function RecordsScreen() {
 
   return (
     <TabScreen title="낚시 기록" subtitle="출조 기록과 당시 바다 조건을 함께 남겨보세요.">
-      <Button label="기록 작성하기" icon="pencil-plus" onPress={() => router.push('/journal/new')} />
+      <Button label="기록 작성하기" icon="write" onPress={() => router.push('/journal/new')} />
 
       <SectionHeader image="cat-catch" title={`최근 낚시기록${journals.data ? ` (${journals.data.length})` : ''}`} />
       {journals.isPending && <Loading />}
@@ -56,13 +55,13 @@ function JournalRow({ journal: j }: { journal: Journal }) {
           </View>
           <View style={styles.main}>
             <View style={styles.inline}>
-              <MaterialCommunityIcons name="calendar-month-outline" size={14} color={theme.textSecondary} />
+              <AppIcon name="trips" size={15} />
               <ThemedText type="small" themeColor="textSecondary">
                 {formatDateTime(j.fished_at)}
               </ThemedText>
             </View>
             <View style={styles.inline}>
-              <MaterialCommunityIcons name="map-marker" size={15} color={Brand.orange} />
+              <AppIcon name="place-wharf" size={16} />
               <ThemedText type="smallBold">{j.place_name}</ThemedText>
             </View>
             <View style={[styles.catch, { backgroundColor: theme.tintSoft }]}>

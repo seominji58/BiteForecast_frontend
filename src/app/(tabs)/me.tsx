@@ -1,4 +1,3 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -31,14 +30,14 @@ export default function MeScreen() {
 
       <Pressable accessibilityRole="button" onPress={() => router.push('/settings')} style={({ pressed }) => pressed && styles.pressed}>
         <Card style={styles.menuRow}>
-          <MaterialCommunityIcons name="cog-outline" size={24} color={Brand.teal} />
+          <AppIcon name="regulation" size={26} />
           <View style={styles.flex}>
             <ThemedText type="smallBold">설정·정보</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
               데이터 출처, 이용 안내
             </ThemedText>
           </View>
-          <MaterialCommunityIcons name="chevron-right" size={20} />
+          <ThemedText themeColor="textSecondary">›</ThemedText>
         </Card>
       </Pressable>
     </TabScreen>
@@ -57,7 +56,7 @@ function ProfileCard({ titleName, journals }: { titleName?: string; journals?: J
     <View style={styles.profile}>
       <View style={styles.profileTop}>
         <View style={styles.avatar}>
-          <MaterialCommunityIcons name="account-circle" size={52} color={Brand.onNavySecondary} />
+          <AppIcon name="tab-me-active" size={34} tint={Brand.onNavySecondary} />
         </View>
         <View style={styles.flex}>
           <ThemedText type="sectionTitle" style={styles.onNavy}>
@@ -65,7 +64,7 @@ function ProfileCard({ titleName, journals }: { titleName?: string; journals?: J
           </ThemedText>
           {titleName ? (
             <View style={styles.badge}>
-              <MaterialCommunityIcons name="crown" size={14} color={Brand.orange} />
+              <AppIcon name="medal" size={14} />
               <ThemedText type="small" style={styles.badgeText}>
                 {titleName}
               </ThemedText>

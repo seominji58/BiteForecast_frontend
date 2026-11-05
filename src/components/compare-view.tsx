@@ -1,4 +1,3 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -83,9 +82,8 @@ export function CompareView({ places, disclaimer }: { places: PlaceCompare[]; di
         onPress={() => setShowHourly((v) => !v)}
         style={[styles.toggle, { borderColor: theme.border, backgroundColor: theme.backgroundElement }]}>
         <ThemedText type="smallBold" themeColor="tint">
-          {showHourly ? '시간별 자료 접기' : '시간별 자료 자세히 보기'}
+          {showHourly ? '시간별 자료 접기 ▴' : '시간별 자료 자세히 보기 ▾'}
         </ThemedText>
-        <MaterialCommunityIcons name={showHourly ? 'chevron-up' : 'chevron-down'} size={20} color={theme.tint} />
       </Pressable>
 
       {showHourly && (
@@ -102,7 +100,7 @@ export function CompareView({ places, disclaimer }: { places: PlaceCompare[]; di
       <SourceList places={places} />
 
       <View style={[styles.notice, { borderColor: theme.border, backgroundColor: theme.backgroundElement }]}>
-        <MaterialCommunityIcons name="information-outline" size={18} color={theme.textSecondary} />
+        <AppIcon name="cat-tip" size={20} />
         <ThemedText type="small" themeColor="textSecondary" style={styles.flex}>
           {disclaimer}
         </ThemedText>

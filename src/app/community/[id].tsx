@@ -1,4 +1,3 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
@@ -75,8 +74,10 @@ export default function PostScreen() {
           createdAt={p.created_at}
           right={
             p.mine ? (
-              <Pressable accessibilityRole="button" accessibilityLabel="글 삭제" hitSlop={8} onPress={confirmDeletePost}>
-                <MaterialCommunityIcons name="trash-can-outline" size={20} color={theme.textSecondary} />
+              <Pressable accessibilityRole="button" hitSlop={8} onPress={confirmDeletePost}>
+                <ThemedText type="small" themeColor="danger">
+                  삭제
+                </ThemedText>
               </Pressable>
             ) : (
               <Pressable
@@ -102,11 +103,7 @@ export default function PostScreen() {
           disabled={like.isPending}
           onPress={() => like.mutate(!p.liked)}
           style={[styles.like, { borderColor: p.liked ? Brand.orange : theme.border }]}>
-          <MaterialCommunityIcons
-            name={p.liked ? 'thumb-up' : 'thumb-up-outline'}
-            size={18}
-            color={p.liked ? Brand.orange : theme.textSecondary}
-          />
+          <AppIcon name="like" size={20} style={p.liked ? undefined : styles.dim} />
           <ThemedText type="smallBold" themeColor={p.liked ? 'accent' : 'textSecondary'}>
             좋아요 {p.like_count}
           </ThemedText>
@@ -126,7 +123,9 @@ export default function PostScreen() {
                 hitSlop={8}
                 onPress={() => (c.mine ? confirmDeleteComment(c) : setReportTarget({ type: 'comment', id: c.id }))}>
                 {c.mine ? (
-                  <MaterialCommunityIcons name="trash-can-outline" size={18} color={theme.textSecondary} />
+                  <ThemedText type="small" themeColor="danger">
+                    삭제
+                  </ThemedText>
                 ) : (
                   <AppIcon name="report" size={20} />
                 )}
@@ -154,6 +153,7 @@ export default function PostScreen() {
 
 const styles = StyleSheet.create({
   bold: { fontWeight: '700' },
+  dim: { opacity: 0.45 },
   body: { marginVertical: Spacing.two },
   tags: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   like: {

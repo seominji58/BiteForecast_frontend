@@ -1,4 +1,3 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -38,7 +37,7 @@ export default function CompareTab() {
     <TabScreen title="조건 비교" subtitle="두 낚시터의 바다 조건을 한눈에 비교하세요.">
       <Card>
         <View style={styles.inline}>
-          <MaterialCommunityIcons name="calendar-month-outline" size={22} color={Brand.orange} />
+          <AppIcon name="trips" size={24} />
           <ThemedText type="smallBold">비교 기준일</ThemedText>
         </View>
         {range.isSuccess ? (
@@ -104,7 +103,7 @@ function Slot({ label, place, onPress }: { label: string; place: Place | null; o
         {place ? (
           <AppIcon name={PLACE_IMAGE[place.type]} size={64} />
         ) : (
-          <MaterialCommunityIcons name="plus-circle-outline" size={28} color="rgba(255,255,255,0.9)" />
+          <ThemedText style={styles.plus}>＋</ThemedText>
         )}
         <ThemedText type="smallBold" style={styles.slotLabel}>
           {label}
@@ -152,5 +151,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   vsText: { color: Brand.onNavy },
+  plus: { color: Brand.onNavy, fontSize: 28, lineHeight: 32, fontWeight: '300' },
   pressed: { opacity: 0.85 },
 });

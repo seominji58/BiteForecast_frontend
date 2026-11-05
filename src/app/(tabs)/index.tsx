@@ -1,4 +1,3 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -49,11 +48,11 @@ export default function HomeScreen() {
             accessibilityLabel="기준 낚시터 변경"
             onPress={() => setPicker(true)}
             style={styles.placeButton}>
-            <MaterialCommunityIcons name="map-marker" size={18} color={Brand.orange} />
+            <AppIcon name={place ? PLACE_IMAGE[place.type] : 'place-wharf'} size={22} />
             <ThemedText type="sectionTitle" numberOfLines={1} style={styles.shrink}>
               {place ? place.name : '낚시터 선택'}
             </ThemedText>
-            <MaterialCommunityIcons name="chevron-down" size={18} />
+            <ThemedText themeColor="textSecondary">▾</ThemedText>
           </Pressable>
           {today ? (
             <ThemedText type="small" themeColor="textSecondary">
@@ -240,7 +239,11 @@ function PlaceCard({ p, km, selected, onPress }: { p: Place; km: number; selecte
       style={[styles.placeCard, { borderColor: selected ? Brand.orange : theme.border, backgroundColor: theme.backgroundElement }]}>
       <View style={styles.placeArt}>
         <AppIcon name={PLACE_IMAGE[p.type]} size={60} />
-        {selected ? <MaterialCommunityIcons name="star" size={18} color={Brand.orange} style={styles.star} /> : null}
+        {selected ? (
+  <View style={styles.star}>
+    <AppIcon name="medal" size={16} badge />
+  </View>
+) : null}
       </View>
       <View style={styles.placeInfo}>
         <ThemedText type="smallBold" numberOfLines={1}>

@@ -1,7 +1,6 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { type ComponentProps, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -21,8 +20,6 @@ import type { AppIconName } from '@/constants/icons';
 import { Brand, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-export type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
-
 /**
  * 탭 화면 공통 레이아웃: 위에 고정된 짧은 그라데이션 헤더(로고·제목·설정) + 아래 내용만 스크롤.
  * 사진 대신 그라데이션·아이콘을 쓴다 (이미지 저작권).
@@ -40,16 +37,17 @@ export function TabScreen({ title, subtitle, children }: { title: string; subtit
         <View style={styles.heroInner}>
           <View style={styles.heroTop}>
             <View style={styles.logo} accessibilityLabel="입질예보">
-              <MaterialCommunityIcons name="fish" size={20} color={Brand.onNavy} />
+              <AppIcon name="fishing-index" size={18} badge />
               <Text style={styles.logoText}>입질예보</Text>
             </View>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="설정"
               hitSlop={12}
-              onPress={() => router.push('/settings')}>
-              <MaterialCommunityIcons name="cog-outline" size={22} color={Brand.onNavy} />
-            </Pressable>
+              onPress={() => router.push('/settings')}
+              style={styles.settingsPill}>
+                <Text style={styles.settingsText}>설정</Text>
+              </Pressable>
           </View>
           <Text style={styles.heroTitle} accessibilityRole="header">
             {title}
@@ -96,14 +94,11 @@ export function Card({ children, style }: { children: ReactNode; style?: StylePr
 
 /** 섹션 제목: 아이콘 + 제목 + 주황 밑줄, 오른쪽에 「더보기」 같은 동작 */
 export function SectionHeader({
-  icon,
   image,
   title,
   actionLabel,
   onAction,
 }: {
-  icon?: IconName;
-  /** 이미지 아이콘 (있으면 icon 대신 사용) */
   image?: AppIconName;
   title: string;
   actionLabel?: string;
@@ -114,11 +109,7 @@ export function SectionHeader({
     <View style={styles.sectionHeader}>
       <View>
         <View style={styles.sectionTitleRow}>
-          {image ? (
-            <AppIcon name={image} size={22} />
-          ) : icon ? (
-            <MaterialCommunityIcons name={icon} size={18} color={theme.tint} />
-          ) : null}
+          {image ? <AppIcon name={image} size={22} /> : null}
           <ThemedText type="sectionTitle" accessibilityRole="header">
             {title}
           </ThemedText>
@@ -128,9 +119,8 @@ export function SectionHeader({
       {actionLabel && onAction ? (
         <Pressable accessibilityRole="button" onPress={onAction} hitSlop={8} style={styles.sectionAction}>
           <ThemedText type="small" themeColor="textSecondary">
-            {actionLabel}
+            {actionLabel} ›
           </ThemedText>
-          <MaterialCommunityIcons name="chevron-right" size={18} color={theme.textSecondary} />
         </Pressable>
       ) : null}
     </View>
@@ -187,6 +177,14 @@ const styles = StyleSheet.create({
   logoText: { color: Brand.onNavy, fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
   heroTitle: { color: Brand.onNavy, fontSize: 21, fontWeight: '800', letterSpacing: -0.4 },
   heroSubtitle: { color: Brand.onNavySecondary, fontSize: 13, lineHeight: 18 },
+  settingsPill: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  settingsText: { color: Brand.onNavy, fontSize: 12, fontWeight: '700' },
   content: {
     padding: Spacing.three,
     gap: Spacing.three,
