@@ -14,8 +14,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppIcon } from '@/components/app-icon';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import type { AppIconName } from '@/constants/icons';
 import { Brand, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -95,11 +97,14 @@ export function Card({ children, style }: { children: ReactNode; style?: StylePr
 /** 섹션 제목: 아이콘 + 제목 + 주황 밑줄, 오른쪽에 「더보기」 같은 동작 */
 export function SectionHeader({
   icon,
+  image,
   title,
   actionLabel,
   onAction,
 }: {
-  icon: IconName;
+  icon?: IconName;
+  /** 이미지 아이콘 (있으면 icon 대신 사용) */
+  image?: AppIconName;
   title: string;
   actionLabel?: string;
   onAction?: () => void;
@@ -109,7 +114,11 @@ export function SectionHeader({
     <View style={styles.sectionHeader}>
       <View>
         <View style={styles.sectionTitleRow}>
-          <MaterialCommunityIcons name={icon} size={18} color={theme.tint} />
+          {image ? (
+            <AppIcon name={image} size={22} />
+          ) : icon ? (
+            <MaterialCommunityIcons name={icon} size={18} color={theme.tint} />
+          ) : null}
           <ThemedText type="sectionTitle" accessibilityRole="header">
             {title}
           </ThemedText>

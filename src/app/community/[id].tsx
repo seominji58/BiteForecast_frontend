@@ -5,6 +5,7 @@ import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { useAddComment, useDeleteComment, useDeletePost, usePost, useSetLike } from '@/api/queries';
 import type { PostComment } from '@/api/types';
+import { AppIcon } from '@/components/app-icon';
 import { Button, TextField } from '@/components/form';
 import { AuthorLine, Tag } from '@/components/post-card';
 import { ReportSheet } from '@/components/report-sheet';
@@ -83,7 +84,7 @@ export default function PostScreen() {
                 accessibilityLabel="글 신고"
                 hitSlop={8}
                 onPress={() => setReportTarget({ type: 'post', id: p.id })}>
-                <MaterialCommunityIcons name="alarm-light-outline" size={20} color={theme.textSecondary} />
+                <AppIcon name="report" size={22} />
               </Pressable>
             )
           }
@@ -124,11 +125,11 @@ export default function PostScreen() {
                 accessibilityLabel={c.mine ? '댓글 삭제' : '댓글 신고'}
                 hitSlop={8}
                 onPress={() => (c.mine ? confirmDeleteComment(c) : setReportTarget({ type: 'comment', id: c.id }))}>
-                <MaterialCommunityIcons
-                  name={c.mine ? 'trash-can-outline' : 'alarm-light-outline'}
-                  size={18}
-                  color={theme.textSecondary}
-                />
+                {c.mine ? (
+                  <MaterialCommunityIcons name="trash-can-outline" size={18} color={theme.textSecondary} />
+                ) : (
+                  <AppIcon name="report" size={20} />
+                )}
               </Pressable>
             }
           />

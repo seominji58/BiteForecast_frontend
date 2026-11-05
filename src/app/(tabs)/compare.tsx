@@ -1,11 +1,11 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useCompare, useDateRange, usePlaces } from '@/api/queries';
 import type { Place } from '@/api/types';
+import { AppIcon } from '@/components/app-icon';
 import { CompareView } from '@/components/compare-view';
 import { Chip } from '@/components/form';
 import { PlacePicker } from '@/components/place-picker';
@@ -14,7 +14,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { dayLabel, dayList } from '@/lib/compare';
-import { PLACE_ICON } from '@/lib/place';
+import { PLACE_IMAGE } from '@/lib/place';
 
 // SCR-02 조건 비교 (FR-02~05, FR-07): 날짜 + A/B 낚시터 선택 → 같은 화면에 결과
 export default function CompareTab() {
@@ -59,7 +59,7 @@ export default function CompareTab() {
         )}
       </Card>
 
-      <SectionHeader icon="map-marker" title="비교 낚시터" />
+      <SectionHeader image="fact" title="비교 낚시터" />
       <View style={styles.slots}>
         <Slot label="A" place={a} onPress={() => setPicking('A')} />
         <View style={styles.vs}>
@@ -100,16 +100,16 @@ function Slot({ label, place, onPress }: { label: string; place: Place | null; o
       accessibilityLabel={`낚시터 ${label}: ${place?.name ?? '선택 안 됨'}`}
       onPress={onPress}
       style={({ pressed }) => [styles.slot, { borderColor: theme.border }, pressed && styles.pressed]}>
-      <LinearGradient colors={[Brand.teal, Brand.navy]} style={styles.slotArt}>
-        <MaterialCommunityIcons
-          name={place ? PLACE_ICON[place.type] : 'plus-circle-outline'}
-          size={26}
-          color="rgba(255,255,255,0.9)"
-        />
+      <View style={[styles.slotArt, { backgroundColor: place ? '#F3F6F9' : Brand.navy }]}>
+        {place ? (
+          <AppIcon name={PLACE_IMAGE[place.type]} size={64} />
+        ) : (
+          <MaterialCommunityIcons name="plus-circle-outline" size={28} color="rgba(255,255,255,0.9)" />
+        )}
         <ThemedText type="smallBold" style={styles.slotLabel}>
           {label}
         </ThemedText>
-      </LinearGradient>
+      </View>
       <View style={[styles.slotInfo, { backgroundColor: theme.backgroundElement }]}>
         <ThemedText type="smallBold" numberOfLines={1}>
           {place?.name ?? '선택하기'}
@@ -128,7 +128,16 @@ const styles = StyleSheet.create({
   slots: { flexDirection: 'row', alignItems: 'center' },
   slot: { flex: 1, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
   slotArt: { height: 64, alignItems: 'center', justifyContent: 'center' },
-  slotLabel: { position: 'absolute', top: 6, left: 10, color: Brand.onNavy },
+  slotLabel: {
+    position: 'absolute',
+    top: 6,
+    left: 8,
+    color: Brand.onNavy,
+    backgroundColor: Brand.navy,
+    borderRadius: 999,
+    paddingHorizontal: 7,
+    overflow: 'hidden',
+  },
   slotInfo: { padding: Spacing.two, gap: 2 },
   vs: {
     width: 40,

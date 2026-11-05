@@ -4,8 +4,10 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useJournals, useMyPoints, useMyTitle } from '@/api/queries';
 import type { Journal } from '@/api/types';
-import { Card, EmptyView, ErrorView, Loading, SectionHeader, TabScreen, type IconName } from '@/components/screen';
+import { AppIcon } from '@/components/app-icon';
+import { Card, EmptyView, ErrorView, Loading, SectionHeader, TabScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
+import type { AppIconName } from '@/constants/icons';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { formatDateTime, POINT_REASON_LABEL } from '@/lib/format';
@@ -19,12 +21,12 @@ export default function MeScreen() {
     <TabScreen title="내정보" subtitle="나의 낚시 기록과 활약을 한눈에!">
       <ProfileCard titleName={title.data?.current.name} journals={journals.data} />
 
-      <SectionHeader icon="medal-outline" title="칭호" />
+      <SectionHeader image="medal" title="칭호" />
       {title.isPending && <Loading />}
       {title.isError && <ErrorView message={title.error.message} onRetry={() => title.refetch()} />}
       {title.isSuccess && <TitleProgress t={title.data} />}
 
-      <SectionHeader icon="star-circle-outline" title="포인트 내역" />
+      <SectionHeader image="trophy" title="포인트 내역" />
       <PointHistory />
 
       <Pressable accessibilityRole="button" onPress={() => router.push('/settings')} style={({ pressed }) => pressed && styles.pressed}>
@@ -75,10 +77,10 @@ function ProfileCard({ titleName, journals }: { titleName?: string; journals?: J
         </View>
       </View>
       <View style={[styles.statsCard, { backgroundColor: theme.backgroundElement }]}>
-        <Stat icon="calendar-check-outline" label="출조 횟수" value={`${list.length}회`} />
-        <Stat icon="fish" label="총 마릿수" value={`${total.toLocaleString()}마리`} />
+        <Stat icon="trips" label="출조 횟수" value={`${list.length}회`} />
+        <Stat icon="total-fish" label="총 마릿수" value={`${total.toLocaleString()}마리`} />
         <Stat
-          icon="trophy-outline"
+          icon="trophy"
           label="최대어"
           value={best ? `${best.max_length_cm}cm` : '–'}
           sub={best?.species_name ?? undefined}
@@ -88,12 +90,11 @@ function ProfileCard({ titleName, journals }: { titleName?: string; journals?: J
   );
 }
 
-function Stat({ icon, label, value, sub }: { icon: IconName; label: string; value: string; sub?: string }) {
-  const theme = useTheme();
+function Stat({ icon, label, value, sub }: { icon: AppIconName; label: string; value: string; sub?: string }) {
   return (
     <View style={styles.stat}>
       <View style={styles.inline}>
-        <MaterialCommunityIcons name={icon} size={16} color={theme.tint} />
+        <AppIcon name={icon} size={20} />
         <ThemedText type="small" themeColor="textSecondary">
           {label}
         </ThemedText>
@@ -119,7 +120,7 @@ function TitleProgress({ t }: { t: NonNullable<ReturnType<typeof useMyTitle>['da
     <Card>
       <View style={styles.between}>
         <View style={styles.inline}>
-          <MaterialCommunityIcons name="medal" size={22} color={Brand.orange} />
+          <AppIcon name="medal" size={28} />
           <ThemedText type="value">{t.current.name}</ThemedText>
         </View>
         <ThemedText type="smallBold" themeColor="tint">

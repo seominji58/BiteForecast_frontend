@@ -3,8 +3,10 @@ import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { FishingIndex, FishingIndexLevel, PlaceCompare, Series } from '@/api/types';
-import { Card, type IconName } from '@/components/screen';
+import { AppIcon } from '@/components/app-icon';
+import { Card } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
+import type { AppIconName } from '@/constants/icons';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import {
@@ -43,31 +45,31 @@ export function CompareView({ places, disclaimer }: { places: PlaceCompare[]; di
   return (
     <>
       <Card style={styles.tableCard}>
-        <Row icon="shield-alert-outline" label="규제 정보">
+        <Row image="regulation" label="규제 정보">
           <RegulationCell p={a} />
           <RegulationCell p={b} />
         </Row>
-        <Row icon="fish" label="바다낚시 지수">
+        <Row image="fishing-index" label="바다낚시 지수">
           <FishingIndexCell f={a.fishing_index} />
           <FishingIndexCell f={b.fishing_index} />
         </Row>
-        <Row icon="waves" label="만조 / 간조">
+        <Row image="tide" label="만조 / 간조">
           <ExtremeCell s={findSeries(a, 'tide_extreme', 'forecast')} />
           <ExtremeCell s={findSeries(b, 'tide_extreme', 'forecast')} />
         </Row>
-        <Row icon="chart-bell-curve-cumulative" label="조위">
+        <Row image="tide-level" label="조위">
           <RangeCell series={[findSeries(a, 'tide_level', 'forecast')]} />
           <RangeCell series={[findSeries(b, 'tide_level', 'forecast')]} />
         </Row>
-        <Row icon="waves-arrow-up" label="파고">
+        <Row image="wave" label="파고">
           <RangeCell series={[findSeries(a, 'wave_height', 'observed'), findSeries(a, 'wave_height', 'forecast')]} />
           <RangeCell series={[findSeries(b, 'wave_height', 'observed'), findSeries(b, 'wave_height', 'forecast')]} />
         </Row>
-        <Row icon="weather-windy" label="바람">
+        <Row image="wind" label="바람">
           <RangeCell series={[findSeries(a, 'wind_speed', 'observed'), findSeries(a, 'wind_speed', 'forecast')]} />
           <RangeCell series={[findSeries(b, 'wind_speed', 'observed'), findSeries(b, 'wind_speed', 'forecast')]} />
         </Row>
-        <Row icon="thermometer" label="수온" last>
+        <Row image="water-temp" label="수온" last>
           <RangeCell series={[findSeries(a, 'water_temp', 'observed')]} />
           <RangeCell series={[findSeries(b, 'water_temp', 'observed')]} />
         </Row>
@@ -109,13 +111,13 @@ export function CompareView({ places, disclaimer }: { places: PlaceCompare[]; di
   );
 }
 
-function Row({ icon, label, children, last }: { icon: IconName; label: string; children: ReactNode; last?: boolean }) {
+function Row({ image, label, children, last }: { image: AppIconName; label: string; children: ReactNode; last?: boolean }) {
   const theme = useTheme();
   const [left, right] = Array.isArray(children) ? children : [children, null];
   return (
     <View style={[styles.row, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: theme.border }]}>
       <View style={styles.label}>
-        <MaterialCommunityIcons name={icon} size={16} color={Brand.onNavy} />
+        <AppIcon name={image} size={16} badge />
         <ThemedText type="small" style={styles.labelText}>
           {label}
         </ThemedText>
@@ -247,7 +249,7 @@ function FactSummary({ a, b }: { a: PlaceCompare; b: PlaceCompare }) {
   return (
     <View style={[styles.fact, { backgroundColor: theme.accentSoft }]}>
       <View style={[styles.factLabel, { backgroundColor: Brand.navy }]}>
-        <MaterialCommunityIcons name="scale-balance" size={18} color={Brand.onNavy} />
+        <AppIcon name="fact" size={16} badge />
         <ThemedText type="small" style={styles.labelText}>
           사실 비교
         </ThemedText>

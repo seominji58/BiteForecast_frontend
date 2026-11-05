@@ -1,10 +1,10 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Link, router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useJournals } from '@/api/queries';
 import type { EnvSnapshot, Journal } from '@/api/types';
+import { AppIcon } from '@/components/app-icon';
 import { Button } from '@/components/form';
 import { Card, EmptyView, ErrorView, Loading, SectionHeader, TabScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
@@ -20,7 +20,7 @@ export default function RecordsScreen() {
     <TabScreen title="낚시 기록" subtitle="출조 기록과 당시 바다 조건을 함께 남겨보세요.">
       <Button label="기록 작성하기" icon="pencil-plus" onPress={() => router.push('/journal/new')} />
 
-      <SectionHeader icon="hook" title={`최근 낚시기록${journals.data ? ` (${journals.data.length})` : ''}`} />
+      <SectionHeader image="cat-catch" title={`최근 낚시기록${journals.data ? ` (${journals.data.length})` : ''}`} />
       {journals.isPending && <Loading />}
       {journals.isError && <ErrorView message={journals.error.message} onRetry={() => journals.refetch()} />}
       {journals.isSuccess &&
@@ -51,9 +51,9 @@ function JournalRow({ journal: j }: { journal: Journal }) {
     <Link href={{ pathname: '/journal/[id]', params: { id: String(j.id) } }} asChild>
       <Pressable accessibilityRole="button" style={({ pressed }) => pressed && styles.pressed}>
         <Card style={styles.row}>
-          <LinearGradient colors={[Brand.teal, Brand.navy]} style={styles.art}>
-            <MaterialCommunityIcons name="fish" size={24} color="rgba(255,255,255,0.9)" />
-          </LinearGradient>
+          <View style={styles.art}>
+            <AppIcon name="cat-catch" size={40} />
+          </View>
           <View style={styles.main}>
             <View style={styles.inline}>
               <MaterialCommunityIcons name="calendar-month-outline" size={14} color={theme.textSecondary} />
@@ -74,8 +74,8 @@ function JournalRow({ journal: j }: { journal: Journal }) {
           </View>
           {/* 당시 인근 관측소 기록 (현장 조건으로 단정하지 않음) */}
           <View style={[styles.env, { backgroundColor: theme.background }]}>
-            <EnvLine icon="waves-arrow-up" label="파고" value={envValue(j.env_snapshots, 'wave_height')} />
-            <EnvLine icon="weather-windy" label="바람" value={envValue(j.env_snapshots, 'wind_speed')} />
+            <EnvLine icon="wave" label="파고" value={envValue(j.env_snapshots, 'wave_height')} />
+            <EnvLine icon="wind" label="바람" value={envValue(j.env_snapshots, 'wind_speed')} />
           </View>
         </Card>
       </Pressable>
@@ -83,11 +83,10 @@ function JournalRow({ journal: j }: { journal: Journal }) {
   );
 }
 
-function EnvLine({ icon, label, value }: { icon: 'waves-arrow-up' | 'weather-windy'; label: string; value: string }) {
-  const theme = useTheme();
+function EnvLine({ icon, label, value }: { icon: 'wave' | 'wind'; label: string; value: string }) {
   return (
     <View style={styles.inline}>
-      <MaterialCommunityIcons name={icon} size={14} color={theme.tint} />
+      <AppIcon name={icon} size={16} />
       <ThemedText type="small" themeColor="textSecondary">
         {label}
       </ThemedText>
@@ -101,7 +100,7 @@ function EnvLine({ icon, label, value }: { icon: 'waves-arrow-up' | 'weather-win
 const styles = StyleSheet.create({
   pressed: { opacity: 0.8 },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, padding: Spacing.two + 2 },
-  art: { width: 52, height: 52, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  art: { width: 52, height: 52, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F6F9' },
   main: { flex: 1, gap: 3 },
   inline: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   catch: {

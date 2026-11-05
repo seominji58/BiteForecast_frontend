@@ -3,6 +3,7 @@ import { type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import type { Author, PostSummary } from '@/api/types';
+import { AppIcon } from '@/components/app-icon';
 import { Card } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Brand, Spacing } from '@/constants/theme';
@@ -33,10 +34,11 @@ export function AuthorLine({ author, createdAt, right }: { author: Author; creat
 }
 
 export function Tag({ icon, text }: { icon: 'map-marker' | 'fish'; text: string }) {
+  const image = icon === 'fish' ? 'total-fish' : null;
   const theme = useTheme();
   return (
     <View style={[styles.tag, { backgroundColor: theme.background }]}>
-      <MaterialCommunityIcons name={icon} size={13} color={theme.tint} />
+      {image ? <AppIcon name={image} size={15} /> : <MaterialCommunityIcons name={icon} size={13} color={theme.tint} />}
       <ThemedText type="small" style={styles.tagText}>
         {text}
       </ThemedText>
@@ -59,7 +61,7 @@ export function PostCard({ p }: { p: PostSummary }) {
           </View>
         ) : null}
         <View style={[styles.cat, { backgroundColor: theme.tintSoft }]}>
-          <MaterialCommunityIcons name={cat.icon} size={12} color={theme.tint} />
+          <AppIcon name={cat.icon} size={14} />
           <ThemedText type="small" themeColor="tint" style={styles.badgeText}>
             {cat.label}
           </ThemedText>
@@ -79,16 +81,12 @@ export function PostCard({ p }: { p: PostSummary }) {
         </View>
       ) : null}
       <View style={styles.counts}>
-        <MaterialCommunityIcons name="comment-outline" size={16} color={theme.textSecondary} />
+        <AppIcon name="comment" size={18} />
         <ThemedText type="small" themeColor="textSecondary">
           댓글 {p.comment_count}
         </ThemedText>
-        <MaterialCommunityIcons
-          name={p.liked ? 'thumb-up' : 'thumb-up-outline'}
-          size={16}
-          color={p.liked ? Brand.orange : theme.textSecondary}
-        />
-        <ThemedText type="small" themeColor="textSecondary">
+        <AppIcon name="like" size={18} style={p.liked ? undefined : styles.dim} />
+        <ThemedText type="small" themeColor={p.liked ? 'accent' : 'textSecondary'}>
           좋아요 {p.like_count}
         </ThemedText>
       </View>
@@ -98,6 +96,7 @@ export function PostCard({ p }: { p: PostSummary }) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  dim: { opacity: 0.45 },
   author: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   avatar: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   titleBadge: { borderRadius: 999, paddingHorizontal: 8 },

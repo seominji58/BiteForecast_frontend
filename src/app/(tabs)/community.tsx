@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { usePosts } from '@/api/queries';
 import type { PostCategory } from '@/api/types';
+import { AppIcon } from '@/components/app-icon';
 import { PostCard } from '@/components/post-card';
 import { EmptyView, ErrorView, Loading, TabScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
@@ -22,7 +23,7 @@ export default function CommunityScreen() {
   const posts = usePosts(category, sort);
 
   const cats: { key: PostCategory | null; label: string; icon: (typeof CATEGORY)[PostCategory]['icon'] }[] = [
-    { key: null, label: '전체글', icon: 'forum-outline' },
+    { key: null, label: '전체글', icon: 'cat-all' },
     ...(Object.keys(CATEGORY) as PostCategory[]).map((k) => ({ key: k, ...CATEGORY[k] })),
   ];
 
@@ -45,7 +46,7 @@ export default function CommunityScreen() {
                     borderColor: on ? Brand.orange : theme.border,
                   },
                 ]}>
-                <MaterialCommunityIcons name={c.icon} size={22} color={on ? Brand.onNavy : theme.tint} />
+                <AppIcon name={c.icon} size={30} badge={on} />
                 <ThemedText type="small" style={[styles.catText, on && { color: Brand.onNavy }]}>
                   {c.label}
                 </ThemedText>
@@ -100,7 +101,7 @@ export default function CommunityScreen() {
         accessibilityLabel="글쓰기"
         onPress={() => router.push('/community/new')}
         style={({ pressed }) => [styles.fab, { opacity: pressed ? 0.85 : 1 }]}>
-        <MaterialCommunityIcons name="pencil" size={20} color="#fff" />
+        <AppIcon name="write" size={22} badge />
         <ThemedText type="smallBold" style={styles.fabText}>
           글쓰기
         </ThemedText>

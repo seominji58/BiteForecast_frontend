@@ -1,15 +1,16 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useConditions, useDateRange, usePlaces } from '@/api/queries';
 import type { Place, PlaceCompare } from '@/api/types';
+import { AppIcon } from '@/components/app-icon';
 import { LEVEL_COLOR } from '@/components/compare-view';
 import { PlacePicker } from '@/components/place-picker';
-import { Card, ErrorView, Loading, SectionHeader, TabScreen, type IconName } from '@/components/screen';
+import { Card, ErrorView, Loading, SectionHeader, TabScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
+import type { AppIconName } from '@/constants/icons';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import {
@@ -24,7 +25,7 @@ import {
   sourceLine,
   timeLabel,
 } from '@/lib/compare';
-import { PLACE_ICON } from '@/lib/place';
+import { PLACE_IMAGE } from '@/lib/place';
 import { useHomePlace } from '@/lib/prefs';
 
 // SCR-01 홈: 기준 낚시터의 오늘 조건 요약 + 공식 바다낚시지수 + 낚시터 선택
@@ -65,17 +66,17 @@ export default function HomeScreen() {
       </Card>
 
       <SectionHeader
-        icon="fish"
+        image="fishing-index"
         title="오늘의 바다낚시지수"
         actionLabel="비교하기"
         onAction={() => router.push({ pathname: '/compare', params: place ? { a: String(place.id) } : {} })}
       />
       {pc && <FishingIndexCard pc={pc} />}
 
-      <SectionHeader icon="waves" title="오늘의 주요 해황" />
+      <SectionHeader image="wave" title="오늘의 주요 해황" />
       {pc && <SeaTiles pc={pc} />}
 
-      <SectionHeader icon="map-marker-radius" title="낚시터" actionLabel="전체보기" onAction={() => setPicker(true)} />
+      <SectionHeader image="place-wharf" title="낚시터" actionLabel="전체보기" onAction={() => setPicker(true)} />
       {places.data && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.placeRow}>
           {places.data.map((p) => (
@@ -103,11 +104,10 @@ export default function HomeScreen() {
 
 /** 부이 실측 최신값 (예보와 섞지 않음) */
 function LatestObservations({ pc }: { pc: PlaceCompare }) {
-  const theme = useTheme();
   const items = [
-    { icon: 'waves-arrow-up' as const, label: '파고', s: findSeries(pc, 'wave_height', 'observed') },
-    { icon: 'weather-windy' as const, label: '바람', s: findSeries(pc, 'wind_speed', 'observed') },
-    { icon: 'thermometer' as const, label: '수온', s: findSeries(pc, 'water_temp', 'observed') },
+    { icon: 'wave' as const, label: '파고', s: findSeries(pc, 'wave_height', 'observed') },
+    { icon: 'wind' as const, label: '바람', s: findSeries(pc, 'wind_speed', 'observed') },
+    { icon: 'water-temp' as const, label: '수온', s: findSeries(pc, 'water_temp', 'observed') },
   ];
   const src = items.find((i) => i.s?.source)?.s?.source ?? null;
   return (
@@ -118,7 +118,7 @@ function LatestObservations({ pc }: { pc: PlaceCompare }) {
           return (
             <View key={label} style={styles.stat}>
               <View style={styles.statLabel}>
-                <MaterialCommunityIcons name={icon} size={18} color={theme.tint} />
+                <AppIcon name={icon} size={20} />
                 <ThemedText type="small" themeColor="textSecondary">
                   {label}
                 </ThemedText>
@@ -157,7 +157,7 @@ function FishingIndexCard({ pc }: { pc: PlaceCompare }) {
   return (
     <View style={[styles.indexCard, { borderColor: theme.border, backgroundColor: theme.backgroundElement }]}>
       <View style={[styles.indexBadge, { backgroundColor: Brand.teal }]}>
-        <MaterialCommunityIcons name="fish" size={24} color={Brand.onNavy} />
+        <AppIcon name="fishing-index" size={28} badge />
         <ThemedText type="small" style={styles.onNavy}>
           {period.period === '일' ? '하루' : period.period}
         </ThemedText>
@@ -196,20 +196,19 @@ function SeaTiles({ pc }: { pc: PlaceCompare }) {
   const temp = rangeText(findSeries(pc, 'water_temp', 'observed'));
   return (
     <View style={styles.grid}>
-      <Tile icon="waves" title="물때" value={ext ? `${ext.type === 'high' ? '만조' : '간조'} ${timeLabel(ext.t)}` : '–'} note={ext ? `다음 ${ext.v ?? '?'}cm` : '자료 없음'} />
-      <Tile icon="waves-arrow-up" title="파고" value={wave?.v ?? '–'} note={wave?.k ?? '자료 없음'} />
-      <Tile icon="weather-windy" title="바람" value={wind?.v ?? '–'} note={wind?.k ?? '자료 없음'} />
-      <Tile icon="thermometer" title="수온" value={temp ?? '–'} note={temp ? '오늘 실측' : '자료 없음'} />
+      <Tile icon="tide" title="물때" value={ext ? `${ext.type === 'high' ? '만조' : '간조'} ${timeLabel(ext.t)}` : '–'} note={ext ? `다음 ${ext.v ?? '?'}cm` : '자료 없음'} />
+      <Tile icon="wave" title="파고" value={wave?.v ?? '–'} note={wave?.k ?? '자료 없음'} />
+      <Tile icon="wind" title="바람" value={wind?.v ?? '–'} note={wind?.k ?? '자료 없음'} />
+      <Tile icon="water-temp" title="수온" value={temp ?? '–'} note={temp ? '오늘 실측' : '자료 없음'} />
     </View>
   );
 }
 
-function Tile({ icon, title, value, note }: { icon: IconName; title: string; value: string; note: string }) {
-  const theme = useTheme();
+function Tile({ icon, title, value, note }: { icon: AppIconName; title: string; value: string; note: string }) {
   return (
     <Card style={styles.tile}>
       <View style={styles.statLabel}>
-        <MaterialCommunityIcons name={icon} size={20} color={theme.tint} />
+        <AppIcon name={icon} size={24} />
         <ThemedText type="smallBold">{title}</ThemedText>
       </View>
       <ThemedText type="value" numberOfLines={1} adjustsFontSizeToFit>
@@ -231,10 +230,10 @@ function PlaceCard({ p, selected, onPress }: { p: Place; selected: boolean; onPr
       accessibilityLabel={`${p.name}${selected ? ', 기준 낚시터' : ''}`}
       onPress={onPress}
       style={[styles.placeCard, { borderColor: selected ? Brand.orange : theme.border, backgroundColor: theme.backgroundElement }]}>
-      <LinearGradient colors={[Brand.teal, Brand.navy]} style={styles.placeArt}>
-        <MaterialCommunityIcons name={PLACE_ICON[p.type]} size={28} color="rgba(255,255,255,0.9)" />
+      <View style={styles.placeArt}>
+        <AppIcon name={PLACE_IMAGE[p.type]} size={60} />
         {selected ? <MaterialCommunityIcons name="star" size={18} color={Brand.orange} style={styles.star} /> : null}
-      </LinearGradient>
+      </View>
       <View style={styles.placeInfo}>
         <ThemedText type="smallBold">{p.name}</ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
@@ -260,7 +259,7 @@ const styles = StyleSheet.create({
   tile: { width: '48.5%', flexGrow: 1, gap: 4 },
   placeRow: { gap: Spacing.two, paddingRight: Spacing.three },
   placeCard: { width: 120, borderRadius: 16, borderWidth: 2, overflow: 'hidden' },
-  placeArt: { height: 64, alignItems: 'center', justifyContent: 'center' },
+  placeArt: { height: 68, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F6F9' },
   star: { position: 'absolute', top: 6, right: 8 },
   placeInfo: { padding: Spacing.two, gap: 2 },
 });
