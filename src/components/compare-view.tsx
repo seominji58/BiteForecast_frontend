@@ -8,6 +8,7 @@ import { ThemedText } from '@/components/themed-text';
 import type { AppIconName } from '@/constants/icons';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { describeShort } from '@/lib/describe';
 import {
   findSeries,
   formatValue,
@@ -43,6 +44,17 @@ export function CompareView({ places, disclaimer }: { places: PlaceCompare[]; di
 
   return (
     <>
+      <Card>
+        {places.map((p, i) => (
+          <View key={p.place.id} style={styles.summaryLine}>
+            <ThemedText type="smallBold" themeColor="tint">
+              {i === 0 ? 'A' : 'B'} {p.place.name}
+            </ThemedText>
+            <ThemedText type="small">{describeShort(p)}</ThemedText>
+          </View>
+        ))}
+      </Card>
+
       <Card style={styles.tableCard}>
         <Row image="regulation" label="규제 정보">
           <RegulationCell p={a} />
@@ -336,6 +348,7 @@ function SourceList({ places }: { places: PlaceCompare[] }) {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   tableCard: { padding: 0, gap: 0, overflow: 'hidden' },
+  summaryLine: { gap: 2 },
   row: { flexDirection: 'row', alignItems: 'stretch', minHeight: 46 },
   label: {
     width: 68,

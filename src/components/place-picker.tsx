@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { FlatList, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { FlatList, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { usePlaces } from '@/api/queries';
@@ -7,6 +7,7 @@ import type { Place } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { Chip } from '@/components/form';
 import { ErrorView, Loading } from '@/components/screen';
+import { SearchBar } from '@/components/search-bar';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, Spacing } from '@/constants/theme';
@@ -56,16 +57,12 @@ export function PlacePicker({ visible, title, selectedId, disabledId, onSelect, 
           </Pressable>
         </View>
 
-        <View style={[styles.search, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
-                    <TextInput
+        <View style={styles.searchWrap}>
+          <SearchBar
             value={query}
             onChangeText={setQuery}
+            onClear={() => setQuery('')}
             placeholder="낚시터·지역 검색 (예: 태안, 대천, 좌대)"
-            placeholderTextColor={theme.textSecondary}
-            style={[styles.input, { color: theme.text }]}
-            returnKeyType="search"
-            autoCorrect={false}
-            clearButtonMode="while-editing"
           />
         </View>
 
@@ -159,16 +156,7 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.four,
     paddingBottom: Spacing.two,
   },
-  search: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    marginHorizontal: Spacing.three,
-    paddingHorizontal: Spacing.three,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  input: { flex: 1, fontSize: 15, paddingVertical: Spacing.two + 2 },
+  searchWrap: { marginHorizontal: Spacing.three },
   sidos: { gap: Spacing.two, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two + 2 },
   list: { paddingHorizontal: Spacing.three, gap: Spacing.two, paddingBottom: Spacing.four },
   row: {

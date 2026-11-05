@@ -1,12 +1,13 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Keyboard, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useConditions, useDateRange, usePlaces } from '@/api/queries';
 import type { Place, PlaceCompare } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { LEVEL_COLOR } from '@/components/compare-view';
 import { PlacePicker } from '@/components/place-picker';
+import { SearchBar } from '@/components/search-bar';
 import { Card, ErrorView, Loading, SectionHeader, TabScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import type { AppIconName } from '@/constants/icons';
@@ -17,14 +18,13 @@ import {
   dayLabel,
   findSeries,
   greeting,
-  latestPoint,
   nextExtreme,
   rangeText,
   REASON_TEXT,
-  sourceLine,
   timeLabel,
 } from '@/lib/compare';
-import { nearby, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
+import { describeToday } from '@/lib/describe';
+import { matches, nearby, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
 import { useHomePlace } from '@/lib/prefs';
 
 // SCR-01 홈: 기준 낚시터의 오늘 조건 요약 + 공식 바다낚시지수 + 낚시터 선택
@@ -33,27 +33,66 @@ export default function HomeScreen() {
   const range = useDateRange();
   const [homeId, setHomeId] = useHomePlace();
   const [picker, setPicker] = useState(false);
+  const [query, setQuery] = useState('');
 
   const place = places.data?.find((p) => p.id === homeId) ?? places.data?.[0] ?? null;
+  const results = query.trim() ? (places.data ?? []).filter((p) => matches(p, query)).slice(0, 8) : [];
+  const choose = (p: Place) => {
+    setHomeId(p.id);
+    setQuery('');
+    Keyboard.dismiss();
+  };
   const today = range.data?.today;
   const cond = useConditions(place?.id ?? null, today);
   const pc = cond.data?.place;
 
   return (
     <TabScreen title={`${greeting()}!`} subtitle="오늘도 안전하고 즐거운 낚시 되세요.">
+      <SearchBar
+        value={query}
+        onChangeText={setQuery}
+        onClear={() => setQuery('')}
+        placeholder="낚시터·지역 검색 (예: 태안, 대천, 좌대)"
+      />
+      {query.trim() ? (
+        <Card style={styles.results}>
+          {results.length === 0 ? (
+            <ThemedText themeColor="textSecondary">검색 결과가 없어요. 지원 지역이 아닐 수 있어요.</ThemedText>
+          ) : (
+            results.map((p) => (
+              <Pressable
+                key={p.id}
+                accessibilityRole="button"
+                onPress={() => choose(p)}
+                style={({ pressed }) => [styles.resultRow, pressed && styles.pressed]}>
+                <AppIcon name={PLACE_IMAGE[p.type]} size={30} />
+                <View style={styles.shrink}>
+                  <ThemedText type="smallBold" numberOfLines={1}>
+                    {p.name}
+                  </ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                    {p.region_name} · {PLACE_TYPE_LABEL[p.type]}
+                  </ThemedText>
+                </View>
+              </Pressable>
+            ))
+          )}
+          <Pressable accessibilityRole="button" onPress={() => setPicker(true)}>
+            <ThemedText type="small" themeColor="tint" style={styles.more}>
+              지역별 전체 목록 보기 ›
+            </ThemedText>
+          </Pressable>
+        </Card>
+      ) : null}
+
       <Card>
         <View style={styles.between}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="기준 낚시터 변경"
-            onPress={() => setPicker(true)}
-            style={styles.placeButton}>
-            <AppIcon name={place ? PLACE_IMAGE[place.type] : 'place-wharf'} size={22} />
+          <View style={styles.placeButton}>
+            <AppIcon name={place ? PLACE_IMAGE[place.type] : 'place-wharf'} size={26} />
             <ThemedText type="sectionTitle" numberOfLines={1} style={styles.shrink}>
-              {place ? place.name : '낚시터 선택'}
+              {place ? place.name : '낚시터를 검색하세요'}
             </ThemedText>
-            <ThemedText themeColor="textSecondary">▾</ThemedText>
-          </Pressable>
+          </View>
           {today ? (
             <ThemedText type="small" themeColor="textSecondary">
               오늘 {dayLabel(today)}
@@ -69,7 +108,7 @@ export default function HomeScreen() {
         {places.isError && <ErrorView message={places.error.message} onRetry={() => places.refetch()} />}
         {cond.isPending && place && <Loading />}
         {cond.isError && <ErrorView message={cond.error.message} onRetry={() => cond.refetch()} />}
-        {pc && <LatestObservations pc={pc} />}
+        {pc && <SeaStory pc={pc} />}
       </Card>
 
       <SectionHeader
@@ -109,41 +148,27 @@ export default function HomeScreen() {
   );
 }
 
-/** 부이 실측 최신값 (예보와 섞지 않음) */
-function LatestObservations({ pc }: { pc: PlaceCompare }) {
-  const items = [
-    { icon: 'wave' as const, label: '파고', s: findSeries(pc, 'wave_height', 'observed') },
-    { icon: 'wind' as const, label: '바람', s: findSeries(pc, 'wind_speed', 'observed') },
-    { icon: 'water-temp' as const, label: '수온', s: findSeries(pc, 'water_temp', 'observed') },
-  ];
-  const src = items.find((i) => i.s?.source)?.s?.source ?? null;
+/** 오늘 바다 이야기: 수치를 공인 등급표 기준의 문장으로 */
+function SeaStory({ pc }: { pc: PlaceCompare }) {
+  const theme = useTheme();
+  const icon: Record<string, AppIconName> = {
+    wave: 'wave',
+    wind: 'wind',
+    temp: 'water-temp',
+    tide: 'tide',
+    index: 'fishing-index',
+    distance: 'cat-tip',
+    none: 'cat-tip',
+  };
   return (
-    <>
-      <View style={styles.stats}>
-        {items.map(({ icon, label, s }) => {
-          const p = latestPoint(s);
-          return (
-            <View key={label} style={styles.stat}>
-              <View style={styles.statLabel}>
-                <AppIcon name={icon} size={20} />
-                <ThemedText type="small" themeColor="textSecondary">
-                  {label}
-                </ThemedText>
-              </View>
-              <ThemedText type="value">{p ? `${p.v}${s!.unit === '°C' ? '°C' : ` ${s!.unit}`}` : '–'}</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                {p ? `${timeLabel(p.t)} 실측` : '자료 없음'}
-              </ThemedText>
-            </View>
-          );
-        })}
-      </View>
-      {src && (
-        <ThemedText type="small" themeColor="textSecondary">
-          {sourceLine(src)}
-        </ThemedText>
-      )}
-    </>
+    <View style={[styles.story, { backgroundColor: theme.background }]}>
+      {describeToday(pc).map((s) => (
+        <View key={s.key} style={styles.storyLine}>
+          <AppIcon name={icon[s.key]} size={20} />
+          <ThemedText style={styles.storyText}>{s.text}</ThemedText>
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -184,7 +209,11 @@ function FishingIndexCard({ pc }: { pc: PlaceCompare }) {
           </View>
         ))}
         <ThemedText type="small" themeColor="textSecondary">
-          국립해양조사원 발표 · {f.source?.station_name} 지점 {f.source?.distance_km}km{'\n'}앱이 판정한 값이 아닙니다
+          국립해양조사원 발표 ·{' '}
+{f.source && f.source.distance_km != null && f.source.distance_km >= 1
+  ? `${f.source.station_name} 지점 ${f.source.distance_km}km`
+  : '이 지점 발표'}
+{'\n'}앱이 판정한 값이 아닙니다
         </ThemedText>
       </View>
     </View>
@@ -261,6 +290,13 @@ const styles = StyleSheet.create({
   between: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: Spacing.two },
   placeButton: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 },
   shrink: { flexShrink: 1 },
+  pressed: { opacity: 0.6 },
+  results: { gap: 2, paddingVertical: Spacing.two },
+  resultRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingVertical: 6 },
+  more: { paddingTop: Spacing.one },
+  story: { borderRadius: 12, padding: Spacing.three - 2, gap: Spacing.two, marginTop: Spacing.one },
+  storyLine: { flexDirection: 'row', gap: Spacing.two, alignItems: 'flex-start' },
+  storyText: { flex: 1, lineHeight: 22 },
   stats: { flexDirection: 'row', gap: Spacing.two, marginTop: Spacing.two },
   stat: { flex: 1, gap: 2 },
   statLabel: { flexDirection: 'row', alignItems: 'center', gap: 4 },
