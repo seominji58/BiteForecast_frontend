@@ -3,12 +3,13 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { FishingIndex, FishingIndexLevel, PlaceCompare, Series } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
+import { MarineWarningBanner } from '@/components/marine-warning-banner';
 import { Card } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import type { AppIconName } from '@/constants/icons';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { describeShort } from '@/lib/describe';
+import { commonKind, describeShort } from '@/lib/describe';
 import {
   findSeries,
   formatValue,
@@ -40,6 +41,8 @@ export const LEVEL_COLOR: Record<FishingIndexLevel, 'success' | 'text' | 'warnin
 export function CompareView({ places, disclaimer }: { places: PlaceCompare[]; disclaimer: string }) {
   const [a, b] = places;
   const [showHourly, setShowHourly] = useState(false);
+  // 두 곳 요약은 같은 종류(예보끼리/실측끼리)로만 만든다
+  const kinds = { wave: commonKind(a, b, 'wave_height'), wind: commonKind(a, b, 'wind_speed') };
   const theme = useTheme();
 
   return (
@@ -50,12 +53,16 @@ export function CompareView({ places, disclaimer }: { places: PlaceCompare[]; di
             <ThemedText type="smallBold" themeColor="tint">
               {i === 0 ? 'A' : 'B'} {p.place.name}
             </ThemedText>
-            <ThemedText type="small">{describeShort(p)}</ThemedText>
+            <ThemedText type="small">{describeShort(p, kinds)}</ThemedText>
           </View>
         ))}
       </Card>
 
       <Card style={styles.tableCard}>
+        <Row image="report" label="해상 특보">
+          <MarineWarningBanner w={a.warning} compact />
+          <MarineWarningBanner w={b.warning} compact />
+        </Row>
         <Row image="regulation" label="규제 정보">
           <RegulationCell p={a} />
           <RegulationCell p={b} />

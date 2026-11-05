@@ -37,6 +37,9 @@ export const Colors = {
     danger: '#C62828',
     warning: '#A86200',
     success: '#2E7D32',
+    dangerSoft: '#FDECEC',
+    warningSoft: '#FFF3E0',
+    cautionSoft: '#FFF8D6',
   },
   dark: {
     text: '#E8EEF5',
@@ -54,6 +57,9 @@ export const Colors = {
     danger: '#EF6B6B',
     warning: '#F0B054',
     success: '#6FCF73',
+    dangerSoft: '#3A1616',
+    warningSoft: '#3A2611',
+    cautionSoft: '#33300F',
   },
 } as const;
 

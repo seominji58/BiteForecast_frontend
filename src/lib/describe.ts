@@ -6,7 +6,7 @@
  * - 파도: WMO 해상상태 코드(Douglas) 파고 구간
  * 「낚시하기 좋다/안전하다」 같은 판정 표현은 쓰지 않는다.
  */
-import type { PlaceCompare, Series } from '@/api/types';
+import type { DataKind, PlaceCompare, Series } from '@/api/types';
 import { currentIndexPeriod, findSeries, latestPoint, nextExtreme, rangeOf, timeLabel } from '@/lib/compare';
 
 /** 보퍼트 풍력계급: [상한 m/s, 이름, 체감 설명] */
@@ -50,11 +50,14 @@ function hourText(iso: string) {
   return timeLabel(iso);
 }
 
-/** 예보 계열에서 하루 최댓값과 그 시각 */
-function peak(s: Series | undefined): { v: number; t: string } | null {
+/** 예보 계열의 최댓값과 그 시각. after 를 주면 그 이후 시각만 본다 (이미 지난 시각을 「높아져요」로 말하지 않기) */
+function peak(s: Series | undefined, after?: Date): { v: number; t: string } | null {
   if (s?.status !== 'ok' || !s.points) return null;
   let best: { v: number; t: string } | null = null;
-  for (const p of s.points) if (p.v != null && (!best || p.v > best.v)) best = { v: p.v, t: p.t };
+  for (const p of s.points) {
+    if (p.v == null || (after && new Date(p.t) < after)) continue;
+    if (!best || p.v > best.v) best = { v: p.v, t: p.t };
+  }
   return best;
 }
 
@@ -71,7 +74,7 @@ export function describeToday(pc: PlaceCompare, now = new Date()): Sentence[] {
 
   // 1) 파도
   const w = latestPoint(obsWave);
-  const wavePeak = peak(fcWave);
+  const wavePeak = peak(fcWave, now);
   if (w?.v != null) {
     const station = obsWave?.source?.station_name;
     let text = `${hourText(w.t)} ${station ? `${station} ` : ''}관측 기준 파고는 ${f1(w.v)}m로 ${seaState(w.v)}이에요.`;
@@ -85,7 +88,7 @@ export function describeToday(pc: PlaceCompare, now = new Date()): Sentence[] {
 
   // 2) 바람
   const wd = latestPoint(obsWind);
-  const windPeak = peak(fcWind);
+  const windPeak = peak(fcWind, now);
   if (wd?.v != null) {
     const n = windName(wd.v);
     let text = `바람은 ${f1(wd.v)}m/s로 ${n.feel} ${n.name} 정도예요.`;
@@ -95,7 +98,7 @@ export function describeToday(pc: PlaceCompare, now = new Date()): Sentence[] {
     out.push({ key: 'wind', text });
   } else if (windPeak) {
     const n = windName(windPeak.v);
-    out.push({ key: 'wind', text: `오늘 예보로 바람은 가장 셀 때 ${f1(windPeak.v)}m/s, ${n.name} 정도예요.` });
+    out.push({ key: 'wind', text: `예보상 남은 시간 중 바람이 가장 셀 때는 ${hourText(windPeak.t)}쯤 ${f1(windPeak.v)}m/s, ${n.name} 정도예요.` });
   }
 
   // 3) 수온 (오늘 첫 관측과 비교)
@@ -123,32 +126,83 @@ export function describeToday(pc: PlaceCompare, now = new Date()): Sentence[] {
 
   // 5) 공식 바다낚시지수 (기관 발표값을 그대로 전달)
   if (period && period.items.length > 0) {
-    const items = period.items.filter((i) => i.index).map((i) => `${i.species} 「${i.index}」`);
-    if (items.length) {
+    // 같은 등급끼리 묶어 반복을 줄인다: 「매우나쁨」 농어·돌돔 / 「보통」 우럭
+    const byLevel = new Map<string, string[]>();
+    for (const i of period.items) if (i.index) byLevel.set(i.index, [...(byLevel.get(i.index) ?? []), i.species]);
+    if (byLevel.size) {
       const when = period.period === '일' ? '오늘' : `오늘 ${period.period}`;
-      out.push({ key: 'index', text: `국립해양조사원이 발표한 ${when} 바다낚시지수는 ${items.join(', ')}이에요.` });
+      const groups = [...byLevel.entries()].map(([lv, sp]) =>
+        sp.length === 1 ? `${sp[0]} 「${lv}」` : `「${lv}」 ${sp.join('·')}`,
+      );
+      out.push({ key: 'index', text: `국립해양조사원이 발표한 ${when} 바다낚시지수는 ${groups.join(', ')}이에요.` });
     }
   }
 
-  // 6) 거리 안내 (관측소가 멀면)
-  const far = [obsWave?.source, fcWave?.source].find((s) => s?.distance_km != null && s.distance_km >= 3);
-  if (far) out.push({ key: 'distance', text: `관측 지점이 약 ${Math.round(far.distance_km!)}km 떨어져 있어 실제 현장과는 다를 수 있어요.` });
+  // 6) 자료 지점 거리 (UX 검토 P0-5). 5km 넘는 지점은 모두 알린다 (물때 조위관측소 포함)
+  const tideSrc = findSeries(pc, 'tide_extreme', 'forecast')?.source;
+  const far = (
+    [
+      ['파도 관측 부이', obsWave?.source],
+      ['물때 기준 조위관측소', tideSrc],
+    ] as const
+  ).filter(([, src]) => src?.distance_km != null && src.distance_km > 5);
+  if (far.length) {
+    const list = far.map(([label, src]) => `${label} ${Math.round(src!.distance_km!)}km(${distanceGrade(src!.distance_km!)})`);
+    out.push({ key: 'distance', text: `자료 지점까지 거리: ${list.join(', ')}. 실제 현장과는 다를 수 있어요.` });
+  }
+  if (!obsWave?.source) {
+    out.push({ key: 'distance', text: '이 낚시터는 30km 안에 파도 관측 부이가 없어 실측 없이 예보만 보여드려요.' });
+  }
 
   if (out.length === 0) out.push({ key: 'none', text: '이 낚시터 주변에서 받을 수 있는 오늘 자료가 아직 없어요.' });
   return out;
 }
 
-/** 비교 화면용 한 줄 요약 */
-export function describeShort(pc: PlaceCompare): string {
-  const parts: string[] = [];
-  const wave = peak(findSeries(pc, 'wave_height', 'forecast')) ?? latestPoint(findSeries(pc, 'wave_height', 'observed'));
-  if (wave?.v != null) parts.push(`파고 최대 ${f1(wave.v)}m(${seaState(wave.v)})`);
-  const wind = peak(findSeries(pc, 'wind_speed', 'forecast')) ?? latestPoint(findSeries(pc, 'wind_speed', 'observed'));
-  if (wind?.v != null) parts.push(`바람 최대 ${f1(wind.v)}m/s(${windName(wind.v).name})`);
+/** 자료 지점 거리 등급 (UX 검토 §7) */
+export function distanceGrade(km: number): string {
+  if (km <= 5) return '인근';
+  if (km <= 15) return '참고';
+  return '먼 거리';
+}
+
+/**
+ * 두 장소에 공통으로 있는 자료 종류. 둘 다 예보가 있으면 예보, 둘 다 실측만 있으면 실측, 아니면 null.
+ * 비교 요약은 이 종류로만 만든다 — 예보와 실측을 나란히 놓지 않는다 (UX 검토 P0-3)
+ */
+export function commonKind(a: PlaceCompare, b: PlaceCompare, metric: 'wave_height' | 'wind_speed'): DataKind | null {
+  const has = (p: PlaceCompare, k: DataKind) => findSeries(p, metric, k)?.status === 'ok';
+  if (has(a, 'forecast') && has(b, 'forecast')) return 'forecast';
+  if (has(a, 'observed') && has(b, 'observed')) return 'observed';
+  return null;
+}
+
+function shortMetric(pc: PlaceCompare, metric: 'wave_height' | 'wind_speed', kind: DataKind | null): string | null {
+  const label = metric === 'wave_height' ? '파고' : '바람';
+  const unit = metric === 'wave_height' ? 'm' : 'm/s';
+  const name = (v: number) => (metric === 'wave_height' ? seaState(v) : windName(v).name);
+  if (kind === 'forecast') {
+    const p = peak(findSeries(pc, metric, 'forecast'));
+    return p ? `${label} 예보 최대 ${f1(p.v)}${unit}(${name(p.v)})` : `${label} 예보 없음`;
+  }
+  if (kind === 'observed') {
+    const p = latestPoint(findSeries(pc, metric, 'observed'));
+    return p?.v != null ? `${label} 실측 ${f1(p.v)}${unit}(${timeLabel(p.t)}, ${name(p.v)})` : `${label} 실측 없음`;
+  }
+  return `${label}: 두 곳에 같은 종류 자료가 없어 비교 생략`;
+}
+
+/** 비교 화면용 한 줄 요약. kinds 는 commonKind() 결과 — 두 장소가 같은 종류로 요약된다 */
+export function describeShort(
+  pc: PlaceCompare,
+  kinds: { wave: DataKind | null; wind: DataKind | null },
+): string {
+  const parts = [shortMetric(pc, 'wave_height', kinds.wave), shortMetric(pc, 'wind_speed', kinds.wind)].filter(
+    (x): x is string => !!x,
+  );
   const ext = findSeries(pc, 'tide_extreme', 'forecast')?.extremes;
   if (ext?.length) {
     const highs = ext.filter((e) => e.type === 'high').map((e) => timeLabel(e.t));
     if (highs.length) parts.push(`만조 ${highs.join('·')}`);
   }
-  return parts.length ? parts.join(', ') : '받을 수 있는 자료가 없어요';
+  return parts.join(', ');
 }

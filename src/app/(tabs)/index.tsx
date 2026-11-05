@@ -6,6 +6,8 @@ import { useConditions, useDateRange, usePlaces } from '@/api/queries';
 import type { Place, PlaceCompare } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { LEVEL_COLOR } from '@/components/compare-view';
+import { Button } from '@/components/form';
+import { MarineWarningBanner } from '@/components/marine-warning-banner';
 import { PlacePicker } from '@/components/place-picker';
 import { SearchBar } from '@/components/search-bar';
 import { Card, ErrorView, Loading, SectionHeader, TabScreen } from '@/components/screen';
@@ -17,25 +19,29 @@ import {
   currentIndexPeriod,
   dayLabel,
   findSeries,
+  KIND_TEXT,
   greeting,
   nextExtreme,
   rangeText,
   REASON_TEXT,
   timeLabel,
 } from '@/lib/compare';
-import { describeToday } from '@/lib/describe';
+import { describeToday, distanceGrade } from '@/lib/describe';
 import { matches, nearby, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
 import { useHomePlace } from '@/lib/prefs';
 
-// SCR-01 홈: 기준 낚시터의 오늘 조건 요약 + 공식 바다낚시지수 + 낚시터 선택
+// SCR-01 홈: 「선택한 낚시터 기준」 오늘 바다 — 특보 → 지금 바다 문장 → 자료 기준 → 지수 → 해황 → 가까운 낚시터
 export default function HomeScreen() {
   const places = usePlaces();
   const range = useDateRange();
-  const [homeId, setHomeId] = useHomePlace();
+  const theme = useTheme();
+  const [homeId, setHomeId, homeLoaded] = useHomePlace();
   const [picker, setPicker] = useState(false);
   const [query, setQuery] = useState('');
 
-  const place = places.data?.find((p) => p.id === homeId) ?? places.data?.[0] ?? null;
+  // 기준 낚시터가 없거나(첫 실행) 더 이상 지원하지 않는 장소면 임의로 고르지 않고 선택을 안내한다 (UX 검토 P0-2)
+  const place = places.data?.find((p) => p.id === homeId) ?? null;
+  const needsChoice = homeLoaded && places.isSuccess && place === null;
   const results = query.trim() ? (places.data ?? []).filter((p) => matches(p, query)).slice(0, 8) : [];
   const choose = (p: Place) => {
     setHomeId(p.id);
@@ -85,66 +91,123 @@ export default function HomeScreen() {
         </Card>
       ) : null}
 
-      <Card>
-        <View style={styles.between}>
-          <View style={styles.placeButton}>
-            <AppIcon name={place ? PLACE_IMAGE[place.type] : 'place-wharf'} size={26} />
-            <ThemedText type="sectionTitle" numberOfLines={1} style={styles.shrink}>
-              {place ? place.name : '낚시터를 검색하세요'}
-            </ThemedText>
+      {needsChoice ? (
+        <Card>
+          <ThemedText type="sectionTitle">어느 바다를 볼까요?</ThemedText>
+          <ThemedText themeColor="textSecondary">
+            위 검색창에 낚시터나 지역 이름을 입력하거나, 지역별 목록에서 골라 주세요. 고른 낚시터를 기준으로 오늘의
+            특보·파고·바람·물때를 보여드려요.
+          </ThemedText>
+          <Button label="지역별 목록에서 고르기" variant="secondary" onPress={() => setPicker(true)} />
+        </Card>
+      ) : null}
+
+      {place ? (
+        <Card>
+          <View style={styles.between}>
+            <View style={styles.placeButton}>
+              <AppIcon name={PLACE_IMAGE[place.type]} size={26} />
+              <ThemedText type="sectionTitle" numberOfLines={1} style={styles.shrink}>
+                {place.name}
+              </ThemedText>
+            </View>
+            {today ? (
+              <ThemedText type="small" themeColor="textSecondary">
+                오늘 {dayLabel(today)}
+              </ThemedText>
+            ) : null}
           </View>
-          {today ? (
-            <ThemedText type="small" themeColor="textSecondary">
-              오늘 {dayLabel(today)}
-            </ThemedText>
-          ) : null}
-        </View>
-        {place ? (
           <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
             {place.region_name} · {PLACE_TYPE_LABEL[place.type]}
             {place.address ? ` · ${place.address}` : ''}
           </ThemedText>
-        ) : null}
-        {places.isError && <ErrorView message={places.error.message} onRetry={() => places.refetch()} />}
-        {cond.isPending && place && <Loading />}
-        {cond.isError && <ErrorView message={cond.error.message} onRetry={() => cond.refetch()} />}
-        {pc && <SeaStory pc={pc} />}
-      </Card>
+          <View style={[styles.basisPill, { backgroundColor: theme.tintSoft }]}>
+            <ThemedText type="small" themeColor="tint" style={styles.bold}>
+              현재 위치가 아닌 「선택한 낚시터」 기준
+              {cond.data ? ` · ${timeLabel(cond.data.generated_at)} 조회` : ''}
+            </ThemedText>
+          </View>
+          {cond.isPending && <Loading />}
+          {cond.isError && <ErrorView message={cond.error.message} onRetry={() => cond.refetch()} />}
+          {pc && <MarineWarningBanner w={pc.warning} />}
+          {pc && <SeaStory pc={pc} />}
+          {pc && <DataBasis pc={pc} />}
+        </Card>
+      ) : null}
+      {places.isError && <ErrorView message={places.error.message} onRetry={() => places.refetch()} />}
 
-      <SectionHeader
-        image="fishing-index"
-        title="오늘의 바다낚시지수"
-        actionLabel="비교하기"
-        onAction={() => router.push({ pathname: '/compare', params: place ? { a: String(place.id) } : {} })}
-      />
-      {pc && <FishingIndexCard pc={pc} />}
+      {place ? (
+        <>
+          <SectionHeader
+            image="fishing-index"
+            title="오늘의 바다낚시지수"
+            actionLabel="비교하기"
+            onAction={() => router.push({ pathname: '/compare', params: place ? { a: String(place.id) } : {} })}
+          />
+          {pc && <FishingIndexCard pc={pc} />}
 
-      <SectionHeader image="wave" title="오늘의 주요 해황" />
-      {pc && <SeaTiles pc={pc} />}
+          <SectionHeader image="wave" title="오늘의 주요 해황" />
+          {pc && <SeaTiles pc={pc} />}
 
-      <SectionHeader image="place-wharf" title="가까운 낚시터" actionLabel="검색" onAction={() => setPicker(true)} />
-      {places.data && place && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.placeRow}>
-          {nearby(place, places.data, 10).map(({ place: p, km }) => (
-            <PlaceCard key={p.id} p={p} km={km} selected={p.id === place.id} onPress={() => setHomeId(p.id)} />
-          ))}
-        </ScrollView>
-      )}
+          <SectionHeader image="place-wharf" title="가까운 낚시터" actionLabel="검색" onAction={() => setPicker(true)} />
+          {places.data && place && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.placeRow}>
+              {nearby(place, places.data, 10).map(({ place: p, km }) => (
+                <PlaceCard key={p.id} p={p} km={km} selected={p.id === place.id} onPress={() => setHomeId(p.id)} />
+              ))}
+            </ScrollView>
+          )}
 
-      {cond.data && (
-        <ThemedText type="small" themeColor="textSecondary">
-          {cond.data.disclaimer}
-        </ThemedText>
-      )}
+          {cond.data && (
+            <ThemedText type="small" themeColor="textSecondary">
+              {cond.data.disclaimer}
+            </ThemedText>
+          )}
+        </>
+      ) : null}
 
       <PlacePicker
         visible={picker}
         title="기준 낚시터 선택"
         selectedId={place?.id}
-        onSelect={(p) => setHomeId(p.id)}
+        onSelect={(p) => choose(p)}
         onClose={() => setPicker(false)}
       />
     </TabScreen>
+  );
+}
+
+/** 자료 기준: 어떤 지점의 어떤 종류 자료를 언제 기준으로 쓰는지 (UX 검토 P0-5, 접이식) */
+function DataBasis({ pc }: { pc: PlaceCompare }) {
+  const [open, setOpen] = useState(false);
+  const rows = new Map<string, string>();
+  for (const s of pc.series) {
+    if (!s.source || s.status !== 'ok') continue;
+    const d = s.source.distance_km;
+    const dist = d != null ? `${d}km · ${distanceGrade(d)}` : '거리 확인 불가';
+    const when =
+      s.kind === 'observed' && s.issued_at
+        ? `${timeLabel(s.issued_at)} 관측`
+        : s.kind === 'forecast' && s.issued_at && s.source.agency === '기상청'
+          ? `${timeLabel(s.issued_at)} 발표`
+          : '';
+    const key = `${s.kind}|${s.source.dataset}|${s.source.station_name}`;
+    rows.set(key, `${KIND_TEXT[s.kind]} · ${s.source.dataset} · ${s.source.station_name} (${dist})${when ? ` · ${when}` : ''}`);
+  }
+  if (rows.size === 0) return null;
+  return (
+    <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={() => setOpen((v) => !v)}>
+      <ThemedText type="small" themeColor="tint" style={styles.bold}>
+        자료 기준 {open ? '▴' : '▾'}
+      </ThemedText>
+      {open
+        ? [...rows.values()].map((r) => (
+            <ThemedText key={r} type="small" themeColor="textSecondary">
+              • {r}
+            </ThemedText>
+          ))
+        : null}
+    </Pressable>
   );
 }
 
@@ -290,6 +353,8 @@ const styles = StyleSheet.create({
   between: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: Spacing.two },
   placeButton: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 },
   shrink: { flexShrink: 1 },
+  bold: { fontWeight: '700' },
+  basisPill: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2 },
   pressed: { opacity: 0.6 },
   results: { gap: 2, paddingVertical: Spacing.two },
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingVertical: 6 },

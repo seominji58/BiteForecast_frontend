@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
-import { useCreatePost, usePlaces, useSpecies } from '@/api/queries';
+import { useCreatePost, useSpecies } from '@/api/queries';
 import type { PostCategory } from '@/api/types';
 import { Button, Chip, ChipGroup, Field, TextField } from '@/components/form';
+import { PlaceField } from '@/components/place-field';
 import { StackScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
@@ -13,7 +14,6 @@ import { CATEGORY } from '@/lib/community';
 // 커뮤니티 글쓰기
 export default function NewPostScreen() {
   const create = useCreatePost();
-  const places = usePlaces();
   const species = useSpecies();
 
   const [category, setCategory] = useState<PostCategory>('catch');
@@ -65,16 +65,14 @@ export default function NewPostScreen() {
         </Field>
 
         <Field label="장소 (선택)">
-          <ChipGroup>
-            {places.data?.map((p) => (
-              <Chip
-                key={p.id}
-                label={p.name}
-                selected={placeId === p.id}
-                onPress={() => setPlaceId(placeId === p.id ? null : p.id)}
-              />
-            ))}
-          </ChipGroup>
+          <PlaceField value={placeId} onChange={setPlaceId} placeholder="어느 낚시터 이야기인가요?" />
+          {placeId != null ? (
+            <Pressable accessibilityRole="button" onPress={() => setPlaceId(null)} hitSlop={8}>
+              <ThemedText type="small" themeColor="textSecondary">
+                장소 태그 빼기
+              </ThemedText>
+            </Pressable>
+          ) : null}
         </Field>
 
         <Field label="어종 (선택)">

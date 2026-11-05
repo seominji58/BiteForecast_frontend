@@ -149,10 +149,24 @@ export type FishingIndex = {
     | null;
 };
 
+/** 기상청 해상 특보. level=unknown 이면 「특보 없음」으로 표시하지 않는다 */
+export type WarningMatch = { type: string; areas: string[]; when: string | null; severe: boolean };
+export type Warning = {
+  level: 'warning' | 'nearby' | 'preliminary' | 'none' | 'unknown';
+  reason: 'NO_DATA' | 'UNKNOWN_SEA' | null;
+  seas: string[];
+  active: WarningMatch[];
+  preliminary: WarningMatch[];
+  issued_at: string | null;
+  fetched_at: string | null;
+  source: string;
+};
+
 export type PlaceCompare = {
   place: Place;
   region_name: string;
   regulation: Regulation;
+  warning: Warning;
   fishing_index: FishingIndex;
   series: Series[];
 };

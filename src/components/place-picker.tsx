@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FlatList, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -13,6 +13,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { matches, PLACE_IMAGE, PLACE_TYPE_LABEL, sidoOf } from '@/lib/place';
+import { getRecentPlaceIds, pushRecentPlace } from '@/lib/prefs';
 
 type Props = {
   visible: boolean;
@@ -33,6 +34,27 @@ export function PlacePicker({ visible, title, selectedId, disabledId, onSelect, 
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
   const [sido, setSido] = useState<string | null>(null);
+  const [recentIds, setRecentIds] = useState<number[]>([]);
+
+  // 열릴 때마다 최근 선택 목록을 읽는다 (기기 저장)
+  useEffect(() => {
+    if (!visible) return;
+    let alive = true;
+    getRecentPlaceIds().then((ids) => alive && setRecentIds(ids));
+    return () => {
+      alive = false;
+    };
+  }, [visible]);
+
+  const recent = useMemo(
+    () => recentIds.map((id) => places.data?.find((p) => p.id === id)).filter((p): p is Place => !!p),
+    [recentIds, places.data],
+  );
+  const pick = (p: Place) => {
+    pushRecentPlace(p.id);
+    onSelect(p);
+    onClose();
+  };
 
   const sidos = useMemo(() => {
     const counts = new Map<string, number>();
@@ -84,10 +106,33 @@ export function PlacePicker({ visible, title, selectedId, disabledId, onSelect, 
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.list}
             initialNumToRender={20}
+            ListHeaderComponent={
+              !query.trim() && !sido && recent.length > 0 ? (
+                <View style={styles.recent}>
+                  <ThemedText type="smallBold" themeColor="textSecondary">
+                    최근 선택
+                  </ThemedText>
+                  <View style={styles.recentChips}>
+                    {recent.map((p) => (
+                      <Chip key={p.id} label={p.name} selected={p.id === selectedId} onPress={() => pick(p)} />
+                    ))}
+                  </View>
+                  <ThemedText type="smallBold" themeColor="textSecondary">
+                    전체
+                  </ThemedText>
+                </View>
+              ) : undefined
+            }
             ListEmptyComponent={
-              <ThemedText themeColor="textSecondary" style={styles.empty}>
-                검색 결과가 없습니다. 지원 지역이 아닐 수 있어요.
-              </ThemedText>
+              <View style={styles.emptyBox}>
+                <ThemedText themeColor="textSecondary" style={styles.empty}>
+                  「{query.trim()}」에 맞는 낚시터가 없어요.
+                </ThemedText>
+                <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
+                  지역명(예: 보령, 통영)으로 찾아보거나 위 시·도를 눌러 보세요.{'\n'}
+                  찾는 곳이 목록에 없다면 가장 가까운 곳을 고르고 메모에 실제 위치를 적어 주세요.
+                </ThemedText>
+              </View>
             }
             ListFooterComponent={
               <ThemedText type="small" themeColor="textSecondary" style={styles.footer}>
@@ -102,10 +147,7 @@ export function PlacePicker({ visible, title, selectedId, disabledId, onSelect, 
                   accessibilityRole="button"
                   accessibilityState={{ disabled, selected }}
                   disabled={disabled}
-                  onPress={() => {
-                    onSelect(p);
-                    onClose();
-                  }}
+                  onPress={() => pick(p)}
                   style={({ pressed }) => [
                     styles.row,
                     { borderColor: selected ? Brand.orange : theme.border, backgroundColor: theme.backgroundElement },
@@ -168,6 +210,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   thumb: { width: 52, height: 52, borderRadius: 10, backgroundColor: '#F3F6F9', alignItems: 'center', justifyContent: 'center' },
-  empty: { textAlign: 'center', padding: Spacing.four },
+  empty: { textAlign: 'center' },
+  emptyBox: { gap: Spacing.two, padding: Spacing.four },
+  recent: { gap: Spacing.two, paddingBottom: Spacing.one },
+  recentChips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   footer: { paddingTop: Spacing.three },
 });

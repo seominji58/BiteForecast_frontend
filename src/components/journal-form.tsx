@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { usePlaces, useSpecies } from '@/api/queries';
+import { useSpecies } from '@/api/queries';
 import type { Journal, JournalInput } from '@/api/types';
 import { DateTimeField } from '@/components/date-time-field';
 import { Button, Chip, ChipGroup, Field, TextField } from '@/components/form';
+import { PlaceField } from '@/components/place-field';
 import { Loading } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
@@ -17,14 +18,15 @@ type Props = {
   submitting: boolean;
   serverError?: string;
   onSubmit: (input: JournalInput) => void;
+  /** 새 일지일 때 미리 채울 장소 (홈 기준 낚시터) */
+  defaultPlaceId?: number | null;
 };
 
 /** 낚시일지 작성/수정 폼 (SCR-04, FR-08). 서버와 같은 기준으로 먼저 검증한다 */
-export function JournalForm({ initial, submitLabel, submitting, serverError, onSubmit }: Props) {
-  const places = usePlaces();
+export function JournalForm({ initial, submitLabel, submitting, serverError, onSubmit, defaultPlaceId }: Props) {
   const species = useSpecies();
 
-  const [placeId, setPlaceId] = useState<number | null>(initial?.place_id ?? null);
+  const [placeId, setPlaceId] = useState<number | null>(initial?.place_id ?? defaultPlaceId ?? null);
   const [fishedAt, setFishedAt] = useState(() => (initial ? new Date(initial.fished_at) : new Date()));
   const [speciesSel, setSpeciesSel] = useState<string | null>(
     initial?.species_code ?? (initial?.species_etc ? ETC : null),
@@ -47,22 +49,15 @@ export function JournalForm({ initial, submitLabel, submitting, serverError, onS
     onSubmit(result);
   };
 
-  if (places.isPending || species.isPending) return <Loading />;
+  if (species.isPending) return <Loading />;
 
   return (
     <View style={styles.form}>
       <Field label="장소" required>
-        {places.data?.length ? (
-          <ChipGroup>
-            {places.data.map((p) => (
-              <Chip key={p.id} label={p.name} selected={placeId === p.id} onPress={() => setPlaceId(p.id)} />
-            ))}
-          </ChipGroup>
-        ) : (
-          <ThemedText themeColor="textSecondary">
-            {places.isError ? places.error.message : '선택할 수 있는 장소가 없습니다.'}
-          </ThemedText>
-        )}
+        <PlaceField value={placeId} onChange={setPlaceId} placeholder="어디서 낚시했나요?" />
+        <ThemedText type="small" themeColor="textSecondary">
+          목록에 없는 곳이면 가장 가까운 낚시터를 고르고 메모에 실제 위치를 적어 주세요.
+        </ThemedText>
       </Field>
 
       <Field label="출조 일시" required>
