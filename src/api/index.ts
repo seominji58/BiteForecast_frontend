@@ -1,5 +1,7 @@
 import { request } from '@/api/client';
 import type {
+  CompareResult,
+  DateRange,
   Health,
   Journal,
   JournalInput,
@@ -30,6 +32,10 @@ export const api = {
   updateJournal: (id: number, input: JournalInput) =>
     request<JournalMutation>(`/journals/${id}`, { method: 'PUT', body: input, auth: true }),
   deleteJournal: (id: number) => request<JournalMutation>(`/journals/${id}`, { method: 'DELETE', auth: true }),
+
+  dateRange: () => request<DateRange>('/meta/date-range'),
+  compare: (placeA: number, placeB: number, date: string) =>
+    request<CompareResult>(`/compare?place_a=${placeA}&place_b=${placeB}&date=${date}`),
 
   myTitle: () => request<MyTitle>('/me/title', { auth: true }),
   myPoints: () => request<MyPoints>('/me/points', { auth: true }),

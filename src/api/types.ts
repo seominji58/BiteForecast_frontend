@@ -91,3 +91,56 @@ export type PointHistoryItem = {
 };
 
 export type MyPoints = { total_points: number; history: PointHistoryItem[] };
+
+// --- A/B 비교 (FR-02~05, FR-07) ---
+
+export type SeriesReason = 'NO_STATION' | 'NO_DATA' | 'FUTURE_DATE' | 'NOT_CONNECTED';
+export type RegulationStatus = 'PROHIBITED' | 'CONDITIONAL' | 'OFFICIALLY_OPEN' | 'UNVERIFIED';
+
+export type SeriesSource = {
+  agency: string;
+  dataset: string;
+  station_code: string;
+  station_name: string;
+  distance_km: number | null;
+};
+
+export type Series = {
+  metric: 'tide_extreme' | 'tide_level' | 'wave_height' | 'wind_speed' | 'water_temp';
+  unit: string;
+  kind: DataKind;
+  status: 'ok' | 'unavailable';
+  reason: SeriesReason | null;
+  source: SeriesSource | null;
+  issued_at: string | null;
+  fetched_at: string | null;
+  points: { t: string; v: number | null }[] | null;
+  extremes: { t: string; type: 'high' | 'low'; v: number | null }[] | null;
+};
+
+export type Regulation = {
+  status: RegulationStatus;
+  stale: boolean;
+  items: {
+    restriction_type: 'fishing' | 'access' | 'other';
+    status: RegulationStatus;
+    authority: string | null;
+    notice_no: string | null;
+    notice_url: string | null;
+    valid_from: string | null;
+    valid_to: string | null;
+    verified_at: string | null;
+  }[];
+};
+
+export type PlaceCompare = { place: Place; region_name: string; regulation: Regulation; series: Series[] };
+
+export type CompareResult = {
+  date: string;
+  timezone: string;
+  generated_at: string;
+  places: PlaceCompare[];
+  disclaimer: string;
+};
+
+export type DateRange = { today: string; min: string; max: string; timezone: string };

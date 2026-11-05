@@ -28,6 +28,17 @@ export const useJournals = () => useQuery({ queryKey: queryKeys.journals, queryF
 export const useJournal = (id: number) =>
   useQuery({ queryKey: queryKeys.journal(id), queryFn: () => api.journal(id), enabled: Number.isFinite(id) });
 
+export const useRegions = () => useQuery({ queryKey: ['regions'], queryFn: api.regions });
+
+export const useDateRange = () => useQuery({ queryKey: ['meta', 'date-range'], queryFn: api.dateRange });
+
+export const useCompare = (placeA: number, placeB: number, date: string) =>
+  useQuery({
+    queryKey: ['compare', placeA, placeB, date],
+    queryFn: () => api.compare(placeA, placeB, date),
+    enabled: Number.isFinite(placeA) && Number.isFinite(placeB) && !!date,
+  });
+
 export const useMyTitle = () => useQuery({ queryKey: queryKeys.myTitle, queryFn: api.myTitle });
 
 export const useMyPoints = () => useQuery({ queryKey: queryKeys.myPoints, queryFn: api.myPoints });
