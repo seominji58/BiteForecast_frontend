@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api } from '@/api';
-import type { JournalInput } from '@/api/types';
+import type { JournalInput, PostCategory, PostInput } from '@/api/types';
 
 // 화면에서 쓰는 조회/변경 훅. queryKey 는 캐시 무효화 기준이 되므로 여기서만 정의한다.
 export const queryKeys = {
@@ -73,4 +73,51 @@ export function useSaveJournal(id?: number) {
 export function useDeleteJournal(id: number) {
   const invalidate = useInvalidateJournalData();
   return useMutation({ mutationFn: () => api.deleteJournal(id), onSuccess: invalidate });
+}
+
+// --- 커뮤니티 ---
+
+export const usePosts = (category: PostCategory | null, sort: 'latest' | 'popular') =>
+  useQuery({ queryKey: ['community', 'posts', category, sort], queryFn: () => api.posts(category, sort) });
+
+export const usePost = (id: number) =>
+  useQuery({ queryKey: ['community', 'post', id], queryFn: () => api.post(id), enabled: Number.isFinite(id) });
+
+/** 글·댓글·좋아요가 바뀌면 목록과 상세를 함께 갱신 */
+function useInvalidateCommunity() {
+  const qc = useQueryClient();
+  return () => qc.invalidateQueries({ queryKey: ['community'] });
+}
+
+export function useCreatePost() {
+  const invalidate = useInvalidateCommunity();
+  return useMutation({ mutationFn: (input: PostInput) => api.createPost(input), onSuccess: invalidate });
+}
+
+export function useDeletePost() {
+  const invalidate = useInvalidateCommunity();
+  return useMutation({ mutationFn: (id: number) => api.deletePost(id), onSuccess: invalidate });
+}
+
+export function useAddComment(postId: number) {
+  const invalidate = useInvalidateCommunity();
+  return useMutation({ mutationFn: (body: string) => api.addComment(postId, body), onSuccess: invalidate });
+}
+
+export function useDeleteComment() {
+  const invalidate = useInvalidateCommunity();
+  return useMutation({ mutationFn: (id: number) => api.deleteComment(id), onSuccess: invalidate });
+}
+
+export function useSetLike(postId: number) {
+  const invalidate = useInvalidateCommunity();
+  return useMutation({ mutationFn: (liked: boolean) => api.setLike(postId, liked), onSuccess: invalidate });
+}
+
+export function useReport() {
+  const invalidate = useInvalidateCommunity();
+  return useMutation({
+    mutationFn: (v: { type: 'post' | 'comment'; id: number; reason: string }) => api.report(v.type, v.id, v.reason),
+    onSuccess: invalidate,
+  });
 }

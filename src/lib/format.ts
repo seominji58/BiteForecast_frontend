@@ -52,3 +52,14 @@ export function pointResultMessage(res: JournalMutation): string {
   lines.push(`총 ${res.total_points}P`);
   return lines.join('\n');
 }
+
+/** 「3시간 전」 같은 상대 시각 (7일 넘으면 날짜) */
+export function timeAgo(iso: string, now = new Date()): string {
+  const diff = (now.getTime() - new Date(iso).getTime()) / 1000;
+  if (diff < 60) return '방금 전';
+  if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
+  if (diff < 7 * 86400) return `${Math.floor(diff / 86400)}일 전`;
+  const d = new Date(iso);
+  return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
+}

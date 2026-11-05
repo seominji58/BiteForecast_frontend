@@ -173,3 +173,37 @@ export type PlaceConditions = {
 };
 
 export type DataSource = { agency: string; dataset: string; kind: DataKind; connected: boolean; note: string | null };
+
+// --- 커뮤니티 ---
+
+export type PostCategory = 'catch' | 'question' | 'tip';
+export type Author = { nickname: string; title: string };
+
+export type PostSummary = {
+  id: number;
+  category: PostCategory;
+  title: string;
+  excerpt: string;
+  author: Author;
+  place_name: string | null;
+  species_name: string | null;
+  like_count: number;
+  comment_count: number;
+  liked: boolean;
+  mine: boolean;
+  popular: boolean;
+  created_at: string;
+};
+
+export type PostComment = { id: number; body: string; author: Author; mine: boolean; created_at: string };
+export type PostDetail = PostSummary & { body: string; comments: PostComment[] };
+
+export type PostInput = {
+  category: PostCategory;
+  title: string;
+  body: string;
+  place_id: number | null;
+  species_code: string | null;
+};
+
+export type ReportResult = { status: 'received' | 'already_reported'; hidden: boolean };

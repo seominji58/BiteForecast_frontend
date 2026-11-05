@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, Brand, MaxContentWidth, Spacing } from '@/constants/theme';
+import { Brand, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
   },
-  tabContent: { paddingBottom: BottomTabInset + Spacing.three },
+  tabContent: { paddingBottom: Spacing.five },
   stackContent: { paddingBottom: Spacing.six },
   card: {
     padding: Spacing.three - 2,

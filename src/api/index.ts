@@ -11,6 +11,11 @@ import type {
   MyTitle,
   Place,
   PlaceConditions,
+  PostCategory,
+  PostDetail,
+  PostInput,
+  PostSummary,
+  ReportResult,
   Region,
   Species,
 } from '@/api/types';
@@ -41,6 +46,26 @@ export const api = {
     request<PlaceConditions>(`/places/${placeId}/conditions?date=${date}`),
   compare: (placeA: number, placeB: number, date: string) =>
     request<CompareResult>(`/compare?place_a=${placeA}&place_b=${placeB}&date=${date}`),
+
+  posts: (category: PostCategory | null, sort: 'latest' | 'popular') =>
+    request<PostSummary[]>(`/community/posts?sort=${sort}${category ? `&category=${category}` : ''}`, { auth: true }),
+  post: (id: number) => request<PostDetail>(`/community/posts/${id}`, { auth: true }),
+  createPost: (input: PostInput) => request<PostDetail>('/community/posts', { method: 'POST', body: input, auth: true }),
+  deletePost: (id: number) => request<void>(`/community/posts/${id}`, { method: 'DELETE', auth: true }),
+  addComment: (postId: number, body: string) =>
+    request<PostDetail>(`/community/posts/${postId}/comments`, { method: 'POST', body: { body }, auth: true }),
+  deleteComment: (id: number) => request<void>(`/community/comments/${id}`, { method: 'DELETE', auth: true }),
+  setLike: (postId: number, liked: boolean) =>
+    request<{ liked: boolean; like_count: number }>(`/community/posts/${postId}/like`, {
+      method: liked ? 'PUT' : 'DELETE',
+      auth: true,
+    }),
+  report: (targetType: 'post' | 'comment', targetId: number, reason: string) =>
+    request<ReportResult>('/community/reports', {
+      method: 'POST',
+      body: { target_type: targetType, target_id: targetId, reason },
+      auth: true,
+    }),
 
   myTitle: () => request<MyTitle>('/me/title', { auth: true }),
   myPoints: () => request<MyPoints>('/me/points', { auth: true }),
