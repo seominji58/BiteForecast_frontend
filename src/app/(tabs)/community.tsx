@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { usePosts } from '@/api/queries';
 import type { PostCategory } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
-import { Dropdown } from '@/components/dropdown';
+import { Dropdown, type DropdownOption } from '@/components/dropdown';
 import { PostCard } from '@/components/post-card';
 import { EmptyView, ErrorView, Loading, TabScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
@@ -16,9 +16,13 @@ import { CATEGORY } from '@/lib/community';
 type Sort = 'popular' | 'latest';
 type CatFilter = PostCategory | 'all';
 
-const FILTER_OPTIONS: { value: CatFilter; label: string }[] = [
-  { value: 'all', label: '전체 글' },
-  ...(Object.keys(CATEGORY) as PostCategory[]).map((k) => ({ value: k as CatFilter, label: CATEGORY[k].label })),
+const FILTER_OPTIONS: DropdownOption<CatFilter>[] = [
+  { value: 'all', label: '전체 글', icon: 'cat-all' },
+  ...(Object.keys(CATEGORY) as PostCategory[]).map((k) => ({
+    value: k as CatFilter,
+    label: CATEGORY[k].label,
+    icon: CATEGORY[k].icon,
+  })),
 ];
 
 // 커뮤니티 (재설계 v2 §7): [카테고리 ▾] [최신 · 인기] 한 줄 + 글 목록 + 글쓰기
@@ -88,7 +92,7 @@ export default function CommunityScreen() {
         accessibilityLabel="글쓰기"
         onPress={() => router.push('/community/new')}
         style={({ pressed }) => [styles.fab, { opacity: pressed ? 0.85 : 1 }]}>
-        <AppIcon name="write" size={22} badge />
+        <AppIcon name="comment" size={20} badge />
         <ThemedText type="smallBold" style={styles.fabText}>
           글쓰기
         </ThemedText>

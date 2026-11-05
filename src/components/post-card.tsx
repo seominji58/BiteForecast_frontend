@@ -7,7 +7,7 @@ import { usePhotoSource } from '@/api/upload';
 import { AppIcon } from '@/components/app-icon';
 import { Card } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
-import { Brand, Spacing } from '@/constants/theme';
+import { Brand, IconSize, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { CATEGORY } from '@/lib/community';
 import { timeAgo } from '@/lib/format';
@@ -76,6 +76,7 @@ export function PostCard({ p }: { p: PostSummary }) {
           </View>
         ) : null}
         <View style={[styles.pill, { backgroundColor: theme.tintSoft, borderColor: theme.tintSoft }]}>
+          <AppIcon name={cat.icon} size={IconSize.inline} />
           <ThemedText type="small" themeColor="tint" style={styles.badgeText}>
             {cat.label}
           </ThemedText>
@@ -132,7 +133,15 @@ const styles = StyleSheet.create({
   titleBadge: { borderRadius: 999, paddingHorizontal: 8 },
   badgeText: { fontSize: 11, lineHeight: 16, fontWeight: '700' },
   badges: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
-  pill: { borderRadius: 999, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 1 },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 1,
+  },
   hot: { backgroundColor: Brand.orange, borderColor: Brand.orange },
   hotText: { color: '#fff', fontSize: 11, lineHeight: 16, fontWeight: '700' },
   main: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },

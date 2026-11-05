@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppIcon } from '@/components/app-icon';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Brand, Layout } from '@/constants/theme';
+import type { AppIconName } from '@/constants/icons';
+import { Brand, IconSize, Layout } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-export type DropdownOption<V extends string> = { value: V; label: string; hint?: string };
+export type DropdownOption<V extends string> = { value: V; label: string; hint?: string; icon?: AppIconName };
 
 /**
  * 짧은 목록 선택 (재설계 v2 §2 Dropdown): 현재값 + ▾ 를 누르면 아래에서 작은 시트가 올라온다.
@@ -45,7 +47,8 @@ export function Dropdown<V extends string>({
           compact ? styles.compact : styles.field,
           { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected, opacity: pressed ? 0.8 : 1 },
         ]}>
-        <ThemedText type={compact ? 'smallBold' : 'default'} numberOfLines={1} style={styles.shrink}>
+        {current?.icon ? <AppIcon name={current.icon} size={compact ? IconSize.inline + 2 : IconSize.row} /> : null}
+        <ThemedText type={compact ? 'smallBold' : 'default'} numberOfLines={1} style={[styles.shrink, !compact && styles.flex]}>
           {current?.label ?? '선택'}
         </ThemedText>
         <ThemedText type="small" themeColor="tint">
@@ -81,7 +84,8 @@ export function Dropdown<V extends string>({
                     { borderColor: on ? Brand.orange : theme.border },
                     pressed && styles.pressed,
                   ]}>
-                  <ThemedText type={on ? 'smallBold' : 'default'} style={styles.shrink}>
+                  {o.icon ? <AppIcon name={o.icon} size={IconSize.row} /> : null}
+                  <ThemedText type={on ? 'smallBold' : 'default'} style={[styles.shrink, styles.flex]}>
                     {o.label}
                   </ThemedText>
                   {o.hint ? (
@@ -106,6 +110,7 @@ export function Dropdown<V extends string>({
 
 const styles = StyleSheet.create({
   shrink: { flexShrink: 1 },
+  flex: { flex: 1 },
   pressed: { opacity: 0.6 },
   field: {
     flexDirection: 'row',

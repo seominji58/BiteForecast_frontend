@@ -2,6 +2,9 @@ import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { Journal, JournalInput } from '@/api/types';
+import { AppIcon } from '@/components/app-icon';
+import { UiIcon } from '@/components/ui-icon';
+import { IconSize } from '@/constants/theme';
 import { DateTimeField } from '@/components/date-time-field';
 import { Button, Field, TextField } from '@/components/form';
 import { PhotoPicker, usePhotoUploads } from '@/components/photo-picker';
@@ -58,7 +61,7 @@ export function JournalForm({ initial, submitLabel, submitting, serverError, onS
 
   return (
     <View style={styles.form}>
-      <Section title="언제, 어디서">
+      <Section title="언제, 어디서" icon={<AppIcon name="trips" size={IconSize.row} />}>
         <Field label="장소" required>
           <PlaceField value={placeId} onChange={setPlaceId} placeholder="어디서 낚시했나요?" />
         </Field>
@@ -67,7 +70,7 @@ export function JournalForm({ initial, submitLabel, submitting, serverError, onS
         </Field>
       </Section>
 
-      <Section title="조과">
+      <Section title="조과" icon={<AppIcon name="total-fish" size={IconSize.row} />}>
         <Field label="어종">
           <SpeciesField value={species} onChange={setSpecies} />
         </Field>
@@ -91,7 +94,7 @@ export function JournalForm({ initial, submitLabel, submitting, serverError, onS
         </View>
       </Section>
 
-      <Section title="사진 (인증용, 최대 4장)">
+      <Section title="사진 (인증용, 최대 4장)" icon={<UiIcon name="photo" size={IconSize.row} />}>
         <PhotoPicker state={photos} />
         <ThemedText type="small" themeColor="textSecondary">
           물고기와 계측(자·줄자)이 보이면 검토가 빨라요. 위치 정보는 지우고 저장하며, 사진은 나만 볼 수 있어요(인증 후
@@ -105,7 +108,12 @@ export function JournalForm({ initial, submitLabel, submitting, serverError, onS
           accessibilityState={{ expanded: moreOpen }}
           onPress={() => setMoreOpen((v) => !v)}
           style={styles.between}>
-          <ThemedText type="smallBold">미끼·채비·메모 (선택)</ThemedText>
+          <View style={styles.sectionHead}>
+            <AppIcon name="write" size={IconSize.row} />
+            <ThemedText type="smallBold" themeColor="textSecondary">
+              미끼·채비·메모 (선택)
+            </ThemedText>
+          </View>
           <ThemedText type="small" themeColor="tint">
             {moreOpen ? '접기 ▴' : '펼치기 ▾'}
           </ThemedText>
@@ -177,12 +185,15 @@ export function JournalForm({ initial, submitLabel, submitting, serverError, onS
   );
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function Section({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) {
   return (
     <Card style={styles.section}>
-      <ThemedText type="smallBold" themeColor="textSecondary">
-        {title}
-      </ThemedText>
+      <View style={styles.sectionHead}>
+        {icon}
+        <ThemedText type="smallBold" themeColor="textSecondary">
+          {title}
+        </ThemedText>
+      </View>
       {children}
     </Card>
   );
@@ -235,6 +246,7 @@ export function buildInput(r: Raw): JournalInput | string {
 const styles = StyleSheet.create({
   form: { gap: 12 },
   section: { gap: 10 },
+  sectionHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   row: { flexDirection: 'row', gap: 8 },
   flex: { flex: 1 },
   between: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

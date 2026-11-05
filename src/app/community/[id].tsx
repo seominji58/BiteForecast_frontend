@@ -71,6 +71,7 @@ export default function PostScreen() {
       <Card>
         <View style={styles.badges}>
           {p.verified ? <VerifiedBadge /> : null}
+          <AppIcon name={CATEGORY[p.category].icon} size={16} />
           <ThemedText type="small" themeColor="tint" style={styles.bold}>
             {CATEGORY[p.category].label}
           </ThemedText>

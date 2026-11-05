@@ -9,8 +9,9 @@ import { PlacePicker } from '@/components/place-picker';
 import { Card, TabScreen } from '@/components/screen';
 import { SearchBar } from '@/components/search-bar';
 import { ThemedText } from '@/components/themed-text';
+import { UiIcon } from '@/components/ui-icon';
 import type { AppIconName } from '@/constants/icons';
-import { Brand } from '@/constants/theme';
+import { Brand, IconSize } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { WARNING_SHORT } from '@/lib/criteria';
 import { matches, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
@@ -66,7 +67,7 @@ export default function HomeScreen() {
                 accessibilityRole="button"
                 onPress={() => openPlace(p)}
                 style={({ pressed }) => [styles.resultRow, pressed && styles.pressed]}>
-                <AppIcon name={PLACE_IMAGE[p.type]} size={26} />
+                <AppIcon name={PLACE_IMAGE[p.type]} size={IconSize.row} />
                 <View style={styles.flex}>
                   <ThemedText type="smallBold" numberOfLines={1}>
                     {p.name}
@@ -83,13 +84,19 @@ export default function HomeScreen() {
       ) : null}
 
       <View style={styles.tiles}>
+        {/* 제공 아이콘 세트에 GPS·지도 그림이 없어 보조 아이콘 사용 */}
         <Tile
-          icon="◎"
+          icon={<UiIcon name="gps" size={IconSize.tile} />}
           title="내 주변 찾기"
           sub="현재 위치 기준"
           onPress={() => router.push({ pathname: '/explore', params: { near: '1' } })}
         />
-        <Tile icon="▦" title="지도로 찾기" sub="지역별 탐색" onPress={() => router.push('/explore')} />
+        <Tile
+          icon={<UiIcon name="map" size={IconSize.tile} />}
+          title="지도로 찾기"
+          sub="지역별 탐색"
+          onPress={() => router.push('/explore')}
+        />
       </View>
 
       <ThemedText type="sectionTitle">어떤 정보가 궁금하세요?</ThemedText>
@@ -108,8 +115,7 @@ export default function HomeScreen() {
         }
       />
       <MenuRow
-        image="tab-compare"
-        tint={theme.tint}
+        image="fact"
         title="두 낚시터 비교하기"
         sub="같은 날 조건을 나란히 비교"
         onPress={() => router.push(home ? { pathname: '/compare', params: { a: String(home.id) } } : '/compare')}
@@ -121,6 +127,7 @@ export default function HomeScreen() {
           accessibilityRole="button"
           onPress={() => router.push({ pathname: '/place/[id]', params: { id: String(home.id) } })}
           style={({ pressed }) => [styles.recent, { borderColor: theme.border }, pressed && styles.pressed]}>
+          <AppIcon name={PLACE_IMAGE[home.type]} size={IconSize.row} />
           <ThemedText type="small" themeColor="textSecondary">
             최근 본 곳
           </ThemedText>
@@ -151,7 +158,7 @@ export default function HomeScreen() {
   );
 }
 
-function Tile({ icon, title, sub, onPress }: { icon: string; title: string; sub: string; onPress: () => void }) {
+function Tile({ icon, title, sub, onPress }: { icon: ReactNode; title: string; sub: string; onPress: () => void }) {
   const theme = useTheme();
   return (
     <Pressable
@@ -163,9 +170,7 @@ function Tile({ icon, title, sub, onPress }: { icon: string; title: string; sub:
         { backgroundColor: theme.backgroundElement, borderColor: theme.border },
         pressed && styles.pressed,
       ]}>
-      <ThemedText style={styles.tileIcon} themeColor="tint">
-        {icon}
-      </ThemedText>
+      <View style={[styles.tileIcon, { backgroundColor: theme.tintSoft }]}>{icon}</View>
       <ThemedText type="smallBold">{title}</ThemedText>
       <ThemedText type="small" themeColor="textSecondary">
         {sub}
@@ -176,13 +181,11 @@ function Tile({ icon, title, sub, onPress }: { icon: string; title: string; sub:
 
 function MenuRow({
   image,
-  tint,
   title,
   sub,
   onPress,
 }: {
   image: AppIconName;
-  tint?: string;
   title: string;
   sub: string;
   onPress: () => void;
@@ -197,7 +200,9 @@ function MenuRow({
         { backgroundColor: theme.backgroundElement, borderColor: theme.border },
         pressed && styles.pressed,
       ]}>
-      <AppIcon name={image} size={26} tint={tint} />
+      <View style={styles.menuIcon}>
+        <AppIcon name={image} size={IconSize.menu} />
+      </View>
       <View style={styles.flex}>
         <ThemedText type="smallBold">{title}</ThemedText>
         <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
@@ -219,7 +224,8 @@ const styles = StyleSheet.create({
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
   tiles: { flexDirection: 'row', gap: 12 },
   tile: { flex: 1, alignItems: 'center', gap: 2, borderWidth: 1, borderRadius: 12, paddingVertical: 16 },
-  tileIcon: { fontSize: 22, lineHeight: 28 },
-  menu: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 12, padding: 14 },
+  tileIcon: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  menu: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 12, padding: 12 },
+  menuIcon: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   recent: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, padding: 12 },
 });

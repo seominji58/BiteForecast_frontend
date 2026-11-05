@@ -103,6 +103,14 @@ export const Spacing = {
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 
 /** 레이아웃 토큰 (재설계 v2 §2): 모든 화면이 같은 간격·카드 규격을 쓴다 */
+/** 아이콘 크기 4단계 (모든 화면 공통) */
+export const IconSize = {
+  inline: 16, // 글자 옆
+  row: 24, // 목록 행·입력 칸
+  menu: 28, // 메뉴 행 (40×40 칸 가운데)
+  tile: 32, // 큰 타일
+} as const;
+
 export const Layout = {
   appBarHeight: 52,
   screenPadding: 16,

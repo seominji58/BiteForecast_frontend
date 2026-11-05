@@ -6,6 +6,8 @@ import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-nat
 import type { Photo } from '@/api/types';
 import { type PhotoPurpose, uploadPhoto, usePhotoSource } from '@/api/upload';
 import { ThemedText } from '@/components/themed-text';
+import { UiIcon } from '@/components/ui-icon';
+import { IconSize } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export const MAX_PHOTOS = 4;
@@ -153,9 +155,7 @@ export function PhotoPicker({ state, disabled }: { state: PhotoUploads; disabled
             styles.add,
             { borderColor: theme.tint, opacity: disabled ? 0.4 : pressed ? 0.7 : 1 },
           ]}>
-          <ThemedText style={styles.plus} themeColor="tint">
-            ＋
-          </ThemedText>
+          <UiIcon name="photo" size={IconSize.row} />
           <ThemedText type="small" themeColor="tint">
             {state.items.length}/{MAX_PHOTOS}
           </ThemedText>
@@ -196,5 +196,4 @@ const styles = StyleSheet.create({
   },
   removeText: { color: '#fff', fontSize: 11, lineHeight: 14 },
   add: { borderStyle: 'dashed', borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
-  plus: { fontSize: 24, lineHeight: 28 },
 });

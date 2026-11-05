@@ -10,7 +10,8 @@ import { Button, Chip } from '@/components/form';
 import { Card, ErrorView } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Brand, Layout } from '@/constants/theme';
+import { UiIcon } from '@/components/ui-icon';
+import { Brand, IconSize, Layout } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { timeLabel } from '@/lib/compare';
 import {
@@ -177,9 +178,12 @@ export default function ExploreScreen() {
             {gps.loading ? (
               <ActivityIndicator color={theme.tint} />
             ) : (
-              <ThemedText type="smallBold" themeColor="tint">
-                ◎ 내 위치로
-              </ThemedText>
+              <View style={styles.between}>
+                <UiIcon name="gps" size={IconSize.inline} />
+                <ThemedText type="smallBold" themeColor="tint">
+                  내 위치로
+                </ThemedText>
+              </View>
             )}
           </Pressable>
         </View>
@@ -333,7 +337,7 @@ function PlaceRow({
         { borderColor: selected ? Brand.orange : theme.border, backgroundColor: theme.backgroundElement },
         pressed && styles.pressed,
       ]}>
-      <AppIcon name={PLACE_IMAGE[place.type]} size={28} />
+      <AppIcon name={PLACE_IMAGE[place.type]} size={IconSize.menu} />
       <View style={styles.flex}>
         <View style={styles.between}>
           <ThemedText type="smallBold" numberOfLines={1} style={styles.flex}>
