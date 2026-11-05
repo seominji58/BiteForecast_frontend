@@ -23,7 +23,7 @@ export const METRIC_LABEL: Record<Metric, string> = {
 export const POINT_REASON_LABEL: Record<PointReason, string> = {
   JOURNAL_CREATED: '일지 작성',
   DETAIL_FILLED: '어종·크기 기록',
-  PHOTO_ATTACHED: '사진 첨부',
+  PHOTO_ATTACHED: '사진 첨부 (폐지된 규칙)',
   FIRST_PLACE: '첫 장소 기록',
   PERSONAL_BEST: '개인 최대어 갱신',
 };
@@ -43,9 +43,11 @@ export function formatEnvKind(s: EnvSnapshot): string | null {
 /** 저장/삭제 결과 안내 문구 (포인트 증감 + 칭호 변경) */
 export function pointResultMessage(res: JournalMutation): string {
   const lines: string[] = [];
+  const v = res.journal?.verification.status;
+  if (v === 'pending') lines.push('인증 검토를 신청했어요. 관리자가 사진을 확인해 승인하면 포인트가 지급돼요.');
+  else if (v === 'none') lines.push('개인 기록으로 저장했어요. 사진 인증을 받으면 포인트가 지급돼요.');
   if (res.point_delta > 0) lines.push(`+${res.point_delta}P 획득`);
-  else if (res.point_delta < 0) lines.push(`${res.point_delta}P (기록 변경으로 회수)`);
-  else lines.push('포인트 변동 없음');
+  else if (res.point_delta < 0) lines.push(`${res.point_delta}P (인증 내용 변경·삭제로 회수)`);
 
   if (res.title_changed) lines.push(`칭호가 「${res.title.current.name}」(으)로 바뀌었습니다.`);
   if (res.title.next) lines.push(`「${res.title.next.name}」까지 ${res.title.points_to_next}P`);

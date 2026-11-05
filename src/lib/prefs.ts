@@ -20,6 +20,7 @@ const HOME_PLACE = 'biteforecast.home_place_id';
 
 const RECENT_MAX = 5;
 export const RECENT_PLACES = 'biteforecast.recent_place_ids';
+export const RECENT_SPECIES = 'biteforecast.recent_species_codes';
 
 /** 최근 선택 목록 (기기 저장, 최신 순). 장소·어종 등 선택 시트가 공통으로 쓴다 */
 export async function getRecent(key: string): Promise<string[]> {

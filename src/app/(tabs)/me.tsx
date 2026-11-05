@@ -10,6 +10,7 @@ import type { AppIconName } from '@/constants/icons';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { formatDateTime, POINT_REASON_LABEL } from '@/lib/format';
+import { VERIFY_LABEL } from '@/lib/verification';
 
 // SCR-06 내정보: 칭호·포인트(FR-11, 12) + 기록 요약(FR-13) + 설정 진입(SCR-07)
 export default function MeScreen() {
@@ -19,6 +20,9 @@ export default function MeScreen() {
   return (
     <TabScreen title="내정보">
       <ProfileCard titleName={title.data?.current.name} journals={journals.data} />
+
+      <SectionHeader title="사진 인증 현황" actionLabel="기록 보기" onAction={() => router.push('/records')} />
+      {journals.isSuccess ? <VerificationSummary journals={journals.data} /> : null}
 
       <SectionHeader title="칭호" />
       {title.isPending && <Loading />}
@@ -139,11 +143,62 @@ function TitleProgress({ t }: { t: NonNullable<ReturnType<typeof useMyTitle>['da
   );
 }
 
+/** 인증 대기·완료·반려 개수와 처리할 기록 (반려 사유 포함) */
+function VerificationSummary({ journals }: { journals: Journal[] }) {
+  const count = (s: Journal['verification']['status']) => journals.filter((j) => j.verification.status === s).length;
+  const attention = journals.filter((j) => j.verification.status === 'rejected' || j.verification.status === 'pending');
+  const cells: [Journal['verification']['status'], number][] = [
+    ['pending', count('pending')],
+    ['approved', count('approved')],
+    ['rejected', count('rejected')],
+  ];
+  return (
+    <Card>
+      <View style={styles.vRow}>
+        {cells.map(([s, n]) => (
+          <View key={s} style={styles.vCell}>
+            <ThemedText type="value" themeColor={n > 0 ? VERIFY_LABEL[s].color : 'textSecondary'}>
+              {n}
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {s === 'pending' ? '검토 중' : s === 'approved' ? '인증 완료' : '반려'}
+            </ThemedText>
+          </View>
+        ))}
+      </View>
+      {attention.slice(0, 3).map((j) => (
+        <Pressable
+          key={j.id}
+          accessibilityRole="button"
+          onPress={() => router.push({ pathname: '/journal/[id]', params: { id: String(j.id) } })}
+          style={({ pressed }) => [styles.between, pressed && styles.pressed]}>
+          <View style={styles.flex}>
+            <ThemedText type="smallBold" numberOfLines={1}>
+              {j.place_name} · {j.species_name ?? '어종 미기록'}
+            </ThemedText>
+            <ThemedText type="small" themeColor={VERIFY_LABEL[j.verification.status].color} numberOfLines={1}>
+              {j.verification.status === 'rejected'
+                ? `반려: ${j.verification.reject_reason ?? '사유 없음'}`
+                : '관리자 검토 중'}
+            </ThemedText>
+          </View>
+          <ThemedText themeColor="textSecondary">›</ThemedText>
+        </Pressable>
+      ))}
+      <ThemedText type="small" themeColor="textSecondary">
+        포인트는 관리자가 사진을 확인해 인증을 완료한 기록에만 지급돼요. 같은 기록은 한 번만 지급되고, 반려되거나 인증
+        내용을 고치면 회수돼요.
+      </ThemedText>
+    </Card>
+  );
+}
+
 function PointHistory() {
   const points = useMyPoints();
   if (points.isPending) return <Loading />;
   if (points.isError) return <ErrorView message={points.error.message} onRetry={() => points.refetch()} />;
-  if (points.data.history.length === 0) return <EmptyView message="낚시일지를 작성하면 포인트가 쌓입니다." />;
+  if (points.data.history.length === 0)
+    return <EmptyView message="아직 포인트가 없어요. 사진 인증이 완료된 기록부터 포인트가 쌓여요." />;
   return (
     <Card>
       {points.data.history.slice(0, 15).map((h) => (
@@ -152,7 +207,7 @@ function PointHistory() {
             <ThemedText>{POINT_REASON_LABEL[h.reason]}</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
               {formatDateTime(h.created_at)}
-              {h.delta < 0 ? ' · 기록 변경으로 회수' : ''}
+              {h.delta < 0 ? ' · 반려·수정·삭제로 회수' : ''}
             </ThemedText>
           </View>
           <ThemedText type="smallBold" themeColor={h.delta < 0 ? 'danger' : 'success'}>
@@ -192,4 +247,6 @@ const styles = StyleSheet.create({
   track: { height: 10, borderRadius: 5, overflow: 'hidden' },
   bar: { height: '100%' },
   menuRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  vRow: { flexDirection: 'row' },
+  vCell: { flex: 1, alignItems: 'center' },
 });

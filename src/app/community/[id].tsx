@@ -1,18 +1,21 @@
+import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { useAddComment, useDeleteComment, useDeletePost, usePost, useSetLike } from '@/api/queries';
 import type { PostComment } from '@/api/types';
+import { usePhotoSource } from '@/api/upload';
 import { AppIcon } from '@/components/app-icon';
 import { Button, TextField } from '@/components/form';
-import { AuthorLine, Tag } from '@/components/post-card';
+import { AuthorLine, Tag, VerifiedBadge } from '@/components/post-card';
 import { ReportSheet } from '@/components/report-sheet';
 import { Card, ErrorView, Loading, StackScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { CATEGORY } from '@/lib/community';
+import { formatDateTime } from '@/lib/format';
 
 // 커뮤니티 글 상세: 본문, 좋아요, 댓글, 신고, 내 글 삭제
 export default function PostScreen() {
@@ -24,6 +27,7 @@ export default function PostScreen() {
   const deletePost = useDeletePost();
   const deleteComment = useDeleteComment();
   const theme = useTheme();
+  const source = usePhotoSource();
 
   const [comment, setComment] = useState('');
   const [reportTarget, setReportTarget] = useState<{ type: 'post' | 'comment'; id: number } | null>(null);
@@ -65,9 +69,12 @@ export default function PostScreen() {
   return (
     <StackScreen>
       <Card>
-        <ThemedText type="small" themeColor="tint" style={styles.bold}>
-          {CATEGORY[p.category].label}
-        </ThemedText>
+        <View style={styles.badges}>
+          {p.verified ? <VerifiedBadge /> : null}
+          <ThemedText type="small" themeColor="tint" style={styles.bold}>
+            {CATEGORY[p.category].label}
+          </ThemedText>
+        </View>
         <ThemedText type="sectionTitle">{p.title}</ThemedText>
         <AuthorLine
           author={p.author}
@@ -90,7 +97,31 @@ export default function PostScreen() {
             )
           }
         />
+        {p.catch ? (
+          <View style={[styles.catch, { backgroundColor: theme.background }]}>
+            <ThemedText type="smallBold">
+              {p.catch.species_name ?? '어종 미기록'}
+              {p.catch.count != null ? ` · ${p.catch.count}마리` : ''}
+              {p.catch.max_length_cm != null ? ` · 최대 ${p.catch.max_length_cm}cm` : ''}
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {formatDateTime(p.catch.fished_at)} · 관리자가 사진을 확인한 기록이에요
+            </ThemedText>
+          </View>
+        ) : null}
         <ThemedText style={styles.body}>{p.body}</ThemedText>
+        {p.photos.map((ph) => {
+          const src = source(ph);
+          return src ? (
+            <Image
+              key={ph.id}
+              source={src}
+              style={[styles.photo, { aspectRatio: ph.width / ph.height }]}
+              contentFit="cover"
+              accessibilityLabel="첨부 사진"
+            />
+          ) : null;
+        })}
         {p.place_name || p.species_name ? (
           <View style={styles.tags}>
             {p.place_name ? <Tag icon="map-marker" text={p.place_name} /> : null}
@@ -155,6 +186,9 @@ const styles = StyleSheet.create({
   bold: { fontWeight: '700' },
   dim: { opacity: 0.45 },
   body: { marginVertical: Spacing.two },
+  badges: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  catch: { borderRadius: 10, padding: 10, gap: 2 },
+  photo: { width: '100%', borderRadius: 10 },
   tags: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   like: {
     flexDirection: 'row',

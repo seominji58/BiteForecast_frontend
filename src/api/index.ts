@@ -39,6 +39,8 @@ export const api = {
   updateJournal: (id: number, input: JournalInput) =>
     request<JournalMutation>(`/journals/${id}`, { method: 'PUT', body: input, auth: true }),
   deleteJournal: (id: number) => request<JournalMutation>(`/journals/${id}`, { method: 'DELETE', auth: true }),
+  requestVerification: (id: number) => request<Journal>(`/journals/${id}/verification`, { method: 'POST', auth: true }),
+  cancelVerification: (id: number) => request<Journal>(`/journals/${id}/verification`, { method: 'DELETE', auth: true }),
 
   dateRange: () => request<DateRange>('/meta/date-range'),
   sources: () => request<DataSource[]>('/meta/sources'),

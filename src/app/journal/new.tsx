@@ -34,7 +34,9 @@ export default function NewJournalScreen() {
           save.mutate(input, {
             onSuccess: (res) => {
               Alert.alert('저장했습니다', pointResultMessage(res));
-              router.back();
+              // 저장한 기록 상세로 (인증 상태·공유를 바로 볼 수 있게)
+              if (res.journal) router.replace({ pathname: '/journal/[id]', params: { id: String(res.journal.id) } });
+              else router.back();
             },
           })
         }

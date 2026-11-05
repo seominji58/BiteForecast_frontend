@@ -57,9 +57,31 @@ export type Journal = {
   rig: string | null;
   memo: string | null;
   photo_count: number;
+  photos: Photo[];
+  verification: Verification;
+  /** 이 기록을 공유한 커뮤니티 글 */
+  shared_post_id: number | null;
   created_at: string;
   updated_at: string;
   env_snapshots: EnvSnapshot[];
+};
+
+/** 서버에 저장된 사진 (EXIF·위치 제거본). url 은 API 주소 기준 상대 경로 */
+export type Photo = { id: number; url: string; width: number; height: number };
+
+export type VerificationStatus = 'none' | 'pending' | 'approved' | 'rejected';
+
+/** 사진 인증 상태 (포인트는 approved 일 때만) */
+export type Verification = {
+  status: VerificationStatus;
+  requested_at: string | null;
+  reviewed_at: string | null;
+  reject_reason: string | null;
+  /** 이 기록으로 현재 받은 포인트 */
+  points: number;
+  can_request: boolean;
+  /** 신청에 빠진 조건 (예: 「사진 1장 이상」) */
+  missing: string[];
 };
 
 export type JournalInput = {
@@ -73,6 +95,10 @@ export type JournalInput = {
   bait: string | null;
   rig: string | null;
   memo: string | null;
+  /** 업로드한 사진 ID (순서 = 표시 순서). 생략하면 사진 변경 없음 */
+  photo_ids?: number[];
+  /** 저장과 함께 인증 신청 */
+  request_verification?: boolean;
 };
 
 export type JournalMutation = {
@@ -210,10 +236,25 @@ export type PostSummary = {
   mine: boolean;
   popular: boolean;
   created_at: string;
+  /** 인증 완료 기록을 공유한 글 (「인증 조황」) */
+  verified: boolean;
+  photo_count: number;
+  thumb: Photo | null;
 };
 
 export type PostComment = { id: number; body: string; author: Author; mine: boolean; created_at: string };
-export type PostDetail = PostSummary & { body: string; comments: PostComment[] };
+export type PostCatch = {
+  fished_at: string;
+  species_name: string | null;
+  count: number | null;
+  max_length_cm: number | null;
+};
+export type PostDetail = PostSummary & {
+  body: string;
+  comments: PostComment[];
+  photos: Photo[];
+  catch: PostCatch | null;
+};
 
 export type PostInput = {
   category: PostCategory;
@@ -221,6 +262,10 @@ export type PostInput = {
   body: string;
   place_id: number | null;
   species_code: string | null;
+  species_etc: string | null;
+  photo_ids: number[];
+  /** 인증 완료된 내 기록 공유 */
+  journal_id?: number | null;
 };
 
 export type ReportResult = { status: 'received' | 'already_reported'; hidden: boolean };
