@@ -115,7 +115,7 @@ function Row({ icon, label, children, last }: { icon: IconName; label: string; c
   return (
     <View style={[styles.row, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: theme.border }]}>
       <View style={styles.label}>
-        <MaterialCommunityIcons name={icon} size={20} color={Brand.onNavy} />
+        <MaterialCommunityIcons name={icon} size={16} color={Brand.onNavy} />
         <ThemedText type="small" style={styles.labelText}>
           {label}
         </ThemedText>
@@ -336,9 +336,9 @@ function SourceList({ places }: { places: PlaceCompare[] }) {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   tableCard: { padding: 0, gap: 0, overflow: 'hidden' },
-  row: { flexDirection: 'row', alignItems: 'stretch', minHeight: 56 },
+  row: { flexDirection: 'row', alignItems: 'stretch', minHeight: 46 },
   label: {
-    width: 78,
+    width: 68,
     backgroundColor: Brand.navy,
     alignItems: 'center',
     justifyContent: 'center',
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
   pillText: { fontWeight: '700', fontSize: 12, lineHeight: 18 },
   kindLine: { flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' },
   fact: { flexDirection: 'row', borderRadius: 16, overflow: 'hidden', alignItems: 'stretch' },
-  factLabel: { width: 78, alignItems: 'center', justifyContent: 'center', gap: 2, paddingVertical: Spacing.two },
+  factLabel: { width: 68, alignItems: 'center', justifyContent: 'center', gap: 2, paddingVertical: Spacing.two },
   toggle: {
     flexDirection: 'row',
     justifyContent: 'center',

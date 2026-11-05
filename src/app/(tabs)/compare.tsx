@@ -103,7 +103,7 @@ function Slot({ label, place, onPress }: { label: string; place: Place | null; o
       <LinearGradient colors={[Brand.teal, Brand.navy]} style={styles.slotArt}>
         <MaterialCommunityIcons
           name={place ? PLACE_ICON[place.type] : 'plus-circle-outline'}
-          size={32}
+          size={26}
           color="rgba(255,255,255,0.9)"
         />
         <ThemedText type="smallBold" style={styles.slotLabel}>
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   days: { gap: Spacing.two, paddingRight: Spacing.three },
   slots: { flexDirection: 'row', alignItems: 'center' },
   slot: { flex: 1, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
-  slotArt: { height: 84, alignItems: 'center', justifyContent: 'center' },
+  slotArt: { height: 64, alignItems: 'center', justifyContent: 'center' },
   slotLabel: { position: 'absolute', top: 6, left: 10, color: Brand.onNavy },
   slotInfo: { padding: Spacing.two, gap: 2 },
   vs: {

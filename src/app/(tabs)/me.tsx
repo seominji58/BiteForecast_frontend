@@ -55,7 +55,7 @@ function ProfileCard({ titleName, journals }: { titleName?: string; journals?: J
     <View style={styles.profile}>
       <View style={styles.profileTop}>
         <View style={styles.avatar}>
-          <MaterialCommunityIcons name="account-circle" size={64} color={Brand.onNavySecondary} />
+          <MaterialCommunityIcons name="account-circle" size={52} color={Brand.onNavySecondary} />
         </View>
         <View style={styles.flex}>
           <ThemedText type="sectionTitle" style={styles.onNavy}>
@@ -119,7 +119,7 @@ function TitleProgress({ t }: { t: NonNullable<ReturnType<typeof useMyTitle>['da
     <Card>
       <View style={styles.between}>
         <View style={styles.inline}>
-          <MaterialCommunityIcons name="medal" size={28} color={Brand.orange} />
+          <MaterialCommunityIcons name="medal" size={22} color={Brand.orange} />
           <ThemedText type="value">{t.current.name}</ThemedText>
         </View>
         <ThemedText type="smallBold" themeColor="tint">
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   between: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: Spacing.two },
   profile: { backgroundColor: Brand.navy, borderRadius: 20, padding: Spacing.three, gap: Spacing.three },
   profileTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
-  avatar: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.08)' },
+  avatar: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.08)' },
   onNavy: { color: Brand.onNavy },
   onNavySecondary: { color: Brand.onNavySecondary },
   badge: {

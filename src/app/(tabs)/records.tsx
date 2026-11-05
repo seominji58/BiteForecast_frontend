@@ -52,7 +52,7 @@ function JournalRow({ journal: j }: { journal: Journal }) {
       <Pressable accessibilityRole="button" style={({ pressed }) => pressed && styles.pressed}>
         <Card style={styles.row}>
           <LinearGradient colors={[Brand.teal, Brand.navy]} style={styles.art}>
-            <MaterialCommunityIcons name="fish" size={30} color="rgba(255,255,255,0.9)" />
+            <MaterialCommunityIcons name="fish" size={24} color="rgba(255,255,255,0.9)" />
           </LinearGradient>
           <View style={styles.main}>
             <View style={styles.inline}>
@@ -101,7 +101,7 @@ function EnvLine({ icon, label, value }: { icon: 'waves-arrow-up' | 'weather-win
 const styles = StyleSheet.create({
   pressed: { opacity: 0.8 },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, padding: Spacing.two + 2 },
-  art: { width: 64, height: 64, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  art: { width: 52, height: 52, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   main: { flex: 1, gap: 3 },
   inline: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   catch: {

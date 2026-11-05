@@ -22,49 +22,48 @@ import { useTheme } from '@/hooks/use-theme';
 export type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
 
 /**
- * 탭 화면 공통 레이아웃: 상단 그라데이션 배너(로고·제목·설정) + 배너에 살짝 겹치는 카드 영역.
+ * 탭 화면 공통 레이아웃: 위에 고정된 짧은 그라데이션 헤더(로고·제목·설정) + 아래 내용만 스크롤.
  * 사진 대신 그라데이션·아이콘을 쓴다 (이미지 저작권).
  */
-export function TabScreen({
-  title,
-  subtitle,
-  children,
-  heroExtra,
-}: {
-  title: string;
-  subtitle?: string;
-  children: ReactNode;
-  heroExtra?: ReactNode;
-}) {
+export function TabScreen({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
   const insets = useSafeAreaInsets();
   return (
     <ThemedView style={styles.flex}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <LinearGradient colors={Brand.hero} locations={[0, 0.45, 0.8, 1]} style={{ paddingTop: insets.top + Spacing.two }}>
-          <View style={styles.heroInner}>
-            <View style={styles.heroTop}>
-              <View style={styles.logo} accessibilityRole="header" accessibilityLabel="입질예보">
-                <MaterialCommunityIcons name="fish" size={30} color={Brand.onNavy} />
-                <Text style={styles.logoText} allowFontScaling>
-                  입질예보
-                </Text>
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="설정"
-                hitSlop={12}
-                onPress={() => router.push('/settings')}>
-                <MaterialCommunityIcons name="cog-outline" size={26} color={Brand.onNavy} />
-              </Pressable>
+      <LinearGradient
+        colors={Brand.hero}
+        locations={[0, 0.45, 0.8, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ paddingTop: insets.top + Spacing.one }}>
+        <View style={styles.heroInner}>
+          <View style={styles.heroTop}>
+            <View style={styles.logo} accessibilityLabel="입질예보">
+              <MaterialCommunityIcons name="fish" size={20} color={Brand.onNavy} />
+              <Text style={styles.logoText}>입질예보</Text>
             </View>
-            <Text style={styles.heroTitle}>{title}</Text>
-            {subtitle ? <Text style={styles.heroSubtitle}>{subtitle}</Text> : null}
-            {heroExtra}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="설정"
+              hitSlop={12}
+              onPress={() => router.push('/settings')}>
+              <MaterialCommunityIcons name="cog-outline" size={22} color={Brand.onNavy} />
+            </Pressable>
           </View>
-          {/* 수평선 느낌의 얇은 빛 */}
-          <View style={styles.horizon} />
-        </LinearGradient>
-        <View style={styles.content}>{children}</View>
+          <Text style={styles.heroTitle} accessibilityRole="header">
+            {title}
+          </Text>
+          {subtitle ? (
+            <Text style={styles.heroSubtitle} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
+      </LinearGradient>
+      <ScrollView
+        contentContainerStyle={[styles.content, styles.tabContent]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}>
+        {children}
       </ScrollView>
     </ThemedView>
   );
@@ -110,7 +109,7 @@ export function SectionHeader({
     <View style={styles.sectionHeader}>
       <View>
         <View style={styles.sectionTitleRow}>
-          <MaterialCommunityIcons name={icon} size={22} color={theme.tint} />
+          <MaterialCommunityIcons name={icon} size={18} color={theme.tint} />
           <ThemedText type="sectionTitle" accessibilityRole="header">
             {title}
           </ThemedText>
@@ -166,33 +165,31 @@ export function EmptyView({ message }: { message: string }) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  scroll: { paddingBottom: BottomTabInset + Spacing.four },
   heroInner: {
-    paddingHorizontal: Spacing.three + 4,
-    paddingBottom: Spacing.five + Spacing.three,
-    gap: Spacing.one,
+    paddingHorizontal: Spacing.three,
+    paddingBottom: Spacing.three,
+    gap: 2,
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
   },
-  heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.three },
-  logo: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  logoText: { color: Brand.onNavy, fontSize: 26, fontWeight: '800', letterSpacing: -0.5 },
-  heroTitle: { color: Brand.onNavy, fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
-  heroSubtitle: { color: Brand.onNavySecondary, fontSize: 15, lineHeight: 21 },
-  horizon: { height: 2, backgroundColor: 'rgba(255, 214, 160, 0.35)' },
+  heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.two },
+  logo: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  logoText: { color: Brand.onNavy, fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
+  heroTitle: { color: Brand.onNavy, fontSize: 21, fontWeight: '800', letterSpacing: -0.4 },
+  heroSubtitle: { color: Brand.onNavySecondary, fontSize: 13, lineHeight: 18 },
   content: {
     padding: Spacing.three,
     gap: Spacing.three,
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
-    marginTop: -Spacing.five,
   },
-  stackContent: { marginTop: 0, paddingBottom: Spacing.six },
+  tabContent: { paddingBottom: BottomTabInset + Spacing.three },
+  stackContent: { paddingBottom: Spacing.six },
   card: {
-    padding: Spacing.three,
-    borderRadius: 18,
+    padding: Spacing.three - 2,
+    borderRadius: 16,
     gap: Spacing.two,
     borderWidth: StyleSheet.hairlineWidth,
     shadowColor: '#0A1F36',
@@ -203,7 +200,7 @@ const styles = StyleSheet.create({
   },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  underline: { height: 3, width: 44, borderRadius: 2, marginTop: Spacing.one, marginLeft: 2 },
+  underline: { height: 2, width: 32, borderRadius: 1, marginTop: 3, marginLeft: 2 },
   sectionAction: { flexDirection: 'row', alignItems: 'center' },
   center: { padding: Spacing.four, alignItems: 'center' },
   button: {

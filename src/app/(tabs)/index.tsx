@@ -27,7 +27,7 @@ import {
 import { PLACE_ICON } from '@/lib/place';
 import { useHomePlace } from '@/lib/prefs';
 
-// SCR-01 홈: 기준 낚시터의 오늘 조건 요약 + 공식 바다낚시지수 + 빠른 메뉴
+// SCR-01 홈: 기준 낚시터의 오늘 조건 요약 + 공식 바다낚시지수 + 낚시터 선택
 export default function HomeScreen() {
   const places = usePlaces();
   const range = useDateRange();
@@ -48,9 +48,9 @@ export default function HomeScreen() {
             accessibilityLabel="기준 낚시터 변경"
             onPress={() => setPicker(true)}
             style={styles.placeButton}>
-            <MaterialCommunityIcons name="map-marker" size={22} color={Brand.orange} />
+            <MaterialCommunityIcons name="map-marker" size={18} color={Brand.orange} />
             <ThemedText type="sectionTitle">{place ? `${pc?.region_name ?? ''} ${place.name}`.trim() : '낚시터 선택'}</ThemedText>
-            <MaterialCommunityIcons name="chevron-down" size={22} />
+            <MaterialCommunityIcons name="chevron-down" size={18} />
           </Pressable>
           {today ? (
             <ThemedText type="small" themeColor="textSecondary">
@@ -83,14 +83,6 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
       )}
-
-      <SectionHeader icon="lightning-bolt" title="빠른 메뉴" />
-      <View style={styles.grid}>
-        <MenuButton icon="scale-balance" title="조건 비교" desc="두 낚시터 나란히" onPress={() => router.push('/compare')} />
-        <MenuButton icon="pencil-plus" title="일지 작성" desc="조과·당시 조건 기록" onPress={() => router.push('/journal/new')} />
-        <MenuButton icon="notebook-outline" title="내 기록" desc="출조 기록 모아보기" onPress={() => router.push('/records')} />
-        <MenuButton icon="trophy-outline" title="칭호·포인트" desc="활동 포인트 확인" onPress={() => router.push('/me')} />
-      </View>
 
       {cond.data && (
         <ThemedText type="small" themeColor="textSecondary">
@@ -165,7 +157,7 @@ function FishingIndexCard({ pc }: { pc: PlaceCompare }) {
   return (
     <View style={[styles.indexCard, { borderColor: theme.border, backgroundColor: theme.backgroundElement }]}>
       <View style={[styles.indexBadge, { backgroundColor: Brand.teal }]}>
-        <MaterialCommunityIcons name="fish" size={30} color={Brand.onNavy} />
+        <MaterialCommunityIcons name="fish" size={24} color={Brand.onNavy} />
         <ThemedText type="small" style={styles.onNavy}>
           {period.period === '일' ? '하루' : period.period}
         </ThemedText>
@@ -240,7 +232,7 @@ function PlaceCard({ p, selected, onPress }: { p: Place; selected: boolean; onPr
       onPress={onPress}
       style={[styles.placeCard, { borderColor: selected ? Brand.orange : theme.border, backgroundColor: theme.backgroundElement }]}>
       <LinearGradient colors={[Brand.teal, Brand.navy]} style={styles.placeArt}>
-        <MaterialCommunityIcons name={PLACE_ICON[p.type]} size={34} color="rgba(255,255,255,0.9)" />
+        <MaterialCommunityIcons name={PLACE_ICON[p.type]} size={28} color="rgba(255,255,255,0.9)" />
         {selected ? <MaterialCommunityIcons name="star" size={18} color={Brand.orange} style={styles.star} /> : null}
       </LinearGradient>
       <View style={styles.placeInfo}>
@@ -253,44 +245,22 @@ function PlaceCard({ p, selected, onPress }: { p: Place; selected: boolean; onPr
   );
 }
 
-function MenuButton({ icon, title, desc, onPress }: { icon: IconName; title: string; desc: string; onPress: () => void }) {
-  const theme = useTheme();
-  return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.tileWrap, pressed && styles.pressed]}>
-      <Card style={styles.menu}>
-        <MaterialCommunityIcons name={icon} size={28} color={theme.tint} />
-        <View style={styles.flex}>
-          <ThemedText type="smallBold">{title}</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {desc}
-          </ThemedText>
-        </View>
-        <MaterialCommunityIcons name="chevron-right" size={20} color={theme.textSecondary} />
-      </Card>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  pressed: { opacity: 0.8 },
   between: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: Spacing.two },
   placeButton: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 },
   stats: { flexDirection: 'row', gap: Spacing.two, marginTop: Spacing.two },
   stat: { flex: 1, gap: 2 },
   statLabel: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   indexCard: { flexDirection: 'row', borderRadius: 18, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth },
-  indexBadge: { width: 96, alignItems: 'center', justifyContent: 'center', gap: 2, padding: Spacing.two },
+  indexBadge: { width: 80, alignItems: 'center', justifyContent: 'center', gap: 2, padding: Spacing.two },
   indexBody: { flex: 1, padding: Spacing.three, gap: 4 },
   onNavy: { color: Brand.onNavy, fontWeight: '700' },
   onNavySecondary: { color: Brand.onNavySecondary },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   tile: { width: '48.5%', flexGrow: 1, gap: 4 },
-  tileWrap: { width: '48.5%', flexGrow: 1 },
-  menu: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   placeRow: { gap: Spacing.two, paddingRight: Spacing.three },
-  placeCard: { width: 140, borderRadius: 16, borderWidth: 2, overflow: 'hidden' },
-  placeArt: { height: 76, alignItems: 'center', justifyContent: 'center' },
+  placeCard: { width: 120, borderRadius: 16, borderWidth: 2, overflow: 'hidden' },
+  placeArt: { height: 64, alignItems: 'center', justifyContent: 'center' },
   star: { position: 'absolute', top: 6, right: 8 },
   placeInfo: { padding: Spacing.two, gap: 2 },
 });
