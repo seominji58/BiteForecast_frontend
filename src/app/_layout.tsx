@@ -25,6 +25,8 @@ export default function RootLayout() {
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <Stack screenOptions={{ headerBackButtonDisplayMode: 'minimal' }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="journal/new" options={{ title: '낚시일지 작성' }} />
+          <Stack.Screen name="journal/[id]" options={{ title: '낚시일지' }} />
         </Stack>
       </ThemeProvider>
     </QueryClientProvider>

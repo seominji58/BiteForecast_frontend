@@ -7,7 +7,7 @@ import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-/** 탭 화면 공통 레이아웃 */
+/** 탭 화면 공통 레이아웃 (큰 제목 포함) */
 export function Screen({ title, children }: { title: string; children: ReactNode }) {
   return (
     <ThemedView style={styles.flex}>
@@ -19,6 +19,20 @@ export function Screen({ title, children }: { title: string; children: ReactNode
           {children}
         </ScrollView>
       </SafeAreaView>
+    </ThemedView>
+  );
+}
+
+/** Stack 으로 이동한 화면용 (제목은 네비게이션 헤더가 표시) */
+export function StackScreen({ children }: { children: ReactNode }) {
+  return (
+    <ThemedView style={styles.flex}>
+      <ScrollView
+        contentContainerStyle={[styles.content, styles.stackContent]}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets>
+        {children}
+      </ScrollView>
     </ThemedView>
   );
 }
@@ -76,6 +90,7 @@ const styles = StyleSheet.create({
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
   },
+  stackContent: { paddingBottom: Spacing.six },
   card: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two },
   center: { padding: Spacing.four, alignItems: 'center' },
   button: {

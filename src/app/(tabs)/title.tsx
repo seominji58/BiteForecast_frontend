@@ -1,18 +1,55 @@
 import { StyleSheet, View } from 'react-native';
 
-import { useMyTitle } from '@/api/queries';
-import { Card, ErrorView, Loading, Screen } from '@/components/screen';
+import { useMyPoints, useMyTitle } from '@/api/queries';
+import { Card, EmptyView, ErrorView, Loading, Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { formatDateTime, POINT_REASON_LABEL } from '@/lib/format';
 
-// SCR-06 활동·칭호 (FR-11, FR-12) — TODO: 포인트 내역
+// SCR-06 활동·칭호 (FR-11, FR-12)
 export default function TitleScreen() {
+  return (
+    <Screen title="칭호">
+      <TitleCard />
+      <ThemedText type="smallBold">포인트 내역</ThemedText>
+      <PointHistory />
+    </Screen>
+  );
+}
+
+function PointHistory() {
+  const points = useMyPoints();
+  if (points.isPending) return <Loading />;
+  if (points.isError) return <ErrorView message={points.error.message} onRetry={() => points.refetch()} />;
+  if (points.data.history.length === 0) return <EmptyView message="낚시일지를 작성하면 포인트가 쌓입니다." />;
+
+  return (
+    <Card>
+      {points.data.history.map((h) => (
+        <View key={h.id} style={styles.historyRow}>
+          <View style={styles.flex}>
+            <ThemedText>{POINT_REASON_LABEL[h.reason]}</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {formatDateTime(h.created_at)}
+              {h.delta < 0 ? ' · 기록 변경으로 회수' : ''}
+            </ThemedText>
+          </View>
+          <ThemedText type="smallBold" themeColor={h.delta < 0 ? 'danger' : 'success'}>
+            {h.delta > 0 ? `+${h.delta}` : h.delta}P
+          </ThemedText>
+        </View>
+      ))}
+    </Card>
+  );
+}
+
+function TitleCard() {
   const theme = useTheme();
   const title = useMyTitle();
 
   return (
-    <Screen title="칭호">
+    <>
       {title.isPending && <Loading />}
       {title.isError && <ErrorView message={title.error.message} onRetry={() => title.refetch()} />}
       {title.isSuccess && (
@@ -50,7 +87,7 @@ export default function TitleScreen() {
           )}
         </Card>
       )}
-    </Screen>
+    </>
   );
 }
 
@@ -61,4 +98,6 @@ function progress(total: number, from: number, to: number) {
 const styles = StyleSheet.create({
   track: { height: 8, borderRadius: 4, overflow: 'hidden', marginTop: Spacing.two },
   bar: { height: '100%' },
+  historyRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.one },
+  flex: { flex: 1 },
 });
