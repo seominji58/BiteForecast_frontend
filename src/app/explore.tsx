@@ -10,7 +10,6 @@ import { Button, Chip } from '@/components/form';
 import { Card, ErrorView } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { UiIcon } from '@/components/ui-icon';
 import { Brand, IconSize, Layout } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { timeLabel } from '@/lib/compare';
@@ -179,7 +178,7 @@ export default function ExploreScreen() {
               <ActivityIndicator color={theme.tint} />
             ) : (
               <View style={styles.between}>
-                <UiIcon name="gps" size={IconSize.inline} />
+                <AppIcon name="find-gps" size={IconSize.inline + 2} />
                 <ThemedText type="smallBold" themeColor="tint">
                   내 위치로
                 </ThemedText>

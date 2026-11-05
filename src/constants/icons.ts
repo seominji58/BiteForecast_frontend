@@ -10,6 +10,12 @@ export const ICONS = {
   'cat-tip': require('@/assets/icons/cat-tip.png'),
   'comment': require('@/assets/icons/comment.png'),
   'fact': require('@/assets/icons/fact.png'),
+  // 홈 「낚시터 찾기」 세트 (2026-11-05 추가: 내 주변·지도·조건·해황·비교)
+  'find-compare': require('@/assets/icons/find-compare.png'),
+  'find-criteria': require('@/assets/icons/find-criteria.png'),
+  'find-gps': require('@/assets/icons/find-gps.png'),
+  'find-map': require('@/assets/icons/find-map.png'),
+  'find-sea': require('@/assets/icons/find-sea.png'),
   'fishing-index': require('@/assets/icons/fishing-index.png'),
   'like': require('@/assets/icons/like.png'),
   'medal': require('@/assets/icons/medal.png'),

@@ -9,7 +9,6 @@ import { PlacePicker } from '@/components/place-picker';
 import { Card, TabScreen } from '@/components/screen';
 import { SearchBar } from '@/components/search-bar';
 import { ThemedText } from '@/components/themed-text';
-import { UiIcon } from '@/components/ui-icon';
 import type { AppIconName } from '@/constants/icons';
 import { Brand, IconSize } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -84,15 +83,14 @@ export default function HomeScreen() {
       ) : null}
 
       <View style={styles.tiles}>
-        {/* 제공 아이콘 세트에 GPS·지도 그림이 없어 보조 아이콘 사용 */}
         <Tile
-          icon={<UiIcon name="gps" size={IconSize.tile} />}
+          icon={<AppIcon name="find-gps" size={IconSize.tile} />}
           title="내 주변 찾기"
           sub="현재 위치 기준"
           onPress={() => router.push({ pathname: '/explore', params: { near: '1' } })}
         />
         <Tile
-          icon={<UiIcon name="map" size={IconSize.tile} />}
+          icon={<AppIcon name="find-map" size={IconSize.tile} />}
           title="지도로 찾기"
           sub="지역별 탐색"
           onPress={() => router.push('/explore')}
@@ -101,13 +99,13 @@ export default function HomeScreen() {
 
       <ThemedText type="sectionTitle">어떤 정보가 궁금하세요?</ThemedText>
       <MenuRow
-        image="fishing-index"
+        image="find-criteria"
         title="내 조건에 맞는 곳 찾기"
         sub="특보·파고·바람 기준과 공식 낚시지수로 거르기"
         onPress={() => router.push({ pathname: '/explore', params: { mode: 'criteria' } })}
       />
       <MenuRow
-        image="wave"
+        image="find-sea"
         title="선택한 낚시터 해황 보기"
         sub={home ? `${home.name} · 물때·파고·풍속·수온 상세` : '물때·파고·풍속·수온 상세'}
         onPress={() =>
@@ -115,7 +113,7 @@ export default function HomeScreen() {
         }
       />
       <MenuRow
-        image="fact"
+        image="find-compare"
         title="두 낚시터 비교하기"
         sub="같은 날 조건을 나란히 비교"
         onPress={() => router.push(home ? { pathname: '/compare', params: { a: String(home.id) } } : '/compare')}
