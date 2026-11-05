@@ -35,6 +35,7 @@ export default function RootLayout() {
           <Stack.Screen name="journal/new" options={{ title: '낚시일지 작성' }} />
           <Stack.Screen name="journal/[id]" options={{ title: '낚시일지' }} />
           <Stack.Screen name="settings" options={{ title: '설정·정보' }} />
+          <Stack.Screen name="place/[id]" options={{ title: '상세 해황' }} />
           <Stack.Screen name="community/new" options={{ title: '글쓰기' }} />
           <Stack.Screen name="community/[id]" options={{ title: '커뮤니티' }} />
         </Stack>

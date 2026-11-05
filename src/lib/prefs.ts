@@ -18,24 +18,26 @@ async function write(key: string, value: string): Promise<void> {
 
 const HOME_PLACE = 'biteforecast.home_place_id';
 
-const RECENT = 'biteforecast.recent_place_ids';
 const RECENT_MAX = 5;
+export const RECENT_PLACES = 'biteforecast.recent_place_ids';
 
-/** 최근 선택한 낚시터 (기기 저장, 최대 5곳, 최신 순) */
-export async function getRecentPlaceIds(): Promise<number[]> {
+/** 최근 선택 목록 (기기 저장, 최신 순). 장소·어종 등 선택 시트가 공통으로 쓴다 */
+export async function getRecent(key: string): Promise<string[]> {
   try {
-    const v = await read(RECENT);
-    const ids = v ? JSON.parse(v) : [];
-    return Array.isArray(ids) ? ids.filter((x) => typeof x === 'number') : [];
+    const v = await read(key);
+    const list = v ? JSON.parse(v) : [];
+    return Array.isArray(list) ? list.map(String) : [];
   } catch {
     return [];
   }
 }
 
-export async function pushRecentPlace(id: number): Promise<void> {
-  const ids = await getRecentPlaceIds();
-  await write(RECENT, JSON.stringify([id, ...ids.filter((x) => x !== id)].slice(0, RECENT_MAX))).catch(() => undefined);
+export async function pushRecent(key: string, value: string, max = RECENT_MAX): Promise<void> {
+  const list = await getRecent(key);
+  await write(key, JSON.stringify([value, ...list.filter((x) => x !== value)].slice(0, max))).catch(() => undefined);
 }
+
+export const pushRecentPlace = (id: number) => pushRecent(RECENT_PLACES, String(id));
 
 /** 홈 화면 기준 낚시터. 저장된 값이 없으면 null → 홈에서 첫 실행 선택 화면을 보여준다 */
 export function useHomePlace(): [number | null, (id: number) => void, boolean] {

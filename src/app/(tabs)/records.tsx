@@ -16,10 +16,10 @@ export default function RecordsScreen() {
   const journals = useJournals();
 
   return (
-    <TabScreen title="낚시 기록" subtitle="출조 기록과 당시 바다 조건을 함께 남겨보세요.">
+    <TabScreen title="낚시 기록">
       <Button label="기록 작성하기" icon="write" onPress={() => router.push('/journal/new')} />
 
-      <SectionHeader image="cat-catch" title={`최근 낚시기록${journals.data ? ` (${journals.data.length})` : ''}`} />
+      <SectionHeader title={`최근 낚시기록${journals.data ? ` (${journals.data.length})` : ''}`} />
       {journals.isPending && <Loading />}
       {journals.isError && <ErrorView message={journals.error.message} onRetry={() => journals.refetch()} />}
       {journals.isSuccess &&

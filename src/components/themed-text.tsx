@@ -26,18 +26,18 @@ export function ThemedText({ style, type = 'default', themeColor, ...rest }: The
 
 const styles = StyleSheet.create({
   small: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 17,
     fontWeight: 500,
   },
   smallBold: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 17,
     fontWeight: 700,
   },
   default: {
-    fontSize: 15,
-    lineHeight: 21,
+    fontSize: 14,
+    lineHeight: 20,
     fontWeight: 500,
   },
   title: {
@@ -57,8 +57,8 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   value: {
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: 22,
+    lineHeight: 28,
     fontWeight: 800,
     letterSpacing: -0.3,
   },

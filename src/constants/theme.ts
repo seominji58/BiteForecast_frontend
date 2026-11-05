@@ -101,4 +101,13 @@ export const Spacing = {
 } as const;
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
+
+/** 레이아웃 토큰 (재설계 v2 §2): 모든 화면이 같은 간격·카드 규격을 쓴다 */
+export const Layout = {
+  appBarHeight: 52,
+  screenPadding: 16,
+  gap: 12,
+  cardPadding: 12,
+  cardRadius: 12,
+} as const;
 export const MaxContentWidth = 800;

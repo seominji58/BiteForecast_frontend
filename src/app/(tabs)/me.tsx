@@ -17,15 +17,15 @@ export default function MeScreen() {
   const journals = useJournals();
 
   return (
-    <TabScreen title="내정보" subtitle="나의 낚시 기록과 활약을 한눈에!">
+    <TabScreen title="내정보">
       <ProfileCard titleName={title.data?.current.name} journals={journals.data} />
 
-      <SectionHeader image="medal" title="칭호" />
+      <SectionHeader title="칭호" />
       {title.isPending && <Loading />}
       {title.isError && <ErrorView message={title.error.message} onRetry={() => title.refetch()} />}
       {title.isSuccess && <TitleProgress t={title.data} />}
 
-      <SectionHeader image="trophy" title="포인트 내역" />
+      <SectionHeader title="포인트 내역" />
       <PointHistory />
 
       <Pressable accessibilityRole="button" onPress={() => router.push('/settings')} style={({ pressed }) => pressed && styles.pressed}>

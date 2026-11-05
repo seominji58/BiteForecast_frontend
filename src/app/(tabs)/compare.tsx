@@ -34,7 +34,7 @@ export default function CompareTab() {
   const q = useCompare(a?.id ?? NaN, b?.id ?? NaN, selectedDay);
 
   return (
-    <TabScreen title="조건 비교" subtitle="두 낚시터의 바다 조건을 한눈에 비교하세요.">
+    <TabScreen title="조건 비교">
       <Card>
         <View style={styles.inline}>
           <AppIcon name="trips" size={24} />
@@ -58,7 +58,7 @@ export default function CompareTab() {
         )}
       </Card>
 
-      <SectionHeader image="fact" title="비교 낚시터" />
+      <SectionHeader title="비교 낚시터" />
       <View style={styles.slots}>
         <Slot label="A" place={a} onPress={() => setPicking('A')} />
         <View style={styles.vs}>

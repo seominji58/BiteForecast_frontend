@@ -72,15 +72,20 @@ type ButtonProps = {
 
 export function Button({ label, onPress, disabled, variant = 'primary', icon }: ButtonProps) {
   const theme = useTheme();
-  const bg = variant === 'danger' ? theme.danger : variant === 'secondary' ? theme.tint : theme.accent;
-  const fg = variant === 'primary' ? 'onAccent' : 'onTint';
+  const outline = variant === 'secondary';
+  const bg = variant === 'danger' ? theme.danger : outline ? 'transparent' : theme.accent;
+  const fg = variant === 'primary' ? 'onAccent' : outline ? 'tint' : 'onTint';
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ disabled: !!disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.button, { backgroundColor: bg, opacity: disabled ? 0.4 : pressed ? 0.85 : 1 }]}>
+      style={({ pressed }) => [
+        styles.button,
+        { backgroundColor: bg, opacity: disabled ? 0.4 : pressed ? 0.85 : 1 },
+        outline && { borderWidth: 1.5, borderColor: theme.tint },
+      ]}>
       {icon ? <AppIcon name={icon} size={22} badge /> : null}
       <ThemedText type="smallBold" themeColor={fg}>
         {label}
@@ -111,7 +116,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: Spacing.two,
-    paddingVertical: Spacing.three - 2,
-    borderRadius: 14,
+    paddingVertical: 11,
+    borderRadius: 10,
   },
 });

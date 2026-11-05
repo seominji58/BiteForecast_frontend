@@ -1,4 +1,3 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { type ReactNode } from 'react';
 import {
@@ -16,49 +15,48 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/app-icon';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import type { AppIconName } from '@/constants/icons';
-import { Brand, MaxContentWidth, Spacing } from '@/constants/theme';
+import { Brand, Layout, MaxContentWidth } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
- * 탭 화면 공통 레이아웃: 위에 고정된 짧은 그라데이션 헤더(로고·제목·설정) + 아래 내용만 스크롤.
- * 사진 대신 그라데이션·아이콘을 쓴다 (이미지 저작권).
+ * 탭 화면 공통 레이아웃 (재설계 v2 §2).
+ * 한 줄 앱바(52pt, 단색 네이비) + 아래 내용만 스크롤. 앱바는 스크롤 영역 밖이라 내용이 가려지지 않는다.
+ * - logo: 홈에서만 앱 로고를 제목 앞에 표시
+ * - right: 오른쪽 보조 동작 (기본: 「설정」)
  */
-export function TabScreen({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
+export function TabScreen({
+  title,
+  logo,
+  right,
+  children,
+}: {
+  title: string;
+  logo?: boolean;
+  right?: ReactNode;
+  children: ReactNode;
+}) {
   const insets = useSafeAreaInsets();
   return (
     <ThemedView style={styles.flex}>
-      <LinearGradient
-        colors={Brand.hero}
-        locations={[0, 0.45, 0.8, 1]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{ paddingTop: insets.top + Spacing.one }}>
-        <View style={styles.heroInner}>
-          <View style={styles.heroTop}>
-            <View style={styles.logo} accessibilityLabel="입질예보">
-              <AppIcon name="fishing-index" size={18} badge />
-              <Text style={styles.logoText}>입질예보</Text>
-            </View>
+      <View style={[styles.appBar, { paddingTop: insets.top }]}>
+        <View style={styles.appBarInner}>
+          <View style={styles.titleRow}>
+            {logo ? <AppIcon name="fishing-index" size={16} badge /> : null}
+            <Text style={styles.title} accessibilityRole="header" numberOfLines={1}>
+              {title}
+            </Text>
+          </View>
+          {right ?? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="설정"
               hitSlop={12}
               onPress={() => router.push('/settings')}
-              style={styles.settingsPill}>
-                <Text style={styles.settingsText}>설정</Text>
-              </Pressable>
-          </View>
-          <Text style={styles.heroTitle} accessibilityRole="header">
-            {title}
-          </Text>
-          {subtitle ? (
-            <Text style={styles.heroSubtitle} numberOfLines={1}>
-              {subtitle}
-            </Text>
-          ) : null}
+              style={styles.pill}>
+              <Text style={styles.pillText}>설정</Text>
+            </Pressable>
+          )}
         </View>
-      </LinearGradient>
+      </View>
       <ScrollView
         contentContainerStyle={[styles.content, styles.tabContent]}
         keyboardShouldPersistTaps="handled"
@@ -83,6 +81,7 @@ export function StackScreen({ children }: { children: ReactNode }) {
   );
 }
 
+/** 카드: 패딩 12 · 라운드 12 · 1px 경계선, 그림자 없음 */
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   const theme = useTheme();
   return (
@@ -92,33 +91,24 @@ export function Card({ children, style }: { children: ReactNode; style?: StylePr
   );
 }
 
-/** 섹션 제목: 아이콘 + 제목 + 주황 밑줄, 오른쪽에 「더보기」 같은 동작 */
+/** 섹션 제목: 15pt 굵게 + 오른쪽 「더보기 ›」 (장식 밑줄·아이콘 없음) */
 export function SectionHeader({
-  image,
   title,
   actionLabel,
   onAction,
 }: {
-  image?: AppIconName;
   title: string;
   actionLabel?: string;
   onAction?: () => void;
 }) {
-  const theme = useTheme();
   return (
     <View style={styles.sectionHeader}>
-      <View>
-        <View style={styles.sectionTitleRow}>
-          {image ? <AppIcon name={image} size={22} /> : null}
-          <ThemedText type="sectionTitle" accessibilityRole="header">
-            {title}
-          </ThemedText>
-        </View>
-        <View style={[styles.underline, { backgroundColor: theme.accent }]} />
-      </View>
+      <ThemedText type="sectionTitle" accessibilityRole="header">
+        {title}
+      </ThemedText>
       {actionLabel && onAction ? (
-        <Pressable accessibilityRole="button" onPress={onAction} hitSlop={8} style={styles.sectionAction}>
-          <ThemedText type="small" themeColor="textSecondary">
+        <Pressable accessibilityRole="button" onPress={onAction} hitSlop={8}>
+          <ThemedText type="small" themeColor="tint">
             {actionLabel} ›
           </ThemedText>
         </Pressable>
@@ -145,8 +135,8 @@ export function ErrorView({ message, onRetry }: { message: string; onRetry: () =
       <Pressable
         accessibilityRole="button"
         onPress={onRetry}
-        style={({ pressed }) => [styles.button, { backgroundColor: theme.tint, opacity: pressed ? 0.8 : 1 }]}>
-        <ThemedText themeColor="onTint" type="smallBold">
+        style={({ pressed }) => [styles.retry, { borderColor: theme.tint, opacity: pressed ? 0.7 : 1 }]}>
+        <ThemedText themeColor="tint" type="smallBold">
           다시 시도
         </ThemedText>
       </Pressable>
@@ -164,56 +154,49 @@ export function EmptyView({ message }: { message: string }) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  heroInner: {
-    paddingHorizontal: Spacing.three,
-    paddingBottom: Spacing.three,
-    gap: 2,
+  appBar: { backgroundColor: Brand.navy },
+  appBarInner: {
+    height: Layout.appBarHeight,
+    paddingHorizontal: Layout.screenPadding,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
   },
-  heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.two },
-  logo: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  logoText: { color: Brand.onNavy, fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
-  heroTitle: { color: Brand.onNavy, fontSize: 21, fontWeight: '800', letterSpacing: -0.4 },
-  heroSubtitle: { color: Brand.onNavySecondary, fontSize: 13, lineHeight: 18 },
-  settingsPill: {
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
+  title: { color: Brand.onNavy, fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
+  pill: {
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.4)',
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 3,
   },
-  settingsText: { color: Brand.onNavy, fontSize: 12, fontWeight: '700' },
+  pillText: { color: Brand.onNavy, fontSize: 12, fontWeight: '700' },
   content: {
-    padding: Spacing.three,
-    gap: Spacing.three,
+    padding: Layout.screenPadding,
+    gap: Layout.gap,
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
   },
-  tabContent: { paddingBottom: Spacing.five },
-  stackContent: { paddingBottom: Spacing.six },
+  tabContent: { paddingBottom: Layout.gap * 3 },
+  stackContent: { paddingBottom: Layout.gap * 4 },
   card: {
-    padding: Spacing.three - 2,
-    borderRadius: 16,
-    gap: Spacing.two,
-    borderWidth: StyleSheet.hairlineWidth,
-    shadowColor: '#0A1F36',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
+    padding: Layout.cardPadding,
+    borderRadius: Layout.cardRadius,
+    gap: 8,
+    borderWidth: 1,
   },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  underline: { height: 2, width: 32, borderRadius: 1, marginTop: 3, marginLeft: 2 },
-  sectionAction: { flexDirection: 'row', alignItems: 'center' },
-  center: { padding: Spacing.four, alignItems: 'center' },
-  button: {
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },
+  center: { padding: 24, alignItems: 'center' },
+  retry: {
     alignSelf: 'flex-start',
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Spacing.two,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 1,
   },
 });

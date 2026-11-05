@@ -28,7 +28,7 @@ export default function CommunityScreen() {
 
   return (
     <View style={styles.flex}>
-      <TabScreen title="커뮤니티" subtitle="조황 소식과 낚시 정보를 함께 나눠요.">
+      <TabScreen title="커뮤니티">
         <View style={styles.cats}>
           {cats.map((c) => {
             const on = c.key === category;
