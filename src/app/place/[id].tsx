@@ -6,7 +6,7 @@ import { AppIcon } from '@/components/app-icon';
 import { Button } from '@/components/form';
 import { MarineWarningBanner } from '@/components/marine-warning-banner';
 import { Card, ErrorView, Loading, SectionHeader, StackScreen } from '@/components/screen';
-import { DataBasis, FishingIndexCard, NearbyPlaces, SeaStory, SeaTiles } from '@/components/sea-detail';
+import { DataBasis, FishingIndexCard, MetricTable, NearbyPlaces, TideCard } from '@/components/sea-detail';
 import { ThemedText } from '@/components/themed-text';
 import { dayLabel, timeLabel } from '@/lib/compare';
 import { nearby, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
@@ -67,10 +67,10 @@ export default function PlaceDetailScreen() {
           <MarineWarningBanner w={pc.warning} />
 
           <SectionHeader title="지금 바다" />
-          <SeaStory pc={pc} />
+          <MetricTable pc={pc} />
 
-          <SectionHeader title="오늘 범위" />
-          <SeaTiles pc={pc} />
+          <SectionHeader title="물때 (오늘)" />
+          <TideCard pc={pc} />
 
           <SectionHeader title="바다낚시지수 (국립해양조사원)" />
           <FishingIndexCard pc={pc} />
@@ -92,6 +92,7 @@ export default function PlaceDetailScreen() {
             label="다른 곳과 비교"
             onPress={() => router.push({ pathname: '/compare', params: { a: String(placeId) } })}
           />
+          {/* 서버 고지문 전문(관측소 위치 차이·조과 비보장·특보 확인)은 상세에서 그대로 보여준다 */}
           <ThemedText type="small" themeColor="textSecondary">
             {cond.data?.disclaimer}
           </ThemedText>

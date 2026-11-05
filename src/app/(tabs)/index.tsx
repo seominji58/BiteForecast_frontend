@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Keyboard, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { useConditions, useDateRange, useJournals, usePlaces } from '@/api/queries';
+import { useConditions, useDateRange, usePlaces } from '@/api/queries';
 import type { Place } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { Chip } from '@/components/form';
@@ -11,12 +11,11 @@ import { Card, Loading, TabScreen } from '@/components/screen';
 import { SearchBar } from '@/components/search-bar';
 import { SeaSummaryCard } from '@/components/sea-summary-card';
 import { ThemedText } from '@/components/themed-text';
-import { formatDateTime } from '@/lib/format';
 import { matches, PLACE_IMAGE, PLACE_TYPE_LABEL, sidoOf } from '@/lib/place';
 import { useHomePlace } from '@/lib/prefs';
 
-// SCR-01 홈 (재설계 v2 §4): 첫 실행이면 목적·지역 선택, 아니면 기준 낚시터 요약 카드 한 장 + 최근 기록.
-// 상세(문장 설명·지수 어종별·자료 출처·가까운 낚시터)는 /place/[id] 상세 해황 화면에서 본다.
+// SCR-01 홈 (재설계 v2 §4): 첫 실행이면 지역·낚시터 선택, 아니면 기준 낚시터 요약 카드 한 장.
+// 상세(실측·예보 표, 물때, 지수 어종별, 자료 출처, 가까운 낚시터)는 /place/[id] 상세 해황 화면에서 본다.
 export default function HomeScreen() {
   const places = usePlaces();
   const range = useDateRange();
@@ -49,20 +48,17 @@ export default function HomeScreen() {
       ) : null}
 
       {place ? (
-        <>
-          <SeaSummaryCard
-            place={place}
-            pc={cond.data?.place}
-            generatedAt={cond.data?.generated_at}
-            today={today}
-            loading={cond.isPending}
-            error={cond.isError ? { message: cond.error.message, retry: () => cond.refetch() } : null}
-            onChangePlace={() => setPicker({ open: true, sido: null })}
-            onDetail={() => router.push({ pathname: '/place/[id]', params: { id: String(place.id) } })}
-            onCompare={() => router.push({ pathname: '/compare', params: { a: String(place.id) } })}
-          />
-          <RecentRecord />
-        </>
+        <SeaSummaryCard
+          place={place}
+          pc={cond.data?.place}
+          generatedAt={cond.data?.generated_at}
+          today={today}
+          loading={cond.isPending}
+          error={cond.isError ? { message: cond.error.message, retry: () => cond.refetch() } : null}
+          onChangePlace={() => setPicker({ open: true, sido: null })}
+          onDetail={() => router.push({ pathname: '/place/[id]', params: { id: String(place.id) } })}
+          onCompare={() => router.push({ pathname: '/compare', params: { a: String(place.id) } })}
+        />
       ) : null}
 
       <PlacePicker
@@ -77,7 +73,7 @@ export default function HomeScreen() {
   );
 }
 
-/** 첫 실행: 목적 질문 + 검색 + 지역 칩을 한 화면에 (단계를 나누지 않음) */
+/** 첫 실행: 질문 + 검색 + 지역 칩을 한 화면에 (단계를 나누지 않음) */
 function FirstRun({
   places,
   onChoose,
@@ -97,9 +93,9 @@ function FirstRun({
 
   return (
     <Card style={styles.firstRun}>
-      <ThemedText type="sectionTitle">오늘 낚시를 계획하고 계신가요?</ThemedText>
+      <ThemedText type="sectionTitle">어느 바다로 나가실 계획인가요?</ThemedText>
       <ThemedText themeColor="textSecondary">
-        어느 지역의 바다를 볼까요? 고른 낚시터를 기준으로 특보·파고·바람·물때를 보여드려요.
+        낚시터를 하나 고르면 그곳 기준으로 특보·파고·바람·물때를 보여드려요. 나중에 언제든 바꿀 수 있어요.
       </ThemedText>
       <SearchBar
         value={query}
@@ -145,40 +141,10 @@ function FirstRun({
   );
 }
 
-/** 다음 행동: 최근 기록 1건, 없으면 기록 남기기 */
-function RecentRecord() {
-  const journals = useJournals();
-  const last = journals.data?.[0];
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={() =>
-        last ? router.push({ pathname: '/journal/[id]', params: { id: String(last.id) } }) : router.push('/journal/new')
-      }
-      style={({ pressed }) => pressed && styles.pressed}>
-      <Card style={styles.recent}>
-        <AppIcon name={last ? 'cat-catch' : 'write'} size={24} />
-        <View style={styles.flex}>
-          <ThemedText type="small" themeColor="textSecondary">
-            {last ? '최근 내 기록' : '오늘 낚시를 다녀오셨나요?'}
-          </ThemedText>
-          <ThemedText type="smallBold" numberOfLines={1}>
-            {last
-              ? `${formatDateTime(last.fished_at)} · ${last.place_name}${last.species_name ? ` · ${last.species_name}` : ''}`
-              : '낚시 기록 남기기'}
-          </ThemedText>
-        </View>
-        <ThemedText themeColor="tint">›</ThemedText>
-      </Card>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   pressed: { opacity: 0.6 },
   firstRun: { gap: 10 },
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
   chips: { gap: 8 },
-  recent: { flexDirection: 'row', alignItems: 'center', gap: 10 },
 });

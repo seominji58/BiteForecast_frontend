@@ -9,7 +9,7 @@ import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
 import { dayLabel, timeLabel } from '@/lib/compare';
 import { PLACE_IMAGE } from '@/lib/place';
-import { farNote, indexLine, keyMetrics, tideLine } from '@/lib/summary';
+import { indexLine, keyMetrics, tideLine } from '@/lib/summary';
 
 /**
  * 홈 요약 카드 (재설계 v2 §4-2). 위→아래: 장소·기준 → 해상 특보(항상) → 핵심 3수치 → 물때·지수 → 행동 버튼.
@@ -37,7 +37,6 @@ export function SeaSummaryCard({
   onCompare: () => void;
 }) {
   const theme = useTheme();
-  const note = pc ? farNote(pc) : null;
 
   return (
     <Card style={styles.card}>
@@ -95,11 +94,6 @@ export function SeaSummaryCard({
           <View style={styles.lines}>
             <InfoLine label="물때" value={tideLine(pc)} />
             <InfoLine label="바다낚시지수" value={indexLine(pc)} hint="국립해양조사원" />
-            {note ? (
-              <ThemedText type="small" themeColor="textSecondary">
-                ⓘ {note}
-              </ThemedText>
-            ) : null}
           </View>
 
           {/* 다음 행동: 주 버튼 하나 */}
@@ -112,7 +106,7 @@ export function SeaSummaryCard({
             </View>
           </View>
           <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
-            실제 조과를 보장하지 않아요 · 출조 전 특보와 현장 출입 제한을 확인하세요
+            조과 보장 없음 · 출조 전 특보·출입 제한을 꼭 확인하세요
           </ThemedText>
         </>
       ) : null}

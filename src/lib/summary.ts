@@ -5,7 +5,7 @@
  */
 import type { PlaceCompare } from '@/api/types';
 import { currentIndexPeriod, findSeries, latestPoint, nextExtreme, timeLabel } from '@/lib/compare';
-import { distanceGrade, seaState, windName } from '@/lib/describe';
+import { seaState, windName } from '@/lib/describe';
 
 export type KeyMetric = {
   label: string;
@@ -64,19 +64,4 @@ export function indexLine(pc: PlaceCompare, now = new Date()): string {
   if (levels.size === 1) return `${items.length > 1 ? '모든 어종' : items[0].species} ${items[0].index}`;
   const shown = items.slice(0, 2).map((i) => `${i.species} ${i.index}`);
   return `${shown.join(' · ')}${items.length > 2 ? ` 외 ${items.length - 2}` : ''}`;
-}
-
-/** 5km 넘는 자료 지점 안내 (P0-5). 없으면 null */
-export function farNote(pc: PlaceCompare): string | null {
-  const wave = findSeries(pc, 'wave_height', 'observed')?.source;
-  const tide = findSeries(pc, 'tide_extreme', 'forecast')?.source;
-  const far = (
-    [
-      ['파도 부이', wave],
-      ['물때 관측소', tide],
-    ] as const
-  ).filter(([, s]) => s?.distance_km != null && s.distance_km > 5);
-  if (!wave) return '30km 안에 파도 관측 부이가 없어 예보만 보여드려요.';
-  if (far.length === 0) return null;
-  return `${far.map(([l, s]) => `${l} ${Math.round(s!.distance_km!)}km(${distanceGrade(s!.distance_km!)})`).join(', ')} 떨어진 자료예요.`;
 }
