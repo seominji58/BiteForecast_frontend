@@ -1,82 +1,139 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useCompare, useDateRange, usePlaces } from '@/api/queries';
 import type { Place } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
-import { CompareView } from '@/components/compare-view';
+import { CompareView, type CompareFocus } from '@/components/compare-view';
+import { Dropdown } from '@/components/dropdown';
 import { Chip } from '@/components/form';
 import { PlacePicker } from '@/components/place-picker';
-import { Card, EmptyView, ErrorView, Loading, SectionHeader, TabScreen } from '@/components/screen';
+import { Card, EmptyView, ErrorView, Loading, TabScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
-import { Brand, Spacing } from '@/constants/theme';
+import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { dayLabel, dayList } from '@/lib/compare';
-import { PLACE_IMAGE } from '@/lib/place';
+import { nearby, PLACE_IMAGE } from '@/lib/place';
+import { useHomePlace } from '@/lib/prefs';
 
-// SCR-02 조건 비교 (FR-02~05, FR-07): 날짜 + A/B 낚시터 선택 → 같은 화면에 결과
+const FOCUS: { value: CompareFocus; label: string }[] = [
+  { value: 'all', label: '전체' },
+  { value: 'sea', label: '파도·바람' },
+  { value: 'tide', label: '물때' },
+  { value: 'index', label: '낚시지수' },
+];
+
+// SCR-02 조건 비교 (재설계 v2 §6): A=기준 낚시터(있을 때만), B=가까운 곳 추천 또는 검색, 날짜는 드롭다운
 export default function CompareTab() {
-  const params = useLocalSearchParams<{ a?: string }>();
+  const params = useLocalSearchParams<{ a?: string; b?: string }>();
   const places = usePlaces();
   const range = useDateRange();
+  const [homeId, , homeLoaded] = useHomePlace();
 
   const [day, setDay] = useState<string | null>(null);
   const [aId, setAId] = useState<number | null>(null);
-  const [bId, setBId] = useState<number | null>(null);
+  const [bId, setBId] = useState<number | null>(params.b ? Number(params.b) : null);
+  const [focus, setFocus] = useState<CompareFocus>('all');
   const [picking, setPicking] = useState<'A' | 'B' | null>(null);
 
-  // 홈에서 「비교하기」로 들어오면 그 낚시터를 A 로 (직접 고르면 그 값 우선)
-  const effectiveA = aId ?? (params.a ? Number(params.a) : null);
-  const a = places.data?.find((p) => p.id === effectiveA) ?? null;
-  const b = places.data?.find((p) => p.id === bId && p.id !== effectiveA) ?? null;
+  // 홈·상세에서 「비교」로 들어오면 그 낚시터가 A (새로 들어올 때마다 직접 고른 값보다 우선)
+  const [lastParams, setLastParams] = useState(`${params.a}|${params.b}`);
+  if (`${params.a}|${params.b}` !== lastParams) {
+    setLastParams(`${params.a}|${params.b}`);
+    setAId(null);
+    setBId(params.b ? Number(params.b) : null);
+  }
+  // A 우선순위: 직접 고른 값 → 링크로 받은 값 → 저장된 기준 낚시터. 셋 다 없으면 비워 둔다 (임의로 채우지 않음)
+  const candidateA = aId ?? (params.a ? Number(params.a) : homeLoaded ? homeId : null);
+  const a = places.data?.find((p) => p.id === candidateA) ?? null;
+  const b = places.data?.find((p) => p.id === bId && p.id !== a?.id) ?? null;
+
+  const days = range.data ? dayList(range.data.min, range.data.max) : [];
   const selectedDay = day ?? range.data?.today ?? '';
+  const dayIdx = days.indexOf(selectedDay);
   const q = useCompare(a?.id ?? NaN, b?.id ?? NaN, selectedDay);
+
+  // B 추천: A에서 가까운 3곳 (A 자신 제외)
+  const suggestions = a && places.data ? nearby(a, places.data, 4).filter((n) => n.place.id !== a.id).slice(0, 3) : [];
 
   return (
     <TabScreen title="조건 비교">
-      <Card>
-        <View style={styles.inline}>
-          <AppIcon name="trips" size={24} />
-          <ThemedText type="smallBold">비교 기준일</ThemedText>
+      {/* 날짜: ◀ 드롭다운 ▶ (가로 스크롤 칩 대신, 화면 너비 안에 들어간다) */}
+      {range.isSuccess ? (
+        <View style={styles.dayRow}>
+          <StepButton label="이전 날짜" text="‹" disabled={dayIdx <= 0} onPress={() => setDay(days[dayIdx - 1])} />
+          <View style={styles.flex}>
+            <Dropdown
+              label="비교 날짜"
+              value={selectedDay}
+              options={days.map((d) => ({
+                value: d,
+                label: d === range.data.today ? `오늘 · ${dayLabel(d)}` : dayLabel(d),
+                hint: d < range.data.today ? '지난 날 · 실측 위주' : d > range.data.today ? '예보만' : undefined,
+              }))}
+              onChange={setDay}
+            />
+          </View>
+          <StepButton
+            label="다음 날짜"
+            text="›"
+            disabled={dayIdx < 0 || dayIdx >= days.length - 1}
+            onPress={() => setDay(days[dayIdx + 1])}
+          />
         </View>
-        {range.isSuccess ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.days}>
-            {dayList(range.data.min, range.data.max).map((d) => (
-              <Chip
-                key={d}
-                label={d === range.data.today ? `오늘 ${dayLabel(d)}` : dayLabel(d)}
-                selected={d === selectedDay}
-                onPress={() => setDay(d)}
-              />
-            ))}
-          </ScrollView>
-        ) : range.isError ? (
-          <ErrorView message={range.error.message} onRetry={() => range.refetch()} />
-        ) : (
-          <Loading />
-        )}
-      </Card>
+      ) : range.isError ? (
+        <ErrorView message={range.error.message} onRetry={() => range.refetch()} />
+      ) : (
+        <Loading />
+      )}
 
-      <SectionHeader title="비교 낚시터" />
       <View style={styles.slots}>
-        <Slot label="A" place={a} onPress={() => setPicking('A')} />
-        <View style={styles.vs}>
-          <ThemedText type="smallBold" style={styles.vsText}>
-            VS
-          </ThemedText>
-        </View>
-        <Slot label="B" place={b} onPress={() => setPicking('B')} />
+        <Slot label="A" place={a} empty="기준 낚시터 고르기" onPress={() => setPicking('A')} />
+        <Slot label="B" place={b} empty="비교할 곳 고르기" onPress={() => setPicking('B')} />
       </View>
 
-      {!a || !b ? (
-        <EmptyView message="A와 B를 눌러 비교할 낚시터 2곳을 선택하세요." />
-      ) : q.isPending ? (
+      {a && !b && suggestions.length > 0 ? (
+        <Card>
+          <ThemedText type="small" themeColor="textSecondary">
+            {a.name} 근처에서 B 고르기
+          </ThemedText>
+          {/* 줄바꿈 칩: 화면 밖으로 잘리지 않게 */}
+          <View style={styles.wrap}>
+            {suggestions.map(({ place, km }) => (
+              <Chip
+                key={place.id}
+                label={`${place.name} · ${km < 1 ? '1km 미만' : `${Math.round(km)}km`}`}
+                selected={false}
+                onPress={() => setBId(place.id)}
+              />
+            ))}
+            <Chip label="전국에서 검색" selected={false} onPress={() => setPicking('B')} />
+          </View>
+        </Card>
+      ) : null}
+
+      {a && b ? (
+        <View style={styles.focusRow}>
+          <ThemedText type="small" themeColor="textSecondary">
+            보기
+          </ThemedText>
+          <View style={[styles.wrap, styles.flex]}>
+            {FOCUS.map((f) => (
+              <Chip key={f.value} label={f.label} selected={focus === f.value} onPress={() => setFocus(f.value)} />
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {!a ? (
+        <EmptyView message="기준 낚시터가 아직 없어요. A를 눌러 낚시터를 고르면 근처 비교 대상을 추천해 드려요." />
+      ) : !b ? null : q.isPending ? (
         <Loading />
       ) : q.isError ? (
         <ErrorView message={q.error.message} onRetry={() => q.refetch()} />
       ) : (
-        <CompareView places={q.data.places} disclaimer={q.data.disclaimer} />
+        <CompareView places={q.data.places} disclaimer={q.data.disclaimer} focus={focus} />
       )}
 
       <PlacePicker
@@ -91,30 +148,50 @@ export default function CompareTab() {
   );
 }
 
-function Slot({ label, place, onPress }: { label: string; place: Place | null; onPress: () => void }) {
+function StepButton({ label, text, disabled, onPress }: { label: string; text: string; disabled: boolean; onPress: () => void }) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.step,
+        { borderColor: theme.backgroundSelected, backgroundColor: theme.backgroundElement, opacity: disabled ? 0.35 : pressed ? 0.7 : 1 },
+      ]}>
+      <ThemedText style={styles.stepText} themeColor="tint">
+        {text}
+      </ThemedText>
+    </Pressable>
+  );
+}
+
+function Slot({ label, place, empty, onPress }: { label: string; place: Place | null; empty: string; onPress: () => void }) {
   const theme = useTheme();
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`낚시터 ${label}: ${place?.name ?? '선택 안 됨'}`}
       onPress={onPress}
-      style={({ pressed }) => [styles.slot, { borderColor: theme.border }, pressed && styles.pressed]}>
-      <View style={[styles.slotArt, { backgroundColor: place ? '#F3F6F9' : Brand.navy }]}>
-        {place ? (
-          <AppIcon name={PLACE_IMAGE[place.type]} size={64} />
-        ) : (
-          <ThemedText style={styles.plus}>＋</ThemedText>
-        )}
-        <ThemedText type="smallBold" style={styles.slotLabel}>
+      style={({ pressed }) => [
+        styles.slot,
+        { borderColor: place ? theme.border : Brand.orange, backgroundColor: theme.backgroundElement },
+        pressed && styles.pressed,
+      ]}>
+      <View style={styles.badge}>
+        <ThemedText type="smallBold" style={styles.badgeText}>
           {label}
         </ThemedText>
       </View>
-      <View style={[styles.slotInfo, { backgroundColor: theme.backgroundElement }]}>
+      {place ? <AppIcon name={PLACE_IMAGE[place.type]} size={26} /> : null}
+      <View style={styles.flex}>
         <ThemedText type="smallBold" numberOfLines={1}>
-          {place?.name ?? '선택하기'}
+          {place?.name ?? empty}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-          {place ? place.region_name : '낚시터 고르기'}
+          {place ? place.region_name : '눌러서 선택'}
         </ThemedText>
       </View>
     </Pressable>
@@ -122,35 +199,15 @@ function Slot({ label, place, onPress }: { label: string; place: Place | null; o
 }
 
 const styles = StyleSheet.create({
-  inline: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  days: { gap: Spacing.two, paddingRight: Spacing.three },
-  slots: { flexDirection: 'row', alignItems: 'center' },
-  slot: { flex: 1, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
-  slotArt: { height: 64, alignItems: 'center', justifyContent: 'center' },
-  slotLabel: {
-    position: 'absolute',
-    top: 6,
-    left: 8,
-    color: Brand.onNavy,
-    backgroundColor: Brand.navy,
-    borderRadius: 999,
-    paddingHorizontal: 7,
-    overflow: 'hidden',
-  },
-  slotInfo: { padding: Spacing.two, gap: 2 },
-  vs: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginHorizontal: -10,
-    zIndex: 1,
-    backgroundColor: Brand.navy,
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  vsText: { color: Brand.onNavy },
-  plus: { color: Brand.onNavy, fontSize: 28, lineHeight: 32, fontWeight: '300' },
-  pressed: { opacity: 0.85 },
+  flex: { flex: 1 },
+  pressed: { opacity: 0.8 },
+  dayRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  step: { width: 44, height: 44, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  stepText: { fontSize: 24, lineHeight: 28, fontWeight: '700' },
+  slots: { flexDirection: 'row', gap: 8 },
+  slot: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 12, padding: 8 },
+  badge: { width: 22, height: 22, borderRadius: 11, backgroundColor: Brand.navy, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { color: Brand.onNavy },
+  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  focusRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 });

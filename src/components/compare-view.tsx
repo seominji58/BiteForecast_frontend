@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { FishingIndex, FishingIndexLevel, PlaceCompare, Series } from '@/api/types';
@@ -38,15 +38,77 @@ export const LEVEL_COLOR: Record<FishingIndexLevel, 'success' | 'text' | 'warnin
  * - 예보와 실측은 섞지 않고 각각 표시 (TC-03)
  * - 판정 문구 없이 사실 비교만 (명세 §14)
  */
-export function CompareView({ places, disclaimer }: { places: PlaceCompare[]; disclaimer: string }) {
+export type CompareFocus = 'all' | 'sea' | 'tide' | 'index';
+
+export function CompareView({
+  places,
+  disclaimer,
+  focus = 'all',
+}: {
+  places: PlaceCompare[];
+  disclaimer: string;
+  /** 보기 필터 (선택). 특보·규제 행은 안전 정보라 항상 표시 */
+  focus?: CompareFocus;
+}) {
   const [a, b] = places;
   const [showHourly, setShowHourly] = useState(false);
   // 두 곳 요약은 같은 종류(예보끼리/실측끼리)로만 만든다
   const kinds = { wave: commonKind(a, b, 'wave_height'), wind: commonKind(a, b, 'wind_speed') };
   const theme = useTheme();
+  const show = (k: Exclude<CompareFocus, 'all'>) => focus === 'all' || focus === k;
+
+  const rows: ReactNode[] = [
+    <Row key="warn" image="report" label="해상 특보">
+      <MarineWarningBanner w={a.warning} compact />
+      <MarineWarningBanner w={b.warning} compact />
+    </Row>,
+    <Row key="reg" image="regulation" label="규제 정보">
+      <RegulationCell p={a} />
+      <RegulationCell p={b} />
+    </Row>,
+  ];
+  if (show('sea')) {
+    rows.push(
+      <Row key="wave" image="wave" label="파고">
+        <RangeCell series={[findSeries(a, 'wave_height', 'observed'), findSeries(a, 'wave_height', 'forecast')]} />
+        <RangeCell series={[findSeries(b, 'wave_height', 'observed'), findSeries(b, 'wave_height', 'forecast')]} />
+      </Row>,
+      <Row key="wind" image="wind" label="바람">
+        <RangeCell series={[findSeries(a, 'wind_speed', 'observed'), findSeries(a, 'wind_speed', 'forecast')]} />
+        <RangeCell series={[findSeries(b, 'wind_speed', 'observed'), findSeries(b, 'wind_speed', 'forecast')]} />
+      </Row>,
+      <Row key="temp" image="water-temp" label="수온">
+        <RangeCell series={[findSeries(a, 'water_temp', 'observed')]} />
+        <RangeCell series={[findSeries(b, 'water_temp', 'observed')]} />
+      </Row>,
+    );
+  }
+  if (show('tide')) {
+    rows.push(
+      <Row key="ext" image="tide" label="만조 / 간조">
+        <ExtremeCell s={findSeries(a, 'tide_extreme', 'forecast')} />
+        <ExtremeCell s={findSeries(b, 'tide_extreme', 'forecast')} />
+      </Row>,
+      <Row key="level" image="tide-level" label="조위">
+        <RangeCell series={[findSeries(a, 'tide_level', 'forecast')]} />
+        <RangeCell series={[findSeries(b, 'tide_level', 'forecast')]} />
+      </Row>,
+    );
+  }
+  if (show('index')) {
+    rows.push(
+      <Row key="index" image="fishing-index" label="바다낚시 지수">
+        <FishingIndexCell f={a.fishing_index} />
+        <FishingIndexCell f={b.fishing_index} />
+      </Row>,
+    );
+  }
 
   return (
     <>
+      {/* 핵심 차이: 같은 종류 자료끼리만 수치 비교 (판정 아님) */}
+      <FactSummary a={a} b={b} />
+
       <Card>
         {places.map((p, i) => (
           <View key={p.place.id} style={styles.summaryLine}>
@@ -59,41 +121,12 @@ export function CompareView({ places, disclaimer }: { places: PlaceCompare[]; di
       </Card>
 
       <Card style={styles.tableCard}>
-        <Row image="report" label="해상 특보">
-          <MarineWarningBanner w={a.warning} compact />
-          <MarineWarningBanner w={b.warning} compact />
-        </Row>
-        <Row image="regulation" label="규제 정보">
-          <RegulationCell p={a} />
-          <RegulationCell p={b} />
-        </Row>
-        <Row image="fishing-index" label="바다낚시 지수">
-          <FishingIndexCell f={a.fishing_index} />
-          <FishingIndexCell f={b.fishing_index} />
-        </Row>
-        <Row image="tide" label="만조 / 간조">
-          <ExtremeCell s={findSeries(a, 'tide_extreme', 'forecast')} />
-          <ExtremeCell s={findSeries(b, 'tide_extreme', 'forecast')} />
-        </Row>
-        <Row image="tide-level" label="조위">
-          <RangeCell series={[findSeries(a, 'tide_level', 'forecast')]} />
-          <RangeCell series={[findSeries(b, 'tide_level', 'forecast')]} />
-        </Row>
-        <Row image="wave" label="파고">
-          <RangeCell series={[findSeries(a, 'wave_height', 'observed'), findSeries(a, 'wave_height', 'forecast')]} />
-          <RangeCell series={[findSeries(b, 'wave_height', 'observed'), findSeries(b, 'wave_height', 'forecast')]} />
-        </Row>
-        <Row image="wind" label="바람">
-          <RangeCell series={[findSeries(a, 'wind_speed', 'observed'), findSeries(a, 'wind_speed', 'forecast')]} />
-          <RangeCell series={[findSeries(b, 'wind_speed', 'observed'), findSeries(b, 'wind_speed', 'forecast')]} />
-        </Row>
-        <Row image="water-temp" label="수온" last>
-          <RangeCell series={[findSeries(a, 'water_temp', 'observed')]} />
-          <RangeCell series={[findSeries(b, 'water_temp', 'observed')]} />
-        </Row>
+        {rows.map((r, i) => (
+          <LastRowContext.Provider key={i} value={i === rows.length - 1}>
+            {r}
+          </LastRowContext.Provider>
+        ))}
       </Card>
-
-      <FactSummary a={a} b={b} />
 
       <Pressable
         accessibilityRole="button"
@@ -128,8 +161,11 @@ export function CompareView({ places, disclaimer }: { places: PlaceCompare[]; di
   );
 }
 
-function Row({ image, label, children, last }: { image: AppIconName; label: string; children: ReactNode; last?: boolean }) {
+const LastRowContext = createContext(false);
+
+function Row({ image, label, children }: { image: AppIconName; label: string; children: ReactNode }) {
   const theme = useTheme();
+  const last = useContext(LastRowContext);
   const [left, right] = Array.isArray(children) ? children : [children, null];
   return (
     <View style={[styles.row, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: theme.border }]}>
@@ -171,7 +207,7 @@ function FishingIndexCell({ f }: { f: FishingIndex }) {
   if (f.status !== 'ok' || !f.periods) {
     return (
       <View>
-        <Muted>{f.reason ? REASON_TEXT[f.reason] : '자료 없음'}</Muted>
+        <Muted>{f.reason ? REASON_TEXT[f.reason] : '자료 없음'} · 비교 불가</Muted>
         {f.source && (
           <Muted>
             ({f.source.station_name} {f.source.distance_km != null ? `${f.source.distance_km}km` : ''})
@@ -204,7 +240,8 @@ function FishingIndexCell({ f }: { f: FishingIndex }) {
 
 function ExtremeCell({ s }: { s: Series | undefined }) {
   const theme = useTheme();
-  if (s?.status !== 'ok' || !s.extremes) return <Muted>{s?.reason ? REASON_TEXT[s.reason] : '자료 없음'}</Muted>;
+  if (s?.status !== 'ok' || !s.extremes)
+    return <Muted>{s?.reason ? REASON_TEXT[s.reason] : '자료 없음'} · 비교 불가</Muted>;
   return (
     <View style={styles.cellStack}>
       {s.extremes.map((e) => (
@@ -229,7 +266,7 @@ function RangeCell({ series }: { series: (Series | undefined)[] }) {
   const ok = lines.filter((s) => s.status === 'ok');
   if (ok.length === 0) {
     const reason = lines.find((s) => s.reason && s.reason !== 'FUTURE_DATE')?.reason ?? lines[0]?.reason;
-    return <Muted>{reason ? REASON_TEXT[reason] : '자료 없음'}</Muted>;
+    return <Muted>{reason ? REASON_TEXT[reason] : '자료 없음'} · 비교 불가</Muted>;
   }
   return (
     <View style={styles.cellStack}>
@@ -262,21 +299,26 @@ function FactSummary({ a, b }: { a: PlaceCompare; b: PlaceCompare }) {
     const name = r.winner === 'A' ? a.place.name : b.place.name;
     return [`${label}(${kind} 최대)가 더 낮은 곳: ${name} (${vs})`];
   });
-  if (items.length === 0) return null;
   return (
     <View style={[styles.fact, { backgroundColor: theme.accentSoft }]}>
       <View style={[styles.factLabel, { backgroundColor: Brand.navy }]}>
         <AppIcon name="fact" size={16} badge />
         <ThemedText type="small" style={styles.labelText}>
-          사실 비교
+          핵심 차이
         </ThemedText>
       </View>
-      <View style={[styles.flex, styles.cellStack]}>
-        {items.map((t) => (
-          <ThemedText key={t} type="small">
-            {t}
+      <View style={[styles.flex, styles.cellStack, styles.factBody]}>
+        {items.length === 0 ? (
+          <ThemedText type="small" themeColor="textSecondary">
+            두 곳에 같은 종류의 파고·풍속 자료가 없어 수치 비교를 하지 않았어요 (비교 불가).
           </ThemedText>
-        ))}
+        ) : (
+          items.map((t) => (
+            <ThemedText key={t} type="small">
+              {t}
+            </ThemedText>
+          ))
+        )}
       </View>
     </View>
   );
@@ -375,6 +417,7 @@ const styles = StyleSheet.create({
   pillText: { fontWeight: '700', fontSize: 12, lineHeight: 18 },
   kindLine: { flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' },
   fact: { flexDirection: 'row', borderRadius: 16, overflow: 'hidden', alignItems: 'stretch' },
+  factBody: { paddingVertical: Spacing.two, paddingHorizontal: Spacing.two + 2 },
   factLabel: { width: 68, alignItems: 'center', justifyContent: 'center', gap: 2, paddingVertical: Spacing.two },
   toggle: {
     flexDirection: 'row',
