@@ -1,32 +1,56 @@
 /**
- * 앱 색상 (라이트/다크). 의미 전달은 색상만으로 하지 않고 항상 텍스트를 함께 표시한다 (NFR-05).
+ * 앱 색상 (라이트/다크). 네이비·틸 바탕 + 주황 포인트.
+ * 의미 전달은 색상만으로 하지 않고 항상 텍스트를 함께 표시한다 (NFR-05).
  */
 
 import '@/global.css';
 
 import { Platform } from 'react-native';
 
+/** 배너·탭바 등 테마와 무관하게 고정인 브랜드 색 */
+export const Brand = {
+  navy: '#0F2C4A',
+  navyDeep: '#0A1F36',
+  teal: '#0E5C63',
+  orange: '#F28C28',
+  /** 상단 배너 그라데이션: 밤바다 → 노을 */
+  hero: ['#0A1F36', '#123A5E', '#2C5D7C', '#C98654'] as const,
+  onNavy: '#FFFFFF',
+  onNavySecondary: '#B9C9D9',
+  tabInactive: '#8FA4BA',
+} as const;
+
 export const Colors = {
   light: {
-    text: '#0B1B2B',
-    background: '#ffffff',
-    backgroundElement: '#F0F3F6',
-    backgroundSelected: '#DDE5EC',
-    textSecondary: '#5A6673',
-    tint: '#0A6EBD',
-    onTint: '#ffffff',
+    text: '#13263A',
+    background: '#EEF2F6',
+    backgroundElement: '#FFFFFF',
+    backgroundSelected: '#E2E8F0',
+    border: '#E1E7EE',
+    textSecondary: '#5B6B7C',
+    tint: '#0E5C63',
+    onTint: '#FFFFFF',
+    accent: '#EE8424',
+    onAccent: '#FFFFFF',
+    accentSoft: '#FDEBD8',
+    tintSoft: '#DCEFEF',
     danger: '#C62828',
-    warning: '#B26A00',
+    warning: '#A86200',
     success: '#2E7D32',
   },
   dark: {
-    text: '#ECF2F8',
-    background: '#0B1117',
-    backgroundElement: '#18212B',
-    backgroundSelected: '#243140',
-    textSecondary: '#A3B0BD',
-    tint: '#4FA8F0',
-    onTint: '#0B1117',
+    text: '#E8EEF5',
+    background: '#0A1420',
+    backgroundElement: '#13202E',
+    backgroundSelected: '#1E2E40',
+    border: '#1F2D3C',
+    textSecondary: '#9AABBD',
+    tint: '#4DB6BC',
+    onTint: '#06121C',
+    accent: '#F5A04A',
+    onAccent: '#1A0F00',
+    accentSoft: '#3A2611',
+    tintSoft: '#123236',
     danger: '#EF6B6B',
     warning: '#F0B054',
     success: '#6FCF73',

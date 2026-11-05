@@ -1,6 +1,7 @@
 import { request } from '@/api/client';
 import type {
   CompareResult,
+  DataSource,
   DateRange,
   Health,
   Journal,
@@ -9,6 +10,7 @@ import type {
   MyPoints,
   MyTitle,
   Place,
+  PlaceConditions,
   Region,
   Species,
 } from '@/api/types';
@@ -34,6 +36,9 @@ export const api = {
   deleteJournal: (id: number) => request<JournalMutation>(`/journals/${id}`, { method: 'DELETE', auth: true }),
 
   dateRange: () => request<DateRange>('/meta/date-range'),
+  sources: () => request<DataSource[]>('/meta/sources'),
+  conditions: (placeId: number, date: string) =>
+    request<PlaceConditions>(`/places/${placeId}/conditions?date=${date}`),
   compare: (placeA: number, placeB: number, date: string) =>
     request<CompareResult>(`/compare?place_a=${placeA}&place_b=${placeB}&date=${date}`),
 

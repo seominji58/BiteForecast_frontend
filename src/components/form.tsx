@@ -1,6 +1,8 @@
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { type ReactNode } from 'react';
 import { Pressable, StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 
+import type { IconName } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -59,19 +61,28 @@ export function ChipGroup({ children }: { children: ReactNode }) {
   return <View style={styles.chips}>{children}</View>;
 }
 
-type ButtonProps = { label: string; onPress: () => void; disabled?: boolean; variant?: 'primary' | 'danger' };
+type ButtonProps = {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  /** primary = 주황(주요 동작), secondary = 틸, danger = 빨강 */
+  variant?: 'primary' | 'secondary' | 'danger';
+  icon?: IconName;
+};
 
-export function Button({ label, onPress, disabled, variant = 'primary' }: ButtonProps) {
+export function Button({ label, onPress, disabled, variant = 'primary', icon }: ButtonProps) {
   const theme = useTheme();
-  const bg = variant === 'danger' ? theme.danger : theme.tint;
+  const bg = variant === 'danger' ? theme.danger : variant === 'secondary' ? theme.tint : theme.accent;
+  const fg = variant === 'primary' ? 'onAccent' : 'onTint';
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ disabled: !!disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.button, { backgroundColor: bg, opacity: disabled ? 0.4 : pressed ? 0.8 : 1 }]}>
-      <ThemedText type="smallBold" themeColor="onTint">
+      style={({ pressed }) => [styles.button, { backgroundColor: bg, opacity: disabled ? 0.4 : pressed ? 0.85 : 1 }]}>
+      {icon ? <MaterialCommunityIcons name={icon} size={20} color={theme[fg]} /> : null}
+      <ThemedText type="smallBold" themeColor={fg}>
         {label}
       </ThemedText>
     </Pressable>
@@ -96,8 +107,11 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.one + 2,
   },
   button: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: Spacing.three,
-    borderRadius: Spacing.two,
+    gap: Spacing.two,
+    paddingVertical: Spacing.three - 2,
+    borderRadius: 14,
   },
 });

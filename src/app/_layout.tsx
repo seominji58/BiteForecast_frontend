@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useColorScheme } from 'react-native';
 
 import { ApiError } from '@/api';
+import { Brand } from '@/constants/theme';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -23,10 +24,17 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack screenOptions={{ headerBackButtonDisplayMode: 'minimal' }}>
+        <Stack
+          screenOptions={{
+            headerBackButtonDisplayMode: 'minimal',
+            headerStyle: { backgroundColor: Brand.navy },
+            headerTintColor: Brand.onNavy,
+            headerTitleStyle: { fontWeight: '700' },
+          }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="journal/new" options={{ title: '낚시일지 작성' }} />
           <Stack.Screen name="journal/[id]" options={{ title: '낚시일지' }} />
+          <Stack.Screen name="settings" options={{ title: '설정·정보' }} />
         </Stack>
       </ThemeProvider>
     </QueryClientProvider>

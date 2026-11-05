@@ -39,6 +39,15 @@ export const useCompare = (placeA: number, placeB: number, date: string) =>
     enabled: Number.isFinite(placeA) && Number.isFinite(placeB) && !!date,
   });
 
+export const useConditions = (placeId: number | null, date: string | undefined) =>
+  useQuery({
+    queryKey: ['conditions', placeId, date],
+    queryFn: () => api.conditions(placeId!, date!),
+    enabled: placeId != null && !!date,
+  });
+
+export const useSources = () => useQuery({ queryKey: ['meta', 'sources'], queryFn: api.sources, staleTime: Infinity });
+
 export const useMyTitle = () => useQuery({ queryKey: queryKeys.myTitle, queryFn: api.myTitle });
 
 export const useMyPoints = () => useQuery({ queryKey: queryKeys.myPoints, queryFn: api.myPoints });

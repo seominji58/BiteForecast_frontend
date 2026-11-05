@@ -1,4 +1,12 @@
-import type { DataKind, PlaceCompare, RegulationStatus, Series, SeriesReason, SeriesSource } from '@/api/types';
+import type {
+  DataKind,
+  FishingIndex,
+  PlaceCompare,
+  RegulationStatus,
+  Series,
+  SeriesReason,
+  SeriesSource,
+} from '@/api/types';
 
 /** 'YYYY-MM-DD' → 기기 로컬 자정 Date (시간대 밀림 방지) */
 export function parseDay(s: string): Date {
@@ -81,4 +89,67 @@ export function formatValue(v: number | null | undefined, unit: string): string 
   if (v === undefined) return '–';
   if (v === null) return '자료 없음';
   return `${v}${unit === '°C' ? '' : ' '}${unit}`;
+}
+
+// --- 요약 (홈·비교 화면) ---
+
+type Point = { t: string; v: number | null };
+
+/** 값이 있는 마지막 시각의 값 (실측 최신값 표시용) */
+export function latestPoint(s: Series | undefined): Point | null {
+  if (s?.status !== 'ok' || !s.points) return null;
+  for (let i = s.points.length - 1; i >= 0; i--) if (s.points[i].v != null) return s.points[i];
+  return null;
+}
+
+/** 하루 범위 "0.3~0.6" (값이 하나면 "0.5"). 자료가 없으면 null */
+export function rangeOf(s: Series | undefined): { min: number; max: number } | null {
+  const vs = (s?.status === 'ok' ? (s.points ?? []) : []).map((p) => p.v).filter((v): v is number => v != null);
+  if (vs.length === 0) return null;
+  return { min: Math.min(...vs), max: Math.max(...vs) };
+}
+
+export function rangeText(s: Series | undefined): string | null {
+  const r = rangeOf(s);
+  if (!r) return null;
+  const unit = s!.unit === '°C' ? '°C' : ` ${s!.unit}`;
+  const f = (n: number) => String(Math.round(n * 10) / 10);
+  return r.min === r.max ? `${f(r.min)}${unit}` : `${f(r.min)}~${f(r.max)}${unit}`;
+}
+
+/** 지금 이후 첫 만조/간조 (없으면 마지막 것) */
+export function nextExtreme(s: Series | undefined, now = new Date()) {
+  const ex = s?.status === 'ok' ? (s.extremes ?? []) : [];
+  return ex.find((e) => new Date(e.t) >= now) ?? null;
+}
+
+/** 지금 시간대에 맞는 지수 (오전/오후, 없으면 하루 단위, 그것도 없으면 첫 항목) */
+export function currentIndexPeriod(f: FishingIndex, now = new Date()) {
+  const periods = f.status === 'ok' ? (f.periods ?? []) : [];
+  const want = now.getHours() < 12 ? '오전' : '오후';
+  return periods.find((p) => p.period === want) ?? periods.find((p) => p.period === '일') ?? periods[0] ?? null;
+}
+
+/**
+ * 사실 비교: 하루 최댓값이 더 낮은 곳 (명세 §14 허용 예시).
+ * 앱의 판정이 아니라 수치 비교만 한다. 예보가 있으면 예보, 없으면 실측 기준.
+ */
+export function lowerOf(a: PlaceCompare, b: PlaceCompare, metric: 'wave_height' | 'wind_speed') {
+  const pick = (p: PlaceCompare) => {
+    const fc = findSeries(p, metric, 'forecast');
+    return rangeOf(fc) ? { r: rangeOf(fc)!, kind: 'forecast' as const } : { r: rangeOf(findSeries(p, metric, 'observed')), kind: 'observed' as const };
+  };
+  const pa = pick(a);
+  const pb = pick(b);
+  if (!pa.r || !pb.r || pa.kind !== pb.kind) return null; // 예보와 실측을 섞어 비교하지 않음
+  if (pa.r.max === pb.r.max) return { winner: null, aMax: pa.r.max, bMax: pb.r.max, kind: pa.kind };
+  return { winner: pa.r.max < pb.r.max ? ('A' as const) : ('B' as const), aMax: pa.r.max, bMax: pb.r.max, kind: pa.kind };
+}
+
+export function greeting(now = new Date()): string {
+  const h = now.getHours();
+  if (h < 5) return '고요한 밤입니다';
+  if (h < 11) return '좋은 아침입니다';
+  if (h < 17) return '좋은 오후입니다';
+  return '편안한 저녁입니다';
 }

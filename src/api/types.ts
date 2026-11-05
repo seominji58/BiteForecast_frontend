@@ -163,3 +163,13 @@ export type CompareResult = {
 };
 
 export type DateRange = { today: string; min: string; max: string; timezone: string };
+
+export type PlaceConditions = {
+  date: string;
+  timezone: string;
+  generated_at: string;
+  place: PlaceCompare;
+  disclaimer: string;
+};
+
+export type DataSource = { agency: string; dataset: string; kind: DataKind; connected: boolean; note: string | null };
