@@ -41,6 +41,7 @@ export const REASON_TEXT: Record<SeriesReason, string> = {
   NO_DATA: '자료 없음',
   FUTURE_DATE: '미래 날짜에는 실측 자료가 없습니다',
   NOT_CONNECTED: '예보 자료 연결 준비 중',
+  TOO_FAR: '가까운 지수 지점 없음',
 };
 
 export const KIND_TEXT: Record<DataKind, string> = { forecast: '예보', observed: '실측' };

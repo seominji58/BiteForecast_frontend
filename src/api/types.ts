@@ -94,7 +94,7 @@ export type MyPoints = { total_points: number; history: PointHistoryItem[] };
 
 // --- A/B 비교 (FR-02~05, FR-07) ---
 
-export type SeriesReason = 'NO_STATION' | 'NO_DATA' | 'FUTURE_DATE' | 'NOT_CONNECTED';
+export type SeriesReason = 'NO_STATION' | 'NO_DATA' | 'FUTURE_DATE' | 'NOT_CONNECTED' | 'TOO_FAR';
 export type RegulationStatus = 'PROHIBITED' | 'CONDITIONAL' | 'OFFICIALLY_OPEN' | 'UNVERIFIED';
 
 export type SeriesSource = {
@@ -133,7 +133,26 @@ export type Regulation = {
   }[];
 };
 
-export type PlaceCompare = { place: Place; region_name: string; regulation: Regulation; series: Series[] };
+/** 국립해양조사원 바다낚시지수 — 기관 발표값 그대로 (앱 자체 판정 아님) */
+export type FishingIndexLevel = '매우좋음' | '좋음' | '보통' | '나쁨' | '매우나쁨';
+
+export type FishingIndex = {
+  status: 'ok' | 'unavailable';
+  reason: SeriesReason | null;
+  source: SeriesSource | null;
+  fetched_at: string | null;
+  periods:
+    | { period: string; tide_phase: string | null; items: { species: string; index: FishingIndexLevel | null }[] }[]
+    | null;
+};
+
+export type PlaceCompare = {
+  place: Place;
+  region_name: string;
+  regulation: Regulation;
+  fishing_index: FishingIndex;
+  series: Series[];
+};
 
 export type CompareResult = {
   date: string;

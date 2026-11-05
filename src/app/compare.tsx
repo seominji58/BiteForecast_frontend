@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { useCompare } from '@/api/queries';
-import type { PlaceCompare, Series } from '@/api/types';
+import type { FishingIndex, FishingIndexLevel, PlaceCompare, Series } from '@/api/types';
 import { Card, ErrorView, Loading, StackScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
@@ -47,6 +47,21 @@ function CompareBody({ places, disclaimer }: { places: PlaceCompare[]; disclaime
           <PlaceHeader label="B" p={b} />
         </View>
       </View>
+
+      <Section title="바다낚시지수 (국립해양조사원 발표)">
+        <View style={styles.row}>
+          <View style={styles.flex}>
+            <FishingIndexColumn f={a.fishing_index} />
+          </View>
+          <View style={styles.flex}>
+            <FishingIndexColumn f={b.fishing_index} />
+          </View>
+        </View>
+        <ThemedText type="small" themeColor="textSecondary">
+          국립해양조사원이 어종별 수온·물때·파고를 바탕으로 발표한 공식 지수를 그대로 보여줍니다. 앱이 판정한 값이
+          아니며 실제 조과를 보장하지 않습니다.
+        </ThemedText>
+      </Section>
 
       <Section title="물때 (만조·간조)">
         <View style={styles.row}>
@@ -109,6 +124,58 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
       </ThemedText>
       {children}
     </View>
+  );
+}
+
+/** 지수 등급은 색과 함께 항상 텍스트로 표시 (NFR-05) */
+const LEVEL_COLOR: Record<FishingIndexLevel, 'success' | 'text' | 'warning' | 'danger'> = {
+  매우좋음: 'success',
+  좋음: 'success',
+  보통: 'text',
+  나쁨: 'warning',
+  매우나쁨: 'danger',
+};
+
+function FishingIndexColumn({ f }: { f: FishingIndex }) {
+  const src = f.source;
+  if (f.status !== 'ok' || !f.periods) {
+    return (
+      <Card>
+        <ThemedText type="small" themeColor="textSecondary">
+          {f.reason ? REASON_TEXT[f.reason] : '자료 없음'}
+        </ThemedText>
+        {src && (
+          <ThemedText type="small" themeColor="textSecondary">
+            가장 가까운 지점: {src.station_name} {src.distance_km != null ? `${src.distance_km}km` : ''}
+          </ThemedText>
+        )}
+      </Card>
+    );
+  }
+  return (
+    <Card>
+      {f.periods.map((p) => (
+        <View key={p.period} style={styles.indexPeriod}>
+          <ThemedText type="smallBold">
+            {p.period === '일' ? '하루' : p.period}
+            {p.tide_phase ? ` · ${p.tide_phase}` : ''}
+          </ThemedText>
+          {p.items.map((i) => (
+            <View key={i.species} style={styles.extremeRow}>
+              <ThemedText type="small">{i.species}</ThemedText>
+              <ThemedText type="smallBold" themeColor={i.index ? LEVEL_COLOR[i.index] : 'textSecondary'}>
+                {i.index ?? '자료 없음'}
+              </ThemedText>
+            </View>
+          ))}
+        </View>
+      ))}
+      {src && (
+        <ThemedText type="small" themeColor="textSecondary">
+          {src.station_name} 지점 · {src.distance_km != null ? `${src.distance_km}km` : '거리 확인 불가'}
+        </ThemedText>
+      )}
+    </Card>
   );
 }
 
@@ -235,6 +302,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   section: { gap: Spacing.two },
   extremeRow: { flexDirection: 'row', justifyContent: 'space-between', gap: Spacing.one },
+  indexPeriod: { gap: 2, marginBottom: Spacing.one },
   tableRow: { flexDirection: 'row', paddingVertical: 2 },
   tableHead: { borderBottomWidth: 1, paddingBottom: Spacing.one, marginBottom: Spacing.one },
   hourCol: { width: 56 },
