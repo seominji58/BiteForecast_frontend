@@ -1,4 +1,4 @@
-import { Link, router } from 'expo-router';
+import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -29,7 +29,14 @@ const FILTER_OPTIONS: DropdownOption<CatFilter>[] = [
 // 커뮤니티 (재설계 v2 §7): [카테고리 ▾] [최신 · 인기] 한 줄 + 글 목록 + 글쓰기
 export default function CommunityScreen() {
   const theme = useTheme();
+  // 홈 「시즌별 어종과 낚시 팁」 등에서 카테고리를 지정해 들어올 수 있다: /community?category=tip
+  const paramCat = useLocalSearchParams<{ category?: string }>().category;
   const [filter, setFilter] = useState<CatFilter>('all');
+  const [lastParam, setLastParam] = useState<string | undefined>(undefined);
+  if (paramCat !== lastParam) {
+    setLastParam(paramCat);
+    if (paramCat && FILTER_OPTIONS.some((o) => o.value === paramCat)) setFilter(paramCat as CatFilter);
+  }
   const [sort, setSort] = useState<Sort>('latest');
   const category = filter === 'all' ? null : filter;
   const posts = usePosts(category, sort);

@@ -43,6 +43,7 @@ export default function RootLayout() {
           <Stack.Screen name="signup" options={{ title: '회원가입' }} />
           <Stack.Screen name="terms" options={{ title: '이용약관' }} />
           <Stack.Screen name="privacy" options={{ title: '개인정보 처리방침' }} />
+          <Stack.Screen name="info/safety" options={{ title: '금어기·출조 안전 정보' }} />
           <Stack.Screen name="community/new" options={{ title: '글쓰기' }} />
           <Stack.Screen name="community/[id]" options={{ title: '커뮤니티' }} />
         </Stack>
