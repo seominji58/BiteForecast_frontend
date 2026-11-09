@@ -137,10 +137,18 @@ function stamp(iso: string): string {
 }
 
 /** 「기상청 예보 11/9 11:00(3시간 전) 발표 · 특보 11/9 13:47(5분 전) 확인」 */
-export function freshnessLine(ds: { forecast_issued_at?: string | null; warning_fetched_at: string | null }): string {
-  if (!ds.forecast_issued_at && !ds.warning_fetched_at) return '아직 수집한 자료가 없어요';
+export function freshnessLine(ds: {
+  forecast_issued_at?: string | null;
+  forecast_fetched_at?: string | null;
+  warning_fetched_at: string | null;
+}): string {
+  if (!ds.forecast_issued_at && !ds.forecast_fetched_at && !ds.warning_fetched_at) return '아직 수집한 자료가 없어요';
   return [
-    ds.forecast_issued_at ? `기상청 예보 ${stamp(ds.forecast_issued_at)} 발표` : '예보 없음',
+    ds.forecast_issued_at
+      ? `기상청 예보 ${stamp(ds.forecast_issued_at)} 발표`
+      : ds.forecast_fetched_at
+        ? `기상청 예보 ${stamp(ds.forecast_fetched_at)} 수집`
+        : '예보 없음',
     ds.warning_fetched_at ? `특보 ${stamp(ds.warning_fetched_at)} 확인` : '특보 확인 안 됨',
   ].join(' · ');
 }
