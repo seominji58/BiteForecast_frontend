@@ -194,17 +194,44 @@ function RecentCatches() {
       <SectionHeader title="최근 조황" actionLabel="전체보기" onAction={() => router.push('/community')} />
       {items.length === 0 ? (
         <Card style={styles.emptyCatch}>
-          <AppIcon name="cat-catch" size={36} />
-          <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
-            {posts.isPending ? '조황을 불러오는 중이에요…' : '아직 올라온 조황이 없어요. 오늘 잡은 물고기를 첫 조황으로 올려 주세요!'}
-          </ThemedText>
-          {!posts.isPending ? (
-            <Pressable accessibilityRole="button" onPress={() => router.push('/community/new')} hitSlop={8}>
-              <ThemedText type="smallBold" themeColor="tint">
-                조황 올리기 ›
-              </ThemedText>
-            </Pressable>
-          ) : null}
+          {posts.isPending ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              조황을 불러오는 중이에요…
+            </ThemedText>
+          ) : (
+            <>
+              {/* 실제 조황이 없을 때: 가짜 조황을 보여주지 않고, 무엇이 올라오는 곳인지와 할 수 있는 일을 안내 */}
+              <View style={styles.emptyHead}>
+                <AppIcon name="cat-catch" size={36} />
+                <View style={styles.flex}>
+                  <ThemedText type="smallBold">아직 올라온 조황이 없어요</ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    낚시인들이 사진과 함께 올린 조황이 여기에 모여요. 관리자가 사진을 확인한 기록에는 「✓ 인증 조황」이 붙어요.
+                  </ThemedText>
+                </View>
+              </View>
+              <View style={styles.emptyActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => router.push('/journal/new')}
+                  style={({ pressed }) => [styles.emptyBtn, { borderColor: theme.tint }, pressed && styles.pressed]}>
+                  <AppIcon name="write" size={IconSize.inline + 2} />
+                  <ThemedText type="smallBold" themeColor="tint">
+                    기록 남기고 인증받기
+                  </ThemedText>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => router.push('/community/new')}
+                  style={({ pressed }) => [styles.emptyBtn, { borderColor: theme.tint }, pressed && styles.pressed]}>
+                  <AppIcon name="comment" size={IconSize.inline + 2} />
+                  <ThemedText type="smallBold" themeColor="tint">
+                    조황 글 올리기
+                  </ThemedText>
+                </Pressable>
+              </View>
+            </>
+          )}
         </Card>
       ) : (
         <ScrollView
@@ -419,7 +446,19 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(46,125,50,0.92)',
   },
   badgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  emptyCatch: { alignItems: 'center', gap: 6, paddingVertical: 18 },
+  emptyCatch: { gap: 10 },
+  emptyHead: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  emptyActions: { flexDirection: 'row', gap: 8 },
+  emptyBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1.5,
+    borderRadius: 10,
+    paddingVertical: 9,
+  },
   explore: { flexDirection: 'row', gap: 12, alignItems: 'center' },
   exploreArt: { width: 56, height: 56, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   list: { gap: 0, paddingVertical: 4 },

@@ -50,16 +50,16 @@ export function CriteriaResult({
   if (b.meets.length === 0) {
     const reasons = [
       b.warning ? `해상 특보 발효 중 ${b.warning}곳 (기준과 관계없이 제외)` : null,
+      b.unknown ? `예보·특보 자료가 부족한 곳 ${b.unknown}곳` : null,
       b.waveOver ? `파고 예보 최대가 ${criteria.maxWave}m 넘는 곳 ${b.waveOver}곳` : null,
-      b.windOver ? `풍속 예보 최대가 ${criteria.maxWind}m/s 넘는 곳 ${b.windOver}곳` : null,
-      b.indexLow ? `바다낚시지수가 ${criteria.minIndex} 미만인 곳 ${b.indexLow}곳` : null,
-      b.unknown ? `자료가 부족한 곳 ${b.unknown}곳` : null,
+      b.windOver ? `파고는 맞지만 풍속 예보 최대가 ${criteria.maxWind}m/s 넘는 곳 ${b.windOver}곳` : null,
+      b.indexLow ? `파고·풍속은 맞지만 바다낚시지수가 ${criteria.minIndex} 미만인 곳 ${b.indexLow}곳` : null,
     ].filter((x): x is string => !!x);
     return (
       <View style={styles.box}>
         <ThemedText type="smallBold">지금 내 기준에 맞는 곳이 없어요</ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
-          전국 {b.total}곳이 빠진 이유 (한 곳이 여러 이유에 걸칠 수 있어요)
+          전국 {b.total}곳이 빠진 이유 (한 곳당 가장 앞선 이유 하나로 셌어요 · 합계 {b.total}곳)
         </ThemedText>
         {reasons.map((r) => (
           <ThemedText key={r} type="small">

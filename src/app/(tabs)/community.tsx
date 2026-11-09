@@ -7,7 +7,8 @@ import type { PostCategory } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { Dropdown, type DropdownOption } from '@/components/dropdown';
 import { PostCard } from '@/components/post-card';
-import { EmptyView, ErrorView, Loading, TabScreen } from '@/components/screen';
+import { Button } from '@/components/form';
+import { Card, EmptyView, ErrorView, Loading, TabScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -122,17 +123,19 @@ export default function CommunityScreen() {
         {posts.isError && <ErrorView message={posts.error.message} onRetry={() => posts.refetch()} />}
         {posts.isSuccess &&
           (posts.data.length === 0 ? (
-            <EmptyView
-              message={
-                sort === 'popular'
-                  ? '최근 30일 인기글이 없어요.'
-                  : filtered
-                    ? '조건에 맞는 글이 없어요. 지역·어종 필터를 바꿔 보세요.'
-                    : category
-                      ? `${CATEGORY[category].label} 글이 아직 없어요.`
-                      : '아직 글이 없어요. 첫 글을 남겨보세요!'
-              }
-            />
+            filtered || category || sort === 'popular' ? (
+              <EmptyView
+                message={
+                  sort === 'popular'
+                    ? '최근 30일 인기글이 없어요.'
+                    : filtered
+                      ? '조건에 맞는 글이 없어요. 지역·어종 필터를 바꾸거나 해제해 보세요.'
+                      : `${CATEGORY[category!].label} 글이 아직 없어요. 첫 글을 남겨 보세요.`
+                }
+              />
+            ) : (
+              <CommunityIntro onWrite={() => router.push(signedIn ? '/community/new' : '/login')} />
+            )
           ) : (
             posts.data.map((p) => (
               <Link key={p.id} href={{ pathname: '/community/[id]', params: { id: String(p.id) } }} asChild>
@@ -159,7 +162,31 @@ export default function CommunityScreen() {
   );
 }
 
+/** 글이 하나도 없을 때: 가짜 글 대신 이 공간에서 무엇을 하는지 안내 */
+function CommunityIntro({ onWrite }: { onWrite: () => void }) {
+  return (
+    <Card>
+      <ThemedText type="smallBold">입질예보 커뮤니티에 첫 글을 남겨 주세요</ThemedText>
+      {(Object.keys(CATEGORY) as PostCategory[]).map((k) => (
+        <View key={k} style={styles.introRow}>
+          <AppIcon name={CATEGORY[k].icon} size={22} />
+          <ThemedText type="small" style={styles.flex}>
+            <ThemedText type="smallBold">{CATEGORY[k].label}</ThemedText>
+            {k === 'catch'
+              ? '  오늘 잡은 물고기 사진과 장소·어종. 인증받은 기록은 「✓ 인증 조황」으로 공유돼요.'
+              : k === 'question'
+                ? '  채비·포인트·물때 등 궁금한 점'
+                : '  시즌별 어종, 채비 요령, 지역 소식'}
+          </ThemedText>
+        </View>
+      ))}
+      <Button label="글쓰기" onPress={onWrite} />
+    </Card>
+  );
+}
+
 const styles = StyleSheet.create({
+  introRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   flex: { flex: 1 },
   pressed: { opacity: 0.8 },
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
