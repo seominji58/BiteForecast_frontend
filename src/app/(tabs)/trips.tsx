@@ -33,9 +33,9 @@ export default function TripsTab() {
   );
 }
 
-/** 로그인 전·가입 직후: 작성하던 계획 이어 쓰기 (앱 메모리의 임시 작성본) */
+/** 작성하던 계획 이어 쓰기 (기기의 임시 저장본 — 7일·지난 일정이면 자동 삭제) */
 function DraftCard() {
-  const draft = useTripDraft();
+  const { draft } = useTripDraft();
   const theme = useTheme();
   if (!draft) return null;
   return (

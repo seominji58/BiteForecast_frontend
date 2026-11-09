@@ -1,5 +1,5 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { api } from '@/api';
@@ -23,8 +23,8 @@ const MAX_DAYS = 7;
 
 /**
  * 출조계획 만들기 · 수정 (설계안 §5-2). 한 화면 폼.
- * - 로그인 전에도 작성할 수 있다. 「계획 만들기」를 누를 때 로그인을 요청하고,
- *   로그인·가입 후 작성 내용이 그대로 남는다 (앱 메모리의 임시 작성본 — 기기에 저장하지 않음)
+ * - 로그인 전에도 작성할 수 있다. 「계획 만들기」를 누를 때 로그인을 요청한다
+ * - 새 계획은 고칠 때마다 기기에 임시 저장 → 로그인·가입 후, 앱을 껐다 켜도 이어 쓴다 (lib/trip-draft.ts 정책)
  * - ?place=147&date=2026-11-14 : 홈·상세의 「계획에 추가」에서 들어오면 장소·날짜가 채워진다
  * - ?id=3 : 수정 (로그인 필요, 장소는 계획 화면에서 바꾼다)
  */
@@ -32,7 +32,7 @@ function TripFormScreen() {
   const params = useLocalSearchParams<{ place?: string; date?: string; id?: string }>();
   const editId = params.id ? Number(params.id) : null;
   const { status } = useAuth();
-  const draft = useTripDraft();
+  const { draft, loaded } = useTripDraft();
   const existing = useTrip(editId ?? NaN);
   const range = useDateRange();
   if (editId != null && status !== 'signed-in') {
@@ -43,7 +43,7 @@ function TripFormScreen() {
     );
   }
   if (editId != null && existing.isPending) return <Loading />;
-  if (!range.data) return <Loading />;
+  if (!range.data || (editId == null && !loaded)) return <Loading />;
   // 「계획에 추가」로 새 장소·날짜를 들고 왔으면 그것을, 아니면 작성하던 내용을 이어 쓴다
   const resume = editId == null && !params.place ? draft : null;
   return (
@@ -85,6 +85,17 @@ function TripForm({
   const [memo, setMemo] = useState(initial?.memo ?? d?.memo ?? '');
   const [placeId, setPlaceId] = useState<number | null>(initial ? null : (d?.placeId ?? initialPlace));
   const [error, setError] = useState<string | null>(null);
+  // 새 계획: 사용자가 무언가 바꾸면 기기에 임시 저장 (수정 화면은 저장하지 않음)
+  const [dirty, setDirty] = useState(false);
+  const touch =
+    <T,>(set: (v: T) => void) =>
+    (v: T) => {
+      set(v);
+      setDirty(true);
+    };
+  useEffect(() => {
+    if (!initial && dirty) setTripDraft({ title, start, end, region, species, memo, placeId });
+  }, [initial, dirty, title, start, end, region, species, memo, placeId]);
 
   const save = useTripMutation((v: { id: number | null }) => {
     const body = {
@@ -140,7 +151,7 @@ function TripForm({
             a11y="시작 날짜"
             value={parseDay(start)}
             minimumDate={initial ? undefined : parseDay(today)}
-            onChange={(d) => setStartDay(formatDay(d))}
+            onChange={(d) => touch(setStartDay)(formatDay(d))}
           />
           <ThemedText themeColor="textSecondary">~</ThemedText>
           <PickerField
@@ -149,7 +160,7 @@ function TripForm({
             value={parseDay(end)}
             minimumDate={parseDay(start)}
             maximumDate={parseDay(maxEnd)}
-            onChange={(d) => setEnd(formatDay(d))}
+            onChange={(d) => touch(setEnd)(formatDay(d))}
           />
         </View>
         <ThemedText type="small" themeColor="textSecondary">
@@ -159,7 +170,7 @@ function TripForm({
 
       {!initial ? (
         <Field label="첫 낚시터 (선택)">
-          <PlaceField value={placeId} onChange={setPlaceId} placeholder="낚시터 고르기 — 나중에 추가해도 돼요" />
+          <PlaceField value={placeId} onChange={touch(setPlaceId)} placeholder="낚시터 고르기 — 나중에 추가해도 돼요" />
           {place ? <CoordNote place={place} compact /> : null}
           {place?.location_suspect ? (
             <ThemedText type="small" themeColor="warning">
@@ -176,23 +187,23 @@ function TripForm({
 
       <Field label="지역 (선택)">
         <ChipGroup>
-          <Chip label="정하지 않음" selected={region == null} onPress={() => setRegion(null)} />
+          <Chip label="정하지 않음" selected={region == null} onPress={() => touch(setRegion)(null)} />
           {SEA_GROUPS.map((g) => (
-            <Chip key={g} label={g} selected={region === g} onPress={() => setRegion(g)} />
+            <Chip key={g} label={g} selected={region === g} onPress={() => touch(setRegion)(g)} />
           ))}
         </ChipGroup>
       </Field>
 
       <Field label="목표 어종 (선택)">
-        <SpeciesField value={species} onChange={setSpecies} />
+        <SpeciesField value={species} onChange={touch(setSpecies)} />
       </Field>
 
       <Field label="제목 (선택)">
-        <TextField value={title} onChangeText={setTitle} placeholder={autoTitle} maxLength={60} />
+        <TextField value={title} onChangeText={touch(setTitle)} placeholder={autoTitle} maxLength={60} />
       </Field>
 
       <Field label="메모 (선택)">
-        <TextField value={memo} onChangeText={setMemo} placeholder="예: 새벽 4시 출발, 동행 2명" multiline maxLength={1000} />
+        <TextField value={memo} onChangeText={touch(setMemo)} placeholder="예: 새벽 4시 출발, 동행 2명" multiline maxLength={1000} />
       </Field>
 
       {!initial ? (
@@ -211,7 +222,7 @@ function TripForm({
         </ThemedText>
       ) : d && !initial ? (
         <ThemedText type="small" themeColor="tint">
-          로그인 전에 작성하던 내용이에요. 「계획 만들기」를 누르면 계정에 저장돼요.
+          작성하던 내용을 불러왔어요. 「계획 만들기」를 누르면 계정에 저장돼요.
         </ThemedText>
       ) : null}
       <Button
@@ -219,6 +230,22 @@ function TripForm({
         disabled={save.isPending}
         onPress={submit}
       />
+      {!initial && (d || dirty) ? (
+        <Button
+          label="작성 취소"
+          variant="secondary"
+          onPress={() => {
+            setTripDraft(null);
+            router.back();
+          }}
+        />
+      ) : null}
+      {!initial ? (
+        <ThemedText type="small" themeColor="textSecondary">
+          작성 중인 내용은 이 기기에 임시로 저장돼요. 계정에 저장하거나 「작성 취소」를 누르면 지워지고, 7일이 지나거나 날짜가 지나면 자동으로
+          지워져요.
+        </ThemedText>
+      ) : null}
     </StackScreen>
   );
 }

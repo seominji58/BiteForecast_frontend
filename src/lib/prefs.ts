@@ -5,17 +5,25 @@ import { Platform } from 'react-native';
 import { type Criteria, DEFAULT_CRITERIA } from '@/lib/criteria';
 
 /** 기기에만 저장하는 작은 설정값 (홈 화면 기준 낚시터 등) */
-async function read(key: string): Promise<string | null> {
+export async function read(key: string): Promise<string | null> {
   if (Platform.OS === 'web') return globalThis.localStorage?.getItem(key) ?? null;
   return SecureStore.getItemAsync(key);
 }
 
-async function write(key: string, value: string): Promise<void> {
+export async function write(key: string, value: string): Promise<void> {
   if (Platform.OS === 'web') {
     globalThis.localStorage?.setItem(key, value);
     return;
   }
   await SecureStore.setItemAsync(key, value);
+}
+
+export async function remove(key: string): Promise<void> {
+  if (Platform.OS === 'web') {
+    globalThis.localStorage?.removeItem(key);
+    return;
+  }
+  await SecureStore.deleteItemAsync(key);
 }
 
 const HOME_PLACE = 'biteforecast.home_place_id';

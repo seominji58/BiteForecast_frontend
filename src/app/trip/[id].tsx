@@ -47,6 +47,13 @@ function TripBody({
   const theme = useTheme();
   const [criteria] = useCriteria();
   const [addingDay, setAddingDay] = useState<string | null>(null);
+  const [pickingDay, setPickingDay] = useState<string | null>(null);
+  const days = tripDays(trip.start_date, trip.end_date);
+  // 처음 펼칠 날짜: 이틀 이하면 모두, 아니면 오늘 이후 첫날(없으면 첫날)
+  const [openDays, setOpenDays] = useState<Set<string>>(
+    () => new Set(days.length <= 2 ? days : [days.find((d) => d >= today) ?? days[0]]),
+  );
+  const allOpen = openDays.size === days.length;
   const [editing, setEditing] = useState<TripStop | null>(null);
   const favorites = useFavorites();
   const del = useDeleteTrip();
@@ -107,79 +114,139 @@ function TripBody({
         {outlook ? ` · ${freshnessLine(outlook.data_status)}` : ''}
       </ThemedText>
 
-      {/* 날짜별 장소 */}
-      {tripDays(trip.start_date, trip.end_date).map((day, i) => {
-        const stops = trip.stops.filter((s) => s.day === day);
+      {/* 날짜별 장소 — 날짜마다 접기·펼치기 (7일 × 5곳이어도 화면이 길어지지 않게) */}
+      {days.length > 1 ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setOpenDays(allOpen ? new Set() : new Set(days))}
+          style={styles.toggleAll}>
+          <ThemedText type="small" themeColor="tint">
+            {allOpen ? '모두 접기' : '모두 펼치기'}
+          </ThemedText>
+        </Pressable>
+      ) : null}
+      {days.map((day, i) => {
+        // 주 장소 먼저, 그다음 예비 (각각 정한 순서대로)
+        const stops = trip.stops
+          .filter((s) => s.day === day)
+          .sort((x, y) => (x.role === y.role ? x.sort_order - y.sort_order : x.role === 'main' ? -1 : 1));
         const mains = stops.filter((s) => s.role === 'main');
-        const pair = stops.length >= 2 ? [mains[0] ?? stops[0], stops.find((s) => s !== (mains[0] ?? stops[0]))!] : null;
+        const alts = stops.filter((s) => s.role !== 'main');
+        const pair = stops.length >= 2 ? [stops[0], stops[1]] : null;
+        const open = openDays.has(day);
+        const summary = stops.length
+          ? [mains.length ? `주 ${mains.map((s) => s.place.name).join('·')}` : '주 장소 없음', alts.length ? `예비 ${alts.length}곳` : null]
+              .filter(Boolean)
+              .join(' · ')
+          : '장소 없음';
         return (
-          <View key={day} style={styles.day}>
-            <View style={styles.dayHead}>
+          <View key={day} style={[styles.day, { borderColor: theme.border, backgroundColor: theme.backgroundElement }]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ expanded: open }}
+              accessibilityLabel={`${dayLabel(day)}, ${summary}, ${open ? '접기' : '펼치기'}`}
+              onPress={() => {
+                const next = new Set(openDays);
+                if (open) next.delete(day);
+                else next.add(day);
+                setOpenDays(next);
+              }}
+              style={({ pressed }) => [styles.dayHead, pressed && styles.pressed]}>
               <View style={[styles.dayBadge, { backgroundColor: theme.tintSoft }]}>
                 <ThemedText type="small" themeColor="tint">
                   DAY {i + 1}
                 </ThemedText>
               </View>
-              <ThemedText type="sectionTitle">{dayLabel(day)}</ThemedText>
-            </View>
-            {stops.length === 0 ? (
-              <ThemedText type="small" themeColor="textSecondary">
-                아직 고른 낚시터가 없어요.
-              </ThemedText>
-            ) : null}
-            {stops.map((s) => (
-              <StopCard
-                key={s.id}
-                stop={s}
-                o={byStop.get(s.id)}
-                lastDay={outlook?.forecast_last_day ?? null}
-                criteria={criteria}
-                today={today}
-                onEdit={() => setEditing(s)}
-                onToggleRole={() =>
-                  run(() => api.updateTripStop(trip.id, s.id, { role: s.role === 'main' ? 'alternative' : 'main' }))
-                }
-                onDelete={() =>
-                  Alert.alert(`${s.place.name}을(를) 뺄까요?`, undefined, [
-                    { text: '취소', style: 'cancel' },
-                    { text: '빼기', style: 'destructive', onPress: () => run(() => api.deleteTripStop(trip.id, s.id)) },
-                  ])
-                }
-              />
-            ))}
-            <View style={styles.dayActions}>
-              {stops.length < MAX_STOPS_PER_DAY ? (
-                <SmallButton icon="find-sea" label="장소 추가" onPress={() => setAddingDay(day)} />
-              ) : null}
-              {pair ? (
-                <SmallButton
-                  icon="find-compare"
-                  label="두 곳 비교"
-                  onPress={() =>
-                    router.push({
-                      pathname: '/compare',
-                      params: { a: String(pair[0].place.id), b: String(pair[1].place.id), date: day },
-                    })
-                  }
-                />
-              ) : null}
-            </View>
-            {addingDay === day && favorites.data?.length ? (
-              <View style={styles.wrap}>
-                <ThemedText type="small" themeColor="textSecondary">
-                  즐겨찾기에서:
+              <View style={styles.flex}>
+                <ThemedText type="smallBold">
+                  {dayLabel(day)}
+                  {day < today ? ' · 지남' : day === today ? ' · 오늘' : ''}
                 </ThemedText>
-                {favorites.data.slice(0, 5).map((p) => (
-                  <Chip
-                    key={p.id}
-                    label={p.name}
-                    selected={false}
-                    onPress={() => {
-                      setAddingDay(null);
-                      run(() => api.addTripStop(trip.id, { day, place_id: p.id, role: stops.length ? 'alternative' : 'main' }));
-                    }}
-                  />
-                ))}
+                {!open ? (
+                  <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                    {summary}
+                  </ThemedText>
+                ) : null}
+              </View>
+              <ThemedText themeColor="textSecondary">{open ? '▲' : '▼'}</ThemedText>
+            </Pressable>
+            {open ? (
+              <View style={styles.dayBody}>
+                {stops.length === 0 ? (
+                  <ThemedText type="small" themeColor="textSecondary">
+                    아직 고른 낚시터가 없어요.
+                  </ThemedText>
+                ) : null}
+                {[
+                  ['주 장소', mains],
+                  ['예비 장소', alts],
+                ].map(([label, list]) =>
+                  (list as TripStop[]).length ? (
+                    <View key={label as string} style={styles.group}>
+                      <ThemedText type="small" themeColor={label === '주 장소' ? 'tint' : 'textSecondary'} style={styles.groupLabel}>
+                        {label as string}
+                      </ThemedText>
+                      {(list as TripStop[]).map((s) => (
+                        <StopCard
+                          key={s.id}
+                          stop={s}
+                          o={byStop.get(s.id)}
+                          lastDay={outlook?.forecast_last_day ?? null}
+                          criteria={criteria}
+                          today={today}
+                          onEdit={() => setEditing(s)}
+                          onToggleRole={() =>
+                            run(() => api.updateTripStop(trip.id, s.id, { role: s.role === 'main' ? 'alternative' : 'main' }))
+                          }
+                          onDelete={() =>
+                            Alert.alert(`${s.place.name}을(를) 뺄까요?`, undefined, [
+                              { text: '취소', style: 'cancel' },
+                              { text: '빼기', style: 'destructive', onPress: () => run(() => api.deleteTripStop(trip.id, s.id)) },
+                            ])
+                          }
+                        />
+                      ))}
+                    </View>
+                  ) : null,
+                )}
+                <View style={styles.dayActions}>
+                  {stops.length < MAX_STOPS_PER_DAY ? (
+                    <SmallButton
+                      icon="find-sea"
+                      label="장소 추가"
+                      onPress={() => setAddingDay(addingDay === day ? null : day)}
+                    />
+                  ) : null}
+                  {pair ? (
+                    <SmallButton
+                      icon="find-compare"
+                      label="두 곳 비교"
+                      onPress={() =>
+                        router.push({
+                          pathname: '/compare',
+                          params: { a: String(pair[0].place.id), b: String(pair[1].place.id), date: day },
+                        })
+                      }
+                    />
+                  ) : null}
+                </View>
+                {addingDay === day ? (
+                  // 장소 추가: 즐겨찾기 바로 넣기 + 검색 (검색 시트가 칩을 가리지 않게 따로 연다)
+                  <View style={styles.wrap}>
+                    {(favorites.data ?? []).slice(0, 5).map((p) => (
+                      <Chip
+                        key={p.id}
+                        label={`★ ${p.name}`}
+                        selected={false}
+                        onPress={() => {
+                          setAddingDay(null);
+                          run(() => api.addTripStop(trip.id, { day, place_id: p.id, role: stops.length ? 'alternative' : 'main' }));
+                        }}
+                      />
+                    ))}
+                    <Chip label="낚시터 검색…" selected={false} onPress={() => setPickingDay(day)} />
+                  </View>
+                ) : null}
               </View>
             ) : null}
           </View>
@@ -195,15 +262,16 @@ function TripBody({
       <Button label="계획 지우기" variant="danger" onPress={confirmDelete} />
 
       <PlacePicker
-        visible={addingDay !== null}
-        title={addingDay ? `${dayLabel(addingDay)}에 넣을 낚시터` : ''}
+        visible={pickingDay !== null}
+        title={pickingDay ? `${dayLabel(pickingDay)}에 넣을 낚시터` : ''}
         onSelect={(p) => {
-          const day = addingDay!;
+          const day = pickingDay!;
           const has = trip.stops.some((s) => s.day === day);
+          setPickingDay(null);
           setAddingDay(null);
           run(() => api.addTripStop(trip.id, { day, place_id: p.id, role: has ? 'alternative' : 'main' }));
         }}
-        onClose={() => setAddingDay(null)}
+        onClose={() => setPickingDay(null)}
       />
       <StopEditor
         stop={editing}
@@ -486,8 +554,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.35)',
   },
-  day: { gap: 8 },
-  dayHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
+  day: { borderWidth: 1, borderRadius: 12, overflow: 'hidden' },
+  dayHead: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 56, paddingHorizontal: 12, paddingVertical: 8 },
+  dayBody: { paddingHorizontal: 12, paddingBottom: 12, gap: 8 },
+  group: { gap: 6 },
+  groupLabel: { fontWeight: '700' },
+  toggleAll: { alignSelf: 'flex-end', minHeight: 32, justifyContent: 'center' },
   dayBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   dayActions: { flexDirection: 'row', gap: 8 },
   small: {
