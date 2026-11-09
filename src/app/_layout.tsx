@@ -39,6 +39,9 @@ export default function RootLayout() {
           <Stack.Screen name="settings" options={{ title: '설정·정보' }} />
           <Stack.Screen name="place/[id]" options={{ title: '상세 해황' }} />
           <Stack.Screen name="explore" options={{ title: '낚시터 찾기' }} />
+          <Stack.Screen name="compare" options={{ title: '조건 비교' }} />
+          <Stack.Screen name="trip/new" options={{ title: '새 출조계획' }} />
+          <Stack.Screen name="trip/[id]" options={{ title: '출조계획' }} />
           <Stack.Screen name="login" options={{ title: '로그인' }} />
           <Stack.Screen name="signup" options={{ title: '회원가입' }} />
           <Stack.Screen name="terms" options={{ title: '이용약관' }} />

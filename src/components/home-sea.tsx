@@ -14,6 +14,7 @@ import MapView, { Marker, type Region } from 'react-native-maps';
 
 import { useConditions } from '@/api/queries';
 import type { Place, PlaceSummary, Series } from '@/api/types';
+import { AddToTripButton } from '@/components/add-to-trip';
 import { AppIcon } from '@/components/app-icon';
 import { ThemedText } from '@/components/themed-text';
 import { Brand, IconSize } from '@/constants/theme';
@@ -489,6 +490,7 @@ export function SelectedSea({
               {pc.warning.active.length ? ` (${pc.warning.active.map((m) => m.type).join('·')})` : ''}
             </ThemedText>
           </View>
+          <AddToTripButton placeId={p.id} placeName={p.name} date={date} />
           {future ? (
             <ThemedText type="small" themeColor="textSecondary">
               특보는 「지금」 발효 상태예요. 그날 특보는 아직 발표 전이니 출조 전 꼭 다시 확인하세요.

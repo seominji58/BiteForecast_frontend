@@ -63,6 +63,8 @@ export type Journal = {
   verification: Verification;
   /** 이 기록을 공유한 커뮤니티 글 */
   shared_post_id: number | null;
+  /** 출조계획 장소에서 쓴 기록이면 그 장소 ID */
+  trip_stop_id?: number | null;
   created_at: string;
   updated_at: string;
   env_snapshots: EnvSnapshot[];
@@ -101,6 +103,8 @@ export type JournalInput = {
   photo_ids?: number[];
   /** 저장과 함께 인증 신청 */
   request_verification?: boolean;
+  /** 출조계획 장소에서 「기록 남기기」로 쓸 때 (본인 계획·같은 낚시터) */
+  trip_stop_id?: number | null;
 };
 
 export type JournalMutation = {
@@ -352,3 +356,98 @@ export type MergeInfo = { done: boolean; available: boolean; journals: number; p
 export type AuthResult = { status: 'ok'; token: string; expires_at: string; account: Account; merge: MergeInfo };
 export type GoogleSignupNeeded = { status: 'signup_required'; email: string | null; name: string | null };
 export type AuthConfig = { google: boolean; email: boolean };
+
+// --- 출조계획 (설계안 2026-11-09). 로그인한 본인 것만 ---
+export type TripRole = 'main' | 'alternative';
+export type TideEvent = { type: 'high' | 'low'; t: string; v: number | null; station_name: string; station_km: number | null };
+
+export type TripStop = {
+  id: number;
+  /** YYYY-MM-DD */
+  day: string;
+  place: Place;
+  role: TripRole;
+  sort_order: number;
+  /** HH:MM:SS */
+  start_time: string | null;
+  end_time: string | null;
+  memo: string | null;
+  journal_ids: number[];
+};
+
+export type ChecklistItem = { id: number; label: string; checked: boolean };
+
+export type Trip = {
+  id: number;
+  title: string;
+  start_date: string;
+  end_date: string;
+  region: string | null;
+  species_code: string | null;
+  species_name: string | null;
+  species_etc: string | null;
+  memo: string | null;
+  stops: TripStop[];
+  checklist: ChecklistItem[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type TripListItem = {
+  id: number;
+  title: string;
+  start_date: string;
+  end_date: string;
+  region: string | null;
+  stop_count: number;
+  checklist_done: number;
+  checklist_total: number;
+  journal_count: number;
+  first_stop: TripStop | null;
+};
+
+export type TripStopInput = {
+  day: string;
+  place_id: number;
+  role?: TripRole;
+  start_time?: string | null;
+  end_time?: string | null;
+  memo?: string | null;
+};
+
+export type TripInput = {
+  title?: string | null;
+  start_date: string;
+  end_date: string;
+  region?: string | null;
+  species_code?: string | null;
+  species_etc?: string | null;
+  memo?: string | null;
+  stops?: TripStopInput[];
+};
+
+export type TripPatch = Partial<Omit<TripInput, 'stops'>>;
+export type TripStopPatch = Partial<TripStopInput> & { sort_order?: number };
+
+/** 장소별 그날 해황. available 예보 있음 · pending 예보 발표 전 · past 지난 날짜 · location_check 위치 확인 필요 */
+export type StopOutlook = {
+  stop_id: number;
+  day: string;
+  place_id: number;
+  forecast_status: 'available' | 'pending' | 'past' | 'location_check';
+  wave_fc_max: ValueAt | null;
+  wind_fc_max: ValueAt | null;
+  warning_level: Warning['level'] | null;
+  warning_types: string[];
+  /** 특보는 「지금」 상태 — 오늘이 아니면 false (앱은 「그날 특보 발표 전」) */
+  warning_is_current: boolean;
+  tides: TideEvent[];
+};
+
+export type TripOutlook = {
+  trip_id: number;
+  today: string;
+  forecast_last_day: string | null;
+  stops: StopOutlook[];
+  data_status: DataStatus;
+};

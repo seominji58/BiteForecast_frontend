@@ -1,5 +1,12 @@
 import { request } from '@/api/client';
 import type {
+  Trip,
+  TripInput,
+  TripListItem,
+  TripOutlook,
+  TripPatch,
+  TripStopInput,
+  TripStopPatch,
   Account,
   Agreements,
   AuthConfig,
@@ -66,6 +73,23 @@ export const api = {
     return request<PostSummary[]>(`/community/posts?${qs.toString()}`);
   },
   favorites: () => request<Place[]>('/me/favorites'),
+
+  // --- 출조계획 ---
+  trips: (when: 'upcoming' | 'past') => request<TripListItem[]>(`/me/trips?when=${when}`, { auth: true }),
+  trip: (id: number) => request<Trip>(`/me/trips/${id}`, { auth: true }),
+  createTrip: (input: TripInput) => request<Trip>('/me/trips', { method: 'POST', body: input, auth: true }),
+  updateTrip: (id: number, patch: TripPatch) =>
+    request<Trip>(`/me/trips/${id}`, { method: 'PATCH', body: patch, auth: true }),
+  deleteTrip: (id: number) => request<void>(`/me/trips/${id}`, { method: 'DELETE', auth: true }),
+  addTripStop: (id: number, stop: TripStopInput) =>
+    request<Trip>(`/me/trips/${id}/stops`, { method: 'POST', body: stop, auth: true }),
+  updateTripStop: (id: number, stopId: number, patch: TripStopPatch) =>
+    request<Trip>(`/me/trips/${id}/stops/${stopId}`, { method: 'PATCH', body: patch, auth: true }),
+  deleteTripStop: (id: number, stopId: number) =>
+    request<Trip>(`/me/trips/${id}/stops/${stopId}`, { method: 'DELETE', auth: true }),
+  setTripChecklist: (id: number, items: { label: string; checked: boolean }[]) =>
+    request<Trip>(`/me/trips/${id}/checklist`, { method: 'PUT', body: items, auth: true }),
+  tripOutlook: (id: number) => request<TripOutlook>(`/me/trips/${id}/outlook`, { auth: true }),
   setFavorite: (placeId: number, on: boolean) =>
     request<void>(`/me/favorites/${placeId}`, { method: on ? 'PUT' : 'DELETE' }),
   post: (id: number) => request<PostDetail>(`/community/posts/${id}`, { auth: true }),

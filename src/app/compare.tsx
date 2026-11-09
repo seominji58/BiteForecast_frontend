@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -9,7 +9,7 @@ import { CompareView, type CompareFocus } from '@/components/compare-view';
 import { Dropdown } from '@/components/dropdown';
 import { Chip } from '@/components/form';
 import { PlacePicker } from '@/components/place-picker';
-import { Card, ErrorView, Loading, TabScreen } from '@/components/screen';
+import { Card, ErrorView, Loading, StackScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import type { AppIconName } from '@/constants/icons';
 import { Brand, IconSize } from '@/constants/theme';
@@ -28,15 +28,17 @@ const FOCUS: { value: CompareFocus; label: string }[] = [
 ];
 
 // SCR-02 조건 비교 (재설계 v2 §6): A=기준 낚시터(있을 때만), B=가까운 곳 추천 또는 검색, 날짜는 드롭다운
-export default function CompareTab() {
-  const params = useLocalSearchParams<{ a?: string; b?: string }>();
+// 2026-11-09: 탭에서 빠져 화면으로 열린다 (출조계획·홈·상세에서). date 로 날짜를 넘겨받는다
+export default function CompareScreen() {
+  const params = useLocalSearchParams<{ a?: string; b?: string; date?: string }>();
   const places = usePlaces();
   const range = useDateRange();
   const [homeId, , homeLoaded] = useHomePlace();
 
-  const [day, setDay] = useState<string | null>(null);
+  const [day, setDay] = useState<string | null>(params.date ?? null);
   const [aId, setAId] = useState<number | null>(null);
   const [bId, setBId] = useState<number | null>(params.b ? Number(params.b) : null);
+  const days = range.data ? dayList(range.data.min, range.data.max) : [];
   const [focus, setFocus] = useState<CompareFocus>('all');
   const [picking, setPicking] = useState<'A' | 'B' | null>(null);
 
@@ -52,8 +54,9 @@ export default function CompareTab() {
   const a = places.data?.find((p) => p.id === candidateA) ?? null;
   const b = places.data?.find((p) => p.id === bId && p.id !== a?.id) ?? null;
 
-  const days = range.data ? dayList(range.data.min, range.data.max) : [];
-  const selectedDay = day ?? range.data?.today ?? '';
+  // 넘겨받은 날짜가 비교 가능 범위 밖이면(예: 먼 출조 날짜) 오늘로 보고 안내한다 — 다른 날짜 자료를 그 날짜 것처럼 보여주지 않음
+  const outOfRange = !!day && !!range.data && !days.includes(day);
+  const selectedDay = (outOfRange ? null : day) ?? range.data?.today ?? '';
   const dayIdx = days.indexOf(selectedDay);
   const q = useCompare(a?.id ?? NaN, b?.id ?? NaN, selectedDay);
 
@@ -68,7 +71,13 @@ export default function CompareTab() {
   }, [a, b]);
 
   return (
-    <TabScreen title="조건 비교">
+    <StackScreen>
+      <Stack.Screen options={{ title: '조건 비교' }} />
+      {outOfRange ? (
+        <ThemedText type="small" themeColor="warning">
+          {dayLabel(day!)}은 아직 비교할 자료가 없어 오늘 날짜로 보여드려요. 그날 예보는 발표 전이에요.
+        </ThemedText>
+      ) : null}
       {/* 날짜: ◀ 드롭다운 ▶ (가로 스크롤 칩 대신, 화면 너비 안에 들어간다) */}
       {range.isSuccess ? (
         <View style={styles.dayRow}>
@@ -172,7 +181,7 @@ export default function CompareTab() {
         onSelect={(p) => (picking === 'A' ? setAId(p.id) : setBId(p.id))}
         onClose={() => setPicking(null)}
       />
-    </TabScreen>
+    </StackScreen>
   );
 }
 

@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useConditions, useDateRange, useFavorites, usePlaces, useSetFavorite } from '@/api/queries';
+import { AddToTripButton } from '@/components/add-to-trip';
 import { AppIcon } from '@/components/app-icon';
 import { Button } from '@/components/form';
 import { MarineWarningBanner } from '@/components/marine-warning-banner';
@@ -57,6 +58,7 @@ export default function PlaceDetailScreen() {
             {place.id === homeId ? '내 기준 낚시터' : '기준 낚시터 아님'}
             {cond.data ? ` · ${timeLabel(cond.data.generated_at)} 갱신` : ''}
           </ThemedText>
+          {today ? <AddToTripButton placeId={place.id} placeName={place.name} date={today} /> : null}
           {place.id !== homeId ? (
             <Button
               label="이 낚시터를 기준으로 설정"

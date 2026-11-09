@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api } from '@/api';
-import type { JournalInput, PostCategory, PostFilter, PostInput } from '@/api/types';
+import type { JournalInput, PostCategory, PostFilter, PostInput, Trip } from '@/api/types';
 import { useAuth } from '@/lib/auth';
 
 // 화면에서 쓰는 조회/변경 훅. queryKey 는 캐시 무효화 기준이 되므로 여기서만 정의한다.
@@ -88,6 +88,8 @@ function useInvalidateJournalData() {
     Promise.all([
       qc.invalidateQueries({ queryKey: queryKeys.journals }),
       qc.invalidateQueries({ queryKey: queryKeys.me }),
+      // 출조계획 장소에 붙은 기록 수
+      qc.invalidateQueries({ queryKey: ['trips'] }),
     ]);
 }
 
@@ -174,5 +176,47 @@ export function useReport() {
   return useMutation({
     mutationFn: (v: { type: 'post' | 'comment'; id: number; reason: string }) => api.report(v.type, v.id, v.reason),
     onSuccess: invalidate,
+  });
+}
+
+// --- 출조계획 (로그인했을 때만) ---
+export const useTrips = (when: 'upcoming' | 'past') => {
+  const { signedIn } = useAuth();
+  return useQuery({ queryKey: ['trips', 'list', when], queryFn: () => api.trips(when), enabled: signedIn });
+};
+
+export const useTrip = (id: number) => {
+  const { signedIn } = useAuth();
+  return useQuery({ queryKey: ['trips', id], queryFn: () => api.trip(id), enabled: signedIn && Number.isFinite(id) });
+};
+
+export const useTripOutlook = (id: number) => {
+  const { signedIn } = useAuth();
+  return useQuery({
+    queryKey: ['trips', id, 'outlook'],
+    queryFn: () => api.tripOutlook(id),
+    enabled: signedIn && Number.isFinite(id),
+    staleTime: 5 * 60_000,
+  });
+};
+
+/** 계획을 바꾸는 요청 공통: 결과(Trip)로 상세 캐시를 바로 바꾸고 목록·해황은 다시 불러온다 */
+export function useTripMutation<V>(fn: (v: V) => Promise<Trip>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: (t) => {
+      qc.setQueryData(['trips', t.id], t);
+      qc.invalidateQueries({ queryKey: ['trips', 'list'] });
+      qc.invalidateQueries({ queryKey: ['trips', t.id, 'outlook'] });
+    },
+  });
+}
+
+export function useDeleteTrip() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.deleteTrip(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['trips', 'list'] }),
   });
 }

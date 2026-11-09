@@ -29,6 +29,8 @@ export const ICONS = {
   'tab-community': require('@/assets/icons/tab-community.png'),
   'tab-compare-active': require('@/assets/icons/tab-compare-active.png'),
   'tab-compare': require('@/assets/icons/tab-compare.png'),
+  'tab-trips-active': require('@/assets/icons/tab-trips-active.png'),
+  'tab-trips': require('@/assets/icons/tab-trips.png'),
   'tab-home-active': require('@/assets/icons/tab-home-active.png'),
   'tab-home': require('@/assets/icons/tab-home.png'),
   'tab-me-active': require('@/assets/icons/tab-me-active.png'),

@@ -21,6 +21,8 @@ type Props = {
   onSubmit: (input: JournalInput) => void;
   /** 새 일지일 때 미리 채울 장소 (홈 기준 낚시터) */
   defaultPlaceId?: number | null;
+  /** 출조계획에서 「기록 남기기」로 들어오면 그날 아침으로 채운다 */
+  defaultFishedAt?: Date;
 };
 
 /**
@@ -28,9 +30,9 @@ type Props = {
  * ① 장소·일시 ② 조과(어종 검색·마릿수·길이) ③ 사진 ④ 미끼·채비·메모(접힘)
  * 사진이 있으면 [저장] / [저장하고 인증 신청]. 포인트는 관리자 승인 후에만 생긴다.
  */
-export function JournalForm({ initial, submitLabel, submitting, serverError, onSubmit, defaultPlaceId }: Props) {
+export function JournalForm({ initial, submitLabel, submitting, serverError, onSubmit, defaultPlaceId, defaultFishedAt }: Props) {
   const [placeId, setPlaceId] = useState<number | null>(initial?.place_id ?? defaultPlaceId ?? null);
-  const [fishedAt, setFishedAt] = useState(() => (initial ? new Date(initial.fished_at) : new Date()));
+  const [fishedAt, setFishedAt] = useState(() => (initial ? new Date(initial.fished_at) : (defaultFishedAt ?? new Date())));
   const [species, setSpecies] = useState<SpeciesValue>({
     code: initial?.species_code ?? null,
     etc: initial?.species_etc ?? null,

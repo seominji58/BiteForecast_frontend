@@ -1,4 +1,5 @@
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
+import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -32,6 +33,70 @@ export function DateTimeField({ value, onChange, maximumDate }: Props) {
     );
   }
   return <AndroidDateTimeField value={value} onChange={onChange} maximumDate={maximumDate} />;
+}
+
+/** 날짜 또는 시간 하나만 고르는 칸 (출조계획 날짜·시간) */
+export function PickerField({
+  mode,
+  value,
+  onChange,
+  minimumDate,
+  maximumDate,
+  a11y,
+  placeholder,
+}: {
+  mode: 'date' | 'time';
+  value: Date | null;
+  onChange: (d: Date) => void;
+  minimumDate?: Date;
+  maximumDate?: Date;
+  a11y: string;
+  /** 값이 없을 때(시간 미정 등) 보여줄 글자 — 누르면 고른다 */
+  placeholder?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const label = value
+    ? mode === 'date'
+      ? value.toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric', weekday: 'short' })
+      : value.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })
+    : (placeholder ?? '선택');
+  if (Platform.OS === 'ios' && (value || editing)) {
+    return (
+      <View style={styles.iosRow} accessibilityLabel={a11y}>
+        <DateTimePicker
+          value={value ?? defaultTime()}
+          mode={mode}
+          display="compact"
+          locale="ko-KR"
+          minimumDate={minimumDate}
+          maximumDate={maximumDate}
+          onValueChange={(_e, d) => onChange(d)}
+        />
+      </View>
+    );
+  }
+  const open = () => {
+    if (Platform.OS === 'ios') {
+      setEditing(true);
+      onChange(value ?? defaultTime());
+      return;
+    }
+    DateTimePickerAndroid.open({
+      value: value ?? defaultTime(),
+      mode,
+      is24Hour: true,
+      minimumDate,
+      maximumDate,
+      onValueChange: (_e, d) => onChange(d),
+    });
+  };
+  return <PickerButton label={label} a11y={a11y} onPress={open} />;
+}
+
+function defaultTime(): Date {
+  const d = new Date();
+  d.setHours(6, 0, 0, 0);
+  return d;
 }
 
 function AndroidDateTimeField({ value, onChange, maximumDate }: Props) {
