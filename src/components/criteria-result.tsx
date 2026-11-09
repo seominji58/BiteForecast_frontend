@@ -9,7 +9,7 @@ import { IconSize } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { Breakdown, Criteria } from '@/lib/criteria';
 import { freshnessLine, WARNING_SHORT } from '@/lib/criteria';
-import { km, PLACE_IMAGE } from '@/lib/place';
+import { distLabel, km, PLACE_IMAGE, usableForLocation } from '@/lib/place';
 
 /**
  * 「조건으로 찾기」 결과 세 가지 상태 (사용자 피드백 2026-11-09).
@@ -105,6 +105,8 @@ export function CriteriaResult({
   const rows = b.meets
     .map((s) => ({ s, p: byId.get(s.place_id) }))
     .filter((r): r is { s: PlaceSummary; p: Place } => !!r.p)
+    // 좌표 오류 의심 곳은 목록에서 뺀다
+    .filter((r) => usableForLocation(r.p))
     .map((r) => ({ ...r, d: origin ? km(origin, r.p) : null }))
     // 위치가 있으면 거리순, 없으면 지역·이름순 (임의 기준의 「가까운 순」 없음)
     .sort((x, y) =>
@@ -129,7 +131,7 @@ export function CriteriaResult({
             <ThemedText type="smallBold" numberOfLines={1}>
               {p.name}
               <ThemedText type="small" themeColor="textSecondary">
-                {d != null && Number.isFinite(d) ? `  ${d < 1 ? '1km 미만' : `${Math.round(d)}km`}` : `  ${p.region_name}`}
+                {`  ${distLabel(d, p) ?? p.region_name}`}
               </ThemedText>
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>

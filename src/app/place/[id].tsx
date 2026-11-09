@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useConditions, useDateRange, useFavorites, usePlaces, useSetFavorite } from '@/api/queries';
 import { AddToTripButton } from '@/components/add-to-trip';
+import { CoordNote } from '@/components/coord-note';
 import { AppIcon } from '@/components/app-icon';
 import { Button } from '@/components/form';
 import { MarineWarningBanner } from '@/components/marine-warning-banner';
@@ -53,6 +54,7 @@ export default function PlaceDetailScreen() {
             </View>
             <FavoriteStar placeId={place.id} />
           </View>
+          <CoordNote place={pc?.place ?? place} />
           <ThemedText type="small" themeColor="textSecondary">
             {today ? `${dayLabel(today)} · ` : ''}
             {place.id === homeId ? '내 기준 낚시터' : '기준 낚시터 아님'}
@@ -85,7 +87,7 @@ export default function PlaceDetailScreen() {
           <SectionHeader title="바다낚시지수 (국립해양조사원)" />
           <FishingIndexCard pc={pc} />
 
-          {place && places.data ? (
+          {place && places.data && !place.location_suspect ? (
             <>
               <SectionHeader title="가까운 낚시터" />
               <NearbyPlaces

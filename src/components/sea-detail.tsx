@@ -24,7 +24,7 @@ import {
   timeLabel,
 } from '@/lib/compare';
 import { distanceGrade, seaState, windName } from '@/lib/describe';
-import { PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
+import { distLabel, isApprox, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
 
 type MetricKey = 'wave_height' | 'wind_speed' | 'water_temp';
 const METRIC_ROWS: { metric: MetricKey; label: string; icon: AppIconName; grade?: (v: number) => string }[] = [
@@ -258,6 +258,7 @@ export function NearbyPlaces({
   onPress: (p: Place) => void;
 }) {
   const theme = useTheme();
+  const baseApprox = isApprox(items.find((x) => x.place.id === currentId)?.place);
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.placeRow}>
       {items.map(({ place: p, km }) => {
@@ -280,7 +281,7 @@ export function NearbyPlaces({
                 {p.name}
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                {current ? '현재 낚시터' : `${PLACE_TYPE_LABEL[p.type]} · ${km < 1 ? '1km 미만' : `${Math.round(km)}km`}`}
+                {current ? '현재 낚시터' : `${PLACE_TYPE_LABEL[p.type]} · ${distLabel(km, p, baseApprox)}`}
               </ThemedText>
             </View>
           </Pressable>

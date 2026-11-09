@@ -16,8 +16,22 @@ export type Place = {
   lat: number | null;
   lon: number | null;
   address: string | null;
-  /** 원본 좌표가 의심됨 (예: 다른 시·도 좌표로 등록) → 해황 자료를 연결하지 않음 */
+  /** 좌표 오류 의심(D등급) → 해황 연결·지도·거리순·추천 등 정밀 위치 기능에서 뺀다 (원본·일반 정보는 그대로) */
   location_suspect?: boolean;
+  /** 좌표 품질 (가장 최근 검증 기록). 없으면 판단 안 됨 */
+  coord?: CoordQuality | null;
+};
+
+/** 좌표 품질 (docs/03_데이터/2026-11-09_좌표품질_검증보고서.md) */
+export type CoordQuality = {
+  grade: 'A' | 'B' | 'C' | 'D';
+  sub_grade: string | null;
+  location_type: string;
+  status: string;
+  /** 대략 위치(대표 주소·반올림·공유 좌표) → 거리·위치를 「약」으로만 */
+  approx: boolean;
+  label: string;
+  checked_at: string;
 };
 
 export type Species = { code: string; name_ko: string };

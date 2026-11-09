@@ -21,13 +21,14 @@ import { Brand, IconSize } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { dayLabel, findSeries, REASON_TEXT, timeLabel } from '@/lib/compare';
 import { WARNING_SHORT } from '@/lib/criteria';
-import { PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
+import { CoordNote, SameCoordSheet } from '@/components/coord-note';
+import { distLabel, isApprox, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
 
 const TIDE_TYPE = { high: '만조', low: '간조' } as const;
 
-export function distanceText(d: number | null): string | null {
-  if (d == null || !Number.isFinite(d)) return null;
-  return d < 1 ? '1km 미만' : `${Math.round(d)}km`;
+/** 거리 표시 (대략 위치면 「약」) */
+export function distanceText(d: number | null, place?: Place | null): string | null {
+  return distLabel(d, place);
 }
 
 /* ───────────── 출조 후보 카드 ───────────── */
@@ -49,7 +50,7 @@ export function CandidateCard({
 }) {
   const theme = useTheme();
   const w = WARNING_SHORT[s.warning_level];
-  const where = [place.region_name, PLACE_TYPE_LABEL[place.type], distanceText(dist)].filter(Boolean).join(' · ');
+  const where = [place.region_name, PLACE_TYPE_LABEL[place.type], distanceText(dist, place)].filter(Boolean).join(' · ');
   return (
     <Pressable
       accessibilityRole="button"
@@ -86,6 +87,7 @@ export function CandidateCard({
           </ThemedText>
         </Pressable>
       </View>
+      <CoordNote place={place} compact />
       {/* 파고 · 바람 · 특보를 따로 */}
       <View style={styles.metrics}>
         <Metric icon="wave" label="파고 최대" value={s.wave_fc_max ? `${s.wave_fc_max.v}m` : '없음'} />
@@ -207,6 +209,7 @@ export function SeaMap({
   const home = useMemo(() => regionFor(dots), [key]); // eslint-disable-line react-hooks/exhaustive-deps
   const [region, setRegion] = useState<Region>(home);
   const [zoomed, setZoomed] = useState(false);
+  const [samePick, setSamePick] = useState<Place[] | null>(null);
 
   // 권역(낚시터 묶음)이 바뀌면 그 범위로 이동 (렌더 중 상태 맞춤 → 지도는 effect 에서 이동)
   const [lastHome, setLastHome] = useState(home);
@@ -268,17 +271,22 @@ export function SeaMap({
                 coordinate={{ latitude: c.lat, longitude: c.lon }}
                 tracksViewChanges={false}
                 anchor={{ x: 0.5, y: 0.5 }}
-                accessibilityLabel={`낚시터 ${c.dots.length}곳 묶음, 눌러서 확대`}
+                accessibilityLabel={`낚시터 ${c.dots.length}곳 묶음, 눌러서 ${
+                  Math.max(...lats) - Math.min(...lats) < 0.003 && Math.max(...lons) - Math.min(...lons) < 0.003 ? '목록 보기' : '확대'
+                }`}
                 onPress={() =>
-                  go(
+                  // 사실상 같은 좌표(약 300m 안)에 모인 곳은 확대해도 갈라지지 않으므로 목록으로 펼친다
+                  Math.max(...lats) - Math.min(...lats) < 0.003 && Math.max(...lons) - Math.min(...lons) < 0.003
+                    ? setSamePick(c.dots.map((d) => d.place))
+                    : go(
                     {
                       latitude: (Math.min(...lats) + Math.max(...lats)) / 2,
                       longitude: (Math.min(...lons) + Math.max(...lons)) / 2,
                       latitudeDelta: Math.max(0.08, (Math.max(...lats) - Math.min(...lats)) * 1.8),
                       longitudeDelta: Math.max(0.08, (Math.max(...lons) - Math.min(...lons)) * 1.8),
                     },
-                    true,
-                  )
+                        true,
+                      )
                 }>
                 <View style={[styles.cluster, { backgroundColor: color[main] }]}>
                   <Text style={styles.clusterText}>{c.dots.length}</Text>
@@ -292,6 +300,14 @@ export function SeaMap({
             );
           })}
         </MapView>
+        <SameCoordSheet
+          places={samePick}
+          onClose={() => setSamePick(null)}
+          onPick={(p) => {
+            setSamePick(null);
+            onPick(p.id);
+          }}
+        />
         {zoomed ? (
           <Pressable
             accessibilityRole="button"
@@ -425,6 +441,7 @@ export function SelectedSea({
         </ThemedText>
       ) : (
         <>
+          <CoordNote place={p} compact />
           {/* 물때: 선 그래프 + 만조·간조 시각 */}
           <View style={styles.block}>
             <View style={styles.metricLabel}>
@@ -452,7 +469,9 @@ export function SelectedSea({
             {tideSrc && (tideExt?.status === 'ok' || tideLevel?.status === 'ok') ? (
               <ThemedText type="small" themeColor="textSecondary">
                 기준: {tideSrc.station_name} 조위관측소
-                {tideSrc.distance_km != null ? ` (낚시터에서 ${tideSrc.distance_km}km)` : ''} · {tideSrc.agency} 조석 예보 ·
+                {tideSrc.distance_km != null
+                  ? ` (낚시터에서 ${isApprox(p) ? `약 ${Math.round(tideSrc.distance_km)}` : tideSrc.distance_km}km)`
+                  : ''} · {tideSrc.agency} 조석 예보 ·
                 참고 자료예요. 관측소와 낚시터의 물때는 다를 수 있어요.
               </ThemedText>
             ) : null}

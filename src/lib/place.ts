@@ -37,9 +37,30 @@ export function km(a: { lat: number | null; lon: number | null }, b: { lat: numb
   return 2 * 6371 * Math.asin(Math.sqrt(h));
 }
 
-/** 기준 장소에서 가까운 순 (기준 장소 포함) */
+/**
+ * 정밀 위치 기반 기능(지도·거리순·가까운 곳·추천)에 쓸 수 있는지.
+ * 좌표 오류 의심(D등급)은 뺀다 — 원본 데이터·일반 상세·검색에는 그대로 남는다
+ */
+export const usableForLocation = (p: Place) => !p.location_suspect && p.lat != null && p.lon != null;
+
+/** 대략 위치(대표 주소·반올림·공유 좌표) — 실제 낚시 지점처럼 보여주지 않는다 */
+export const isApprox = (p: Place | null | undefined) => !!p?.coord?.approx;
+
+/** 거리 표시. 대략 위치면(대상 또는 기준 쪽 approx) 「약」을 붙이고 1km 단위로만 */
+export function distLabel(d: number | null | undefined, p?: Place | null, approx = false): string | null {
+  if (d == null || !Number.isFinite(d)) return null;
+  if (approx || isApprox(p)) return d < 1.5 ? '약 1km 안팎' : `약 ${Math.round(d)}km`;
+  return d < 1 ? '1km 미만' : `${Math.round(d)}km`;
+}
+
+/** 같은 좌표를 쓰는 낚시터 묶음 키 */
+export const coordKey = (p: Place) => `${p.lat?.toFixed(6)},${p.lon?.toFixed(6)}`;
+
+/** 기준 장소에서 가까운 순 (기준 장소 포함). 좌표 오류 의심 곳은 빼고, 기준이 의심 곳이면 비운다 */
 export function nearby(base: Place, all: Place[], n: number): { place: Place; km: number }[] {
+  if (!usableForLocation(base)) return [];
   return all
+    .filter(usableForLocation)
     .map((p) => ({ place: p, km: km(base, p) }))
     .sort((a, b) => a.km - b.km)
     .slice(0, n);

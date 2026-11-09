@@ -28,7 +28,8 @@ import {
   WIND_STEPS,
 } from '@/lib/criteria';
 import { type Coords, getCurrentCoords } from '@/lib/location';
-import { km, PLACE_IMAGE, PLACE_TYPE_LABEL, sidoOf } from '@/lib/place';
+import { CoordNote, SameCoordSheet } from '@/components/coord-note';
+import { coordKey, distLabel, km, PLACE_IMAGE, PLACE_TYPE_LABEL, sidoOf, usableForLocation } from '@/lib/place';
 import { getRecent, RECENT_PLACES, useCriteria, useExploreRegion, useHomePlace } from '@/lib/prefs';
 
 const KOREA: Region = { latitude: 36.0, longitude: 127.8, latitudeDelta: 6.5, longitudeDelta: 6.5 };
@@ -116,6 +117,8 @@ export default function ExploreScreen() {
 
   const rows = useMemo(() => {
     const list = (places.data ?? [])
+      // 좌표 오류 의심(D등급)은 지도·거리순에서 뺀다 (상세·검색에는 남음)
+      .filter(usableForLocation)
       .map((p) => {
         const s = byId.get(p.id);
         return { place: p, s, dist: origin ? km(origin.coords, p) : null, check: checkPlace(s, criteria) };
@@ -141,6 +144,14 @@ export default function ExploreScreen() {
         : '전국 · 지역 이름순 (내 위치를 쓰거나 지역을 고르면 그 기준으로 보여드려요)';
 
   const selected = rows.find((r) => r.place.id === selectedId) ?? null;
+  const excluded = (places.data ?? []).filter((p) => !usableForLocation(p)).length;
+  // 같은 좌표를 쓰는 낚시터는 핀 하나로 묶고, 누르면 목록으로 펼친다
+  const pins = useMemo(() => {
+    const g = new Map<string, typeof rows>();
+    for (const r of rows) g.set(coordKey(r.place), [...(g.get(coordKey(r.place)) ?? []), r]);
+    return [...g.values()];
+  }, [rows]);
+  const [samePick, setSamePick] = useState<Place[] | null>(null);
 
   // 조건 맞는 곳만 볼 때: 가까운 결과들이 지도에 보이도록 화면을 맞춘다
   const fitKey = onlyMatching ? rows.slice(0, 8).map((r) => r.place.id).join(',') : '';
@@ -159,7 +170,7 @@ export default function ExploreScreen() {
   useEffect(() => {
     if (!mapReady || region === 'all' || origin) return;
     const pts = (places.data ?? [])
-      .filter((p) => sidoOf(p) === region && p.lat != null && p.lon != null)
+      .filter((p) => sidoOf(p) === region && usableForLocation(p))
       .map((p) => ({ latitude: p.lat!, longitude: p.lon! }));
     if (pts.length) mapRef.current?.fitToCoordinates(pts, { edgePadding: { top: 40, right: 40, bottom: 40, left: 40 }, animated: true });
   }, [region, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -184,18 +195,37 @@ export default function ExploreScreen() {
           initialRegion={initialRegion}
           showsUserLocation={!!gps.coords}
           onMapReady={() => setMapReady(true)}>
-          {rows
-            .filter((r) => r.place.lat != null && r.place.lon != null)
-            .map((r) => (
+          {pins.map((group) => {
+            const r = group[0];
+            if (group.length === 1)
+              return (
+                <Marker
+                  key={r.place.id}
+                  coordinate={{ latitude: r.place.lat!, longitude: r.place.lon! }}
+                  pinColor={pinColor(r)}
+                  title={r.place.name}
+                  description={r.s ? WARNING_SHORT[r.s.warning_level].text : undefined}
+                  onPress={() => setSelectedId(r.place.id)}
+                />
+              );
+            // 같은 좌표 여러 곳: 묶음 핀 (특보 발효 곳이 있으면 빨강)
+            const warn = group.some((x) => x.s?.warning_level === 'warning');
+            return (
               <Marker
-                key={r.place.id}
+                key={`g${coordKey(r.place)}`}
                 coordinate={{ latitude: r.place.lat!, longitude: r.place.lon! }}
-                pinColor={pinColor(r)}
-                title={r.place.name}
-                description={r.s ? WARNING_SHORT[r.s.warning_level].text : undefined}
-                onPress={() => setSelectedId(r.place.id)}
-              />
-            ))}
+                tracksViewChanges={false}
+                anchor={{ x: 0.5, y: 0.5 }}
+                accessibilityLabel={`같은 좌표의 낚시터 ${group.length}곳, 눌러서 목록 보기`}
+                onPress={() => setSamePick(group.map((x) => x.place))}>
+                <View style={[styles.groupPin, { backgroundColor: warn ? theme.danger : Brand.navy }]}>
+                  <ThemedText type="smallBold" style={styles.groupPinText}>
+                    {group.length}
+                  </ThemedText>
+                </View>
+              </Marker>
+            );
+          })}
         </MapView>
       ) : (
         <View style={styles.map} />
@@ -289,6 +319,11 @@ export default function ExploreScreen() {
         <ThemedText type="sectionTitle">
           {onlyMatching ? `조건에 맞는 곳 ${rows.length}` : `낚시터 ${rows.length}`}
         </ThemedText>
+        {excluded ? (
+          <ThemedText type="small" themeColor="textSecondary">
+            좌표가 주소와 맞지 않는 {excluded}곳(위치 확인 필요)은 지도·거리순에서 뺐어요. 검색과 상세 화면에서는 볼 수 있어요.
+          </ThemedText>
+        ) : null}
         {summary.isPending || places.isPending ? <ActivityIndicator color={theme.tint} /> : null}
         {rows.length === 0 && summary.isSuccess ? (
           <Card>
@@ -328,6 +363,14 @@ export default function ExploreScreen() {
           {summary.data?.disclaimer}
         </ThemedText>
       </ScrollView>
+      <SameCoordSheet
+        places={samePick}
+        onClose={() => setSamePick(null)}
+        onPick={(p) => {
+          setSamePick(null);
+          setSelectedId(p.id);
+        }}
+      />
     </ThemedView>
   );
 }
@@ -406,9 +449,10 @@ function PlaceRow({
             {place.name}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            {dist != null && Number.isFinite(dist) ? (dist < 1 ? '1km 미만' : `${Math.round(dist)}km`) : place.region_name}
+            {distLabel(dist, place) ?? place.region_name}
           </ThemedText>
         </View>
+        <CoordNote place={place} compact />
         <ThemedText type="small" numberOfLines={1}>
           {w ? (
             <ThemedText type="small" themeColor={w.color} style={styles.bold}>
@@ -472,8 +516,9 @@ function SelectedCard({
       </View>
       <ThemedText type="small" themeColor="textSecondary">
         {place.region_name} · {PLACE_TYPE_LABEL[place.type]}
-        {dist != null && Number.isFinite(dist) ? ` · ${dist < 1 ? '1km 미만' : `${Math.round(dist)}km`}` : ''}
+        {distLabel(dist, place) ? ` · ${distLabel(dist, place)}` : ''}
       </ThemedText>
+      <CoordNote place={place} compact />
       {w ? (
         <ThemedText type="smallBold" themeColor={w.color}>
           {w.text}
@@ -523,6 +568,17 @@ function SelectedCard({
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  groupPin: {
+    minWidth: 30,
+    height: 30,
+    paddingHorizontal: 6,
+    borderRadius: 15,
+    borderWidth: 2,
+    borderColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  groupPinText: { color: '#fff' },
   bold: { fontWeight: '700' },
   pressed: { opacity: 0.8 },
   map: { height: 300, width: '100%' },

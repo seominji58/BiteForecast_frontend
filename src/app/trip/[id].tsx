@@ -6,6 +6,7 @@ import { api } from '@/api';
 import { useDateRange, useDeleteTrip, useFavorites, useTrip, useTripMutation, useTripOutlook } from '@/api/queries';
 import type { ChecklistItem, StopOutlook, Trip, TripStop } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
+import { CoordNote } from '@/components/coord-note';
 import { PickerField } from '@/components/date-time-field';
 import { Button, Chip, Field, TextField } from '@/components/form';
 import { AuthGate } from '@/components/login-required';
@@ -265,6 +266,7 @@ function StopCard({
           </ThemedText>
         </Pressable>
       </View>
+      <CoordNote place={stop.place} compact />
       <View style={[styles.sea, { backgroundColor: theme.background }]}>
         <ThemedText type="small" themeColor={line.tone}>
           {line.text}
