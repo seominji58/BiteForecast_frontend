@@ -41,7 +41,9 @@ export function CoordNote({ place, compact }: { place: Place; compact?: boolean 
       </ThemedText>
     ) : null;
   }
-  const detail = c.approx
+  const detail = c.recommend_hold
+    ? '등록된 주소와 좌표가 서로 다른 시·군을 가리켜요. 추가 검증 전까지 출조 후보·가까운 곳 추천에서는 빼고, 거리와 해황은 참고로만 보여드려요.'
+    : c.approx
     ? '여러 낚시터가 같은 좌표를 쓰거나 좌표가 반올림돼 있어요. 지도 위치와 거리는 대략적이고, 실제 좌대·포인트 위치가 아니에요. 관측소 거리도 대략적이에요.'
     : c.grade === 'B'
       ? '기관이 정한 대표 지점이에요. 실제로 낚시하는 자리와는 다를 수 있어요.'

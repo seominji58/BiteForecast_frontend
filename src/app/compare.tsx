@@ -17,7 +17,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { dayLabel, dayList } from '@/lib/compare';
 import { CHECK_TEXT, checkPlace, criteriaLabel, freshnessLine } from '@/lib/criteria';
 import { getCurrentCoords } from '@/lib/location';
-import { distLabel, isApprox, km, nearby, PLACE_IMAGE, usableForLocation } from '@/lib/place';
+import { distLabel, isApprox, km, nearby, PLACE_IMAGE, recommendable } from '@/lib/place';
 import { getRecent, pushRecent, RECENT_COMPARES, RECENT_PLACES, useCriteria, useHomePlace } from '@/lib/prefs';
 
 const FOCUS: { value: CompareFocus; label: string }[] = [
@@ -236,8 +236,8 @@ function PickPanel({
     const r = await getCurrentCoords();
     if ('error' in r) return setNear({ loading: false, list: [], error: r.error });
     const list = places
-      // 좌표 오류 의심 곳은 「내 위치 주변」에서 뺀다
-      .filter(usableForLocation)
+      // 좌표 오류 의심·좌표 불일치 의심 곳은 「내 위치 주변」 추천에서 뺀다
+      .filter(recommendable)
       .map((p) => ({ place: p, d: km(r.coords, p) }))
       .filter((x) => Number.isFinite(x.d))
       .sort((x, y) => x.d - y.d)

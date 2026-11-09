@@ -29,7 +29,7 @@ import {
 } from '@/lib/criteria';
 import { type Coords, getCurrentCoords } from '@/lib/location';
 import { CoordNote, SameCoordSheet } from '@/components/coord-note';
-import { coordKey, distLabel, km, PLACE_IMAGE, PLACE_TYPE_LABEL, sidoOf, usableForLocation } from '@/lib/place';
+import { coordKey, distLabel, km, PLACE_IMAGE, PLACE_TYPE_LABEL, recommendable, sidoOf, usableForLocation } from '@/lib/place';
 import { getRecent, RECENT_PLACES, useCriteria, useExploreRegion, useHomePlace } from '@/lib/prefs';
 
 const KOREA: Region = { latitude: 36.0, longitude: 127.8, latitudeDelta: 6.5, longitudeDelta: 6.5 };
@@ -124,7 +124,8 @@ export default function ExploreScreen() {
         return { place: p, s, dist: origin ? km(origin.coords, p) : null, check: checkPlace(s, criteria) };
       })
       // 자료가 오래됐으면 「조건에 맞는 곳」을 고르지 않는다 (최신처럼 보이지 않게)
-      .filter((r) => !onlyMatching || (!stale && r.check.status === 'meets'))
+      // 「조건에 맞는 곳」은 추천이므로 좌표 불일치 의심 곳은 뺀다 (전체 보기에는 안내와 함께 남김)
+      .filter((r) => !onlyMatching || (!stale && r.check.status === 'meets' && recommendable(r.place)))
       .filter((r) => region === 'all' || sidoOf(r.place) === region);
     // 현재 위치가 있으면 거리순, 없으면 지역 이름 → 낚시터 이름순 (임의 기준의 「가까운 순」 없음)
     list.sort((a, b) =>

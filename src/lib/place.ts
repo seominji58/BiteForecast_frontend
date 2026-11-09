@@ -43,6 +43,12 @@ export function km(a: { lat: number | null; lon: number | null }, b: { lat: numb
  */
 export const usableForLocation = (p: Place) => !p.location_suspect && p.lat != null && p.lon != null;
 
+/**
+ * 위치 기반 「추천」(출조 후보·가까운 낚시터·비교 추천·조건에 맞는 곳)에 내도 되는지.
+ * 좌표 불일치 의심(주소와 좌표의 시·군이 다름)은 검증 전까지 추천을 보류한다 — 지도·검색·상세에는 안내와 함께 남는다
+ */
+export const recommendable = (p: Place) => usableForLocation(p) && !p.coord?.recommend_hold;
+
 /** 대략 위치(대표 주소·반올림·공유 좌표) — 실제 낚시 지점처럼 보여주지 않는다 */
 export const isApprox = (p: Place | null | undefined) => !!p?.coord?.approx;
 
@@ -60,7 +66,7 @@ export const coordKey = (p: Place) => `${p.lat?.toFixed(6)},${p.lon?.toFixed(6)}
 export function nearby(base: Place, all: Place[], n: number): { place: Place; km: number }[] {
   if (!usableForLocation(base)) return [];
   return all
-    .filter(usableForLocation)
+    .filter((p) => p.id === base.id || recommendable(p))
     .map((p) => ({ place: p, km: km(base, p) }))
     .sort((a, b) => a.km - b.km)
     .slice(0, n);

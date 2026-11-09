@@ -31,6 +31,8 @@ export type CoordQuality = {
   /** 대략 위치(대표 주소·반올림·공유 좌표) → 거리·위치를 「약」으로만 */
   approx: boolean;
   label: string;
+  /** 좌표 불일치 의심(추가 검증 필요) — 검증 전까지 추천에서 뺀다 */
+  recommend_hold?: boolean;
   checked_at: string;
 };
 

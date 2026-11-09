@@ -98,9 +98,11 @@ export default function HomeScreen() {
   const chosen = near ? !!gps.coords : !!sea;
 
   const dist = (s: PlaceSummary) => (gps.coords && near ? km(gps.coords, byId.get(s.place_id)!) : null);
+  const held = b.meets.filter((s) => byId.get(s.place_id)?.coord?.recommend_hold).length;
   const candidates = useMemo(() => {
     if (stale) return [];
-    const list = [...b.meets];
+    // 좌표 불일치 의심(추가 검증 필요) 곳은 검증 전까지 후보로 내지 않는다
+    const list = b.meets.filter((s) => !byId.get(s.place_id)?.coord?.recommend_hold);
     // 내 주변: 가까운 순 / 바다 권역: 파고 예보 최대가 낮은 순 → 풍속 낮은 순 (실제 예보값 기준)
     list.sort((x, y) =>
       near && gps.coords
@@ -278,6 +280,11 @@ export default function HomeScreen() {
           <ThemedText type="small" themeColor="textSecondary">
             {scopeName} {b.total}곳 중 내 기준 충족 {b.meets.length}곳 · {near ? '가까운 순' : '파고 예보가 낮은 순'}
           </ThemedText>
+          {held ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              좌표를 검증 중인 {held}곳(주소와 좌표의 시·군이 다름)은 후보에서 뺐어요.
+            </ThemedText>
+          ) : null}
           {candidates.map((s) => (
             <CandidateCard
               key={s.place_id}

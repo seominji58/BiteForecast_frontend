@@ -9,7 +9,7 @@ import { IconSize } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { Breakdown, Criteria } from '@/lib/criteria';
 import { freshnessLine, WARNING_SHORT } from '@/lib/criteria';
-import { distLabel, km, PLACE_IMAGE, usableForLocation } from '@/lib/place';
+import { distLabel, km, PLACE_IMAGE, recommendable } from '@/lib/place';
 
 /**
  * 「조건으로 찾기」 결과 세 가지 상태 (사용자 피드백 2026-11-09).
@@ -106,7 +106,7 @@ export function CriteriaResult({
     .map((s) => ({ s, p: byId.get(s.place_id) }))
     .filter((r): r is { s: PlaceSummary; p: Place } => !!r.p)
     // 좌표 오류 의심 곳은 목록에서 뺀다
-    .filter((r) => usableForLocation(r.p))
+    .filter((r) => recommendable(r.p))
     .map((r) => ({ ...r, d: origin ? km(origin, r.p) : null }))
     // 위치가 있으면 거리순, 없으면 지역·이름순 (임의 기준의 「가까운 순」 없음)
     .sort((x, y) =>
