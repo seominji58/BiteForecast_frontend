@@ -231,6 +231,10 @@ export type PlaceSummary = {
 /** 자료별 마지막 수집 시각. stale 이면 출조 탐색 판단에 쓰지 않는다 */
 export type DataStatus = {
   forecast_fetched_at: string | null;
+  /** 받아 둔 예보의 최근 발표 시각 (오래됨 판단 기준) */
+  forecast_issued_at: string | null;
+  /** 예보가 다루는 마지막 시각 — 이후 날짜는 예보 없음 */
+  forecast_valid_until: string | null;
   warning_fetched_at: string | null;
   buoy_fetched_at: string | null;
   tide_fetched_at: string | null;
