@@ -44,6 +44,27 @@ export async function pushRecent(key: string, value: string, max = RECENT_MAX): 
 
 export const pushRecentPlace = (id: number) => pushRecent(RECENT_PLACES, String(id));
 
+const EXPLORE_REGION = 'biteforecast.explore_region';
+
+/** 출조 탐색에서 고른 지역(시·도). 'all' = 고르지 않음 */
+export function useExploreRegion(): [string, (v: string) => void] {
+  const [v, setV] = useState('all');
+  useEffect(() => {
+    let alive = true;
+    read(EXPLORE_REGION)
+      .then((x) => alive && x && setV(x))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const update = (next: string) => {
+    setV(next);
+    write(EXPLORE_REGION, next).catch(() => undefined);
+  };
+  return [v, update];
+}
+
 const CRITERIA = 'biteforecast.criteria';
 
 /** 「조건으로 찾기」 기준 (기기 저장) */

@@ -149,14 +149,19 @@ export default function CompareTab() {
         />
       ) : null}
 
-      {a && b ? <CriteriaFit a={a} b={b} day={selectedDay} today={range.data?.today} /> : null}
+      {a && b && selectedDay ? <CriteriaFit a={a} b={b} day={selectedDay} future={selectedDay !== range.data?.today} /> : null}
 
       {!a || !b ? null : q.isPending ? (
         <Loading />
       ) : q.isError ? (
         <ErrorView message={q.error.message} onRetry={() => q.refetch()} />
       ) : (
-        <CompareView places={q.data.places} disclaimer={q.data.disclaimer} focus={focus} />
+        <CompareView
+          places={q.data.places}
+          disclaimer={q.data.disclaimer}
+          focus={focus}
+          warningNote={selectedDay !== range.data?.today ? `지금 발효 상태 (${dayLabel(range.data?.today ?? selectedDay)} 기준) · 그날 특보는 발표 전` : undefined}
+        />
       )}
 
       <PlacePicker
@@ -318,9 +323,12 @@ function PickButton({ icon, label, onPress }: { icon: AppIconName; label: string
   );
 }
 
-/** 내 기준(파고·풍속 상한, 특보)에 각각 맞는지 — 오늘 자료 기준, 판정 대신 근거 수치 */
-function CriteriaFit({ a, b, day, today }: { a: Place; b: Place; day: string; today: string | undefined }) {
-  const summary = usePlacesSummary(today);
+/**
+ * 내 기준(파고·풍속 상한, 특보)에 각각 맞는지 — 위에서 고른 날짜 기준 (비교 표와 같은 날짜).
+ * 그 날짜 예보가 없으면 오늘 자료로 대신하지 않고 「자료 부족」으로 보여준다
+ */
+function CriteriaFit({ a, b, day, future }: { a: Place; b: Place; day: string; future: boolean }) {
+  const summary = usePlacesSummary(day);
   const [criteria] = useCriteria();
   if (!summary.data) return null;
   if (summary.data.data_status.stale) {
@@ -342,6 +350,7 @@ function CriteriaFit({ a, b, day, today }: { a: Place; b: Place; day: string; to
     r: checkPlace(
       summary.data.places.find((s) => s.place_id === p.id),
       criteria,
+      { future },
     ),
   }));
   return (
@@ -358,8 +367,7 @@ function CriteriaFit({ a, b, day, today }: { a: Place; b: Place; day: string; to
         </Pressable>
       </View>
       <ThemedText type="small" themeColor="textSecondary">
-        {criteriaLabel(criteria)}
-        {day !== today ? ' · 오늘 자료 기준' : ''}
+        {dayLabel(day)} 기준 · {criteriaLabel(criteria)}
       </ThemedText>
       {rows.map(({ label, p, r }) => (
         <View key={label} style={styles.fitRow}>

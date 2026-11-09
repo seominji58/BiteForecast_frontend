@@ -6,6 +6,7 @@ import MapView, { Marker, type Region } from 'react-native-maps';
 import { useDateRange, usePlaces, usePlacesSummary } from '@/api/queries';
 import type { Place, PlaceSummary } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
+import { Dropdown, type DropdownOption } from '@/components/dropdown';
 import { Button, Chip } from '@/components/form';
 import { Card, ErrorView } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
@@ -27,8 +28,8 @@ import {
   WIND_STEPS,
 } from '@/lib/criteria';
 import { type Coords, getCurrentCoords } from '@/lib/location';
-import { km, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
-import { useCriteria, useHomePlace } from '@/lib/prefs';
+import { km, PLACE_IMAGE, PLACE_TYPE_LABEL, sidoOf } from '@/lib/place';
+import { getRecent, RECENT_PLACES, useCriteria, useExploreRegion, useHomePlace } from '@/lib/prefs';
 
 const KOREA: Region = { latitude: 36.0, longitude: 127.8, latitudeDelta: 6.5, longitudeDelta: 6.5 };
 const PAGE = 20;
@@ -88,16 +89,27 @@ export default function ExploreScreen() {
     }
   }, [params.near]);
 
-  const home = places.data?.find((p) => p.id === homeId) ?? null;
+  // 거리 기준은 현재 위치(GPS 허용 시)뿐이다. 최근 본 낚시터를 기준으로 「가까운 순」이라 하지 않는다
   const origin: Origin = useMemo(
-    () =>
-      gps.coords
-        ? { kind: 'gps', coords: gps.coords, label: '현재 위치' }
-        : home && home.lat != null && home.lon != null
-          ? { kind: 'home', coords: { lat: home.lat, lon: home.lon }, label: `최근 본 ${home.name}` }
-          : null,
-    [gps.coords, home],
+    () => (gps.coords ? { kind: 'gps', coords: gps.coords, label: '현재 위치' } : null),
+    [gps.coords],
   );
+  // 지역(시·도)을 고르면 그 지역 안에서 탐색
+  const [region, setRegion] = useExploreRegion();
+  const regionOptions = useMemo<DropdownOption<string>[]>(() => {
+    const counts = new Map<string, number>();
+    for (const p of places.data ?? []) counts.set(sidoOf(p), (counts.get(sidoOf(p)) ?? 0) + 1);
+    return [
+      { value: 'all', label: '전국' },
+      ...[...counts.entries()].sort((a, b) => b[1] - a[1]).map(([sd, n]) => ({ value: sd, label: sd, hint: `${n}곳` })),
+    ];
+  }, [places.data]);
+  const [recentPlaces, setRecentPlaces] = useState<Place[]>([]);
+  useEffect(() => {
+    getRecent(RECENT_PLACES).then((ids) =>
+      setRecentPlaces(ids.map((id) => places.data?.find((p) => p.id === Number(id))).filter((p): p is Place => !!p)),
+    );
+  }, [places.data]);
 
   const stale = !!summary.data?.data_status.stale;
   const byId = useMemo(() => new Map((summary.data?.places ?? []).map((s) => [s.place_id, s])), [summary.data]);
@@ -109,12 +121,24 @@ export default function ExploreScreen() {
         return { place: p, s, dist: origin ? km(origin.coords, p) : null, check: checkPlace(s, criteria) };
       })
       // 자료가 오래됐으면 「조건에 맞는 곳」을 고르지 않는다 (최신처럼 보이지 않게)
-      .filter((r) => !onlyMatching || (!stale && r.check.status === 'meets'));
+      .filter((r) => !onlyMatching || (!stale && r.check.status === 'meets'))
+      .filter((r) => region === 'all' || sidoOf(r.place) === region);
+    // 현재 위치가 있으면 거리순, 없으면 지역 이름 → 낚시터 이름순 (임의 기준의 「가까운 순」 없음)
     list.sort((a, b) =>
-      a.dist != null && b.dist != null ? a.dist - b.dist : a.place.region_name.localeCompare(b.place.region_name),
+      a.dist != null && b.dist != null
+        ? a.dist - b.dist
+        : a.place.region_name.localeCompare(b.place.region_name) || a.place.name.localeCompare(b.place.name),
     );
     return list;
-  }, [places.data, byId, origin, criteria, onlyMatching, stale]);
+  }, [places.data, byId, origin, criteria, onlyMatching, stale, region]);
+
+  const orderLabel = gps.loading
+    ? '현재 위치 확인 중…'
+    : origin
+      ? `${region === 'all' ? '' : `${region} · `}현재 위치에서 가까운 순`
+      : region !== 'all'
+        ? `${region} 낚시터 · 이름순`
+        : '전국 · 지역 이름순 (내 위치를 쓰거나 지역을 고르면 그 기준으로 보여드려요)';
 
   const selected = rows.find((r) => r.place.id === selectedId) ?? null;
 
@@ -131,6 +155,14 @@ export default function ExploreScreen() {
     if (pts.length)
       mapRef.current?.fitToCoordinates(pts, { edgePadding: { top: 40, right: 40, bottom: 40, left: 40 }, animated: true });
   }, [fitKey, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!mapReady || region === 'all' || origin) return;
+    const pts = (places.data ?? [])
+      .filter((p) => sidoOf(p) === region && p.lat != null && p.lon != null)
+      .map((p) => ({ latitude: p.lat!, longitude: p.lon! }));
+    if (pts.length) mapRef.current?.fitToCoordinates(pts, { edgePadding: { top: 40, right: 40, bottom: 40, left: 40 }, animated: true });
+  }, [region, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pinColor = (r: (typeof rows)[number]) => {
     if (r.s?.warning_level === 'warning') return theme.danger;
@@ -170,14 +202,11 @@ export default function ExploreScreen() {
       )}
 
       <ScrollView contentContainerStyle={styles.content}>
-        {/* 거리 기준 */}
+        {/* 탐색 기준: 지역 + 현재 위치 */}
         <View style={styles.between}>
-          <ThemedText type="small" themeColor="textSecondary" style={styles.flex}>
-            {gps.loading
-              ? '현재 위치 확인 중…'
-              : origin
-                ? `${origin.label}에서 가까운 순`
-                : '지역순 (내 위치를 쓰면 가까운 순으로 보여드려요)'}
+          <Dropdown label="지역" value={region} options={regionOptions} onChange={setRegion} compact />
+          <ThemedText type="small" themeColor="textSecondary" style={styles.flex} numberOfLines={2}>
+            {orderLabel}
           </ThemedText>
           <Pressable accessibilityRole="button" onPress={locate} hitSlop={8} disabled={gps.loading}>
             {gps.loading ? (
@@ -196,6 +225,21 @@ export default function ExploreScreen() {
           <ThemedText type="small" themeColor="warning">
             {gps.error}
           </ThemedText>
+        ) : null}
+        {recentPlaces.length ? (
+          <View style={styles.recentRow}>
+            <ThemedText type="small" themeColor="textSecondary">
+              최근 본 곳
+            </ThemedText>
+            {recentPlaces.slice(0, 4).map((p) => (
+              <Chip
+                key={p.id}
+                label={p.name}
+                selected={false}
+                onPress={() => router.push({ pathname: '/place/[id]', params: { id: String(p.id) } })}
+              />
+            ))}
+          </View>
         ) : null}
 
         {/* 조건으로 찾기 */}
@@ -484,6 +528,7 @@ const styles = StyleSheet.create({
   map: { height: 300, width: '100%' },
   content: { padding: Layout.screenPadding, gap: Layout.gap, paddingBottom: 48 },
   between: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  recentRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   editor: { gap: 6 },
   row: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', borderWidth: 1, borderRadius: Layout.cardRadius, padding: 10 },

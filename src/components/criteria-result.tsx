@@ -25,9 +25,12 @@ export function CriteriaResult({
   limit = 3,
   onChangeCriteria,
   dataStatus,
+  showList = true,
 }: {
   /** 자료가 오래됐으면 개수·목록 대신 상태만 안내한다 */
   dataStatus?: DataStatus;
+  /** false 면 맞는 곳 목록은 숨기고 개수만 (기준 지역·위치가 없을 때) */
+  showList?: boolean;
   b: Breakdown;
   criteria: Criteria;
   places: Place[];
@@ -103,8 +106,15 @@ export function CriteriaResult({
     .map((s) => ({ s, p: byId.get(s.place_id) }))
     .filter((r): r is { s: PlaceSummary; p: Place } => !!r.p)
     .map((r) => ({ ...r, d: origin ? km(origin, r.p) : null }))
-    .sort((x, y) => (x.d ?? 0) - (y.d ?? 0))
+    // 위치가 있으면 거리순, 없으면 지역·이름순 (임의 기준의 「가까운 순」 없음)
+    .sort((x, y) =>
+      x.d != null && y.d != null
+        ? x.d - y.d
+        : x.p.region_name.localeCompare(y.p.region_name) || x.p.name.localeCompare(y.p.name),
+    )
     .slice(0, limit);
+
+  if (!showList) return null;
 
   return (
     <View style={styles.box}>

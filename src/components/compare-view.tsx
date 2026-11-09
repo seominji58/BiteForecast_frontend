@@ -44,9 +44,12 @@ export function CompareView({
   places,
   disclaimer,
   focus = 'all',
+  warningNote,
 }: {
   places: PlaceCompare[];
   disclaimer: string;
+  /** 오늘이 아닌 날짜: 특보 행이 「지금」 상태임을 알린다 */
+  warningNote?: string;
   /** 보기 필터 (선택). 특보·규제 행은 안전 정보라 항상 표시 */
   focus?: CompareFocus;
 }) {
@@ -58,9 +61,15 @@ export function CompareView({
   const show = (k: Exclude<CompareFocus, 'all'>) => focus === 'all' || focus === k;
 
   const rows: ReactNode[] = [
-    <Row key="warn" image="report" label="해상 특보">
-      <MarineWarningBanner w={a.warning} compact />
-      <MarineWarningBanner w={b.warning} compact />
+    <Row key="warn" image="report" label={warningNote ? '해상 특보 (현재)' : '해상 특보'}>
+      <View style={styles.cellStack}>
+        <MarineWarningBanner w={a.warning} compact />
+        {warningNote ? <Muted>{warningNote}</Muted> : null}
+      </View>
+      <View style={styles.cellStack}>
+        <MarineWarningBanner w={b.warning} compact />
+        {warningNote ? <Muted>{warningNote}</Muted> : null}
+      </View>
     </Row>,
     <Row key="reg" image="regulation" label="규제 정보">
       <RegulationCell p={a} />

@@ -29,12 +29,20 @@ export type CheckResult = {
   notes: string[];
 };
 
-export function checkPlace(s: PlaceSummary | undefined, c: Criteria): CheckResult {
+/**
+ * opts.future: 오늘이 아닌 날짜를 볼 때. 해상 특보는 「지금」 발효 상태라 그날 특보로 쓰지 않는다
+ * - 지금 특보 발효 중이면 그날은 판단하지 않고(자료 부족) 이유를 적는다 — 안전 쪽으로
+ * - 지금 특보가 없으면 파고·풍속 예보로만 보고 「그날 특보는 발표 전」을 함께 적는다
+ */
+export function checkPlace(s: PlaceSummary | undefined, c: Criteria, opts: { future?: boolean } = {}): CheckResult {
   if (!s) return { status: 'unknown', notes: ['자료 없음'] };
   const fails: string[] = [];
   const unknown: string[] = [];
 
-  if (s.warning_level === 'warning') fails.push(`특보 발효 중(${s.warning_types.join('·') || '해상 특보'})`);
+  if (opts.future) {
+    if (s.warning_level === 'warning') unknown.push('지금 특보 발효 중 · 그날 특보는 아직 발표 전');
+    else if (s.warning_level === 'unknown') unknown.push('특보 확인 불가');
+  } else if (s.warning_level === 'warning') fails.push(`특보 발효 중(${s.warning_types.join('·') || '해상 특보'})`);
   else if (s.warning_level === 'unknown') unknown.push('특보 확인 불가');
 
   if (!s.wave_fc_max) unknown.push('파고 예보 없음');
@@ -50,9 +58,10 @@ export function checkPlace(s: PlaceSummary | undefined, c: Criteria): CheckResul
 
   if (fails.length) return { status: 'fails', notes: fails };
   if (unknown.length) return { status: 'unknown', notes: unknown };
-  const notes = [`파고 최대 ${s.wave_fc_max!.v}m · 풍속 최대 ${s.wind_fc_max!.v}m/s (예보)`];
-  if (s.warning_level === 'nearby') notes.push('인근 해역 특보 있음');
-  if (s.warning_level === 'preliminary') notes.push('예비특보 있음');
+  const notes = [`파고 최대 ${s.wave_fc_max!.v}m · 풍속 최대 ${s.wind_fc_max!.v}m/s (${opts.future ? '그날 예보' : '남은 시간 예보'})`];
+  if (opts.future) notes.push('그날 특보는 아직 발표 전 · 출조 전 꼭 확인');
+  else if (s.warning_level === 'nearby') notes.push('인근 해역 특보 있음');
+  else if (s.warning_level === 'preliminary') notes.push('예비특보 있음');
   return { status: 'meets', notes };
 }
 

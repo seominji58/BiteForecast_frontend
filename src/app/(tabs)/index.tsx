@@ -9,6 +9,7 @@ import type { Place, PostSummary } from '@/api/types';
 import { usePhotoSource } from '@/api/upload';
 import { AppIcon } from '@/components/app-icon';
 import { CriteriaResult } from '@/components/criteria-result';
+import { Dropdown } from '@/components/dropdown';
 import { Card, SectionHeader, TabScreen } from '@/components/screen';
 import { SearchBar } from '@/components/search-bar';
 import { ThemedText } from '@/components/themed-text';
@@ -18,8 +19,8 @@ import { useTheme } from '@/hooks/use-theme';
 import { breakdown, criteriaLabel, freshnessLine, WARNING_SHORT } from '@/lib/criteria';
 import { catchLine, shortDate, whereLine } from '@/lib/community';
 import { timeAgo } from '@/lib/format';
-import { matches, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
-import { useCriteria, useHomePlace } from '@/lib/prefs';
+import { matches, PLACE_IMAGE, PLACE_TYPE_LABEL, sidoOf } from '@/lib/place';
+import { useCriteria, useExploreRegion, useHomePlace } from '@/lib/prefs';
 
 // SCR-01 홈 (사용자 제안 2026-11-09): 검색·지도 중심은 그대로, 아래에 「지금 낚시판에서 일어나는 일」을 둔다.
 // 최근 조황(이용자 사진) → 출조 탐색(내 조건에 맞는 곳 수) → 낚시 소식·출조 정보
@@ -105,7 +106,7 @@ export default function HomeScreen() {
 
       <RecentCatches />
 
-      <ExploreTeaser home={home} />
+      <ExploreTeaser />
 
       <SectionHeader title="낚시 소식 · 출조 정보" />
       <Card style={styles.list}>
@@ -332,12 +333,27 @@ function CatchCard({
  * 오늘 출조 탐색: 내 조건(파고·풍속 상한, 특보 발효 제외)으로 전국 낚시터를 실제 자료로 나눠 보여준다.
  * 맞는 곳 / 맞는 곳 없음(제외 이유) / 자료 부족 세 상태를 구분한다 (앱 판정 없음)
  */
-function ExploreTeaser({ home }: { home: Place | null }) {
+function ExploreTeaser() {
   const range = useDateRange();
   const summary = usePlacesSummary(range.data?.today);
   const places = usePlaces();
   const [criteria] = useCriteria();
-  const b = useMemo(() => breakdown(summary.data?.places ?? [], criteria), [summary.data, criteria]);
+  const [region, setRegion] = useExploreRegion();
+  const regionOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const p of places.data ?? []) counts.set(sidoOf(p), (counts.get(sidoOf(p)) ?? 0) + 1);
+    return [
+      { value: 'all', label: '전국' },
+      ...[...counts.entries()].sort((a, b) => b[1] - a[1]).map(([sd, n]) => ({ value: sd, label: sd, hint: `${n}곳` })),
+    ];
+  }, [places.data]);
+  // 지역을 골랐으면 그 지역 낚시터만 센다
+  const scoped = useMemo(() => {
+    const ids = new Set((places.data ?? []).filter((p) => region === 'all' || sidoOf(p) === region).map((p) => p.id));
+    return (summary.data?.places ?? []).filter((s) => ids.has(s.place_id));
+  }, [summary.data, places.data, region]);
+  const b = useMemo(() => breakdown(scoped, criteria), [scoped, criteria]);
+  const stale = !!summary.data?.data_status.stale;
   const openCriteria = () => router.push({ pathname: '/explore', params: { mode: 'criteria' } });
 
   return (
@@ -349,9 +365,9 @@ function ExploreTeaser({ home }: { home: Place | null }) {
             <AppIcon name="find-criteria" size={32} badge />
           </View>
           <View style={styles.flex}>
-            {summary.isSuccess && !b.insufficient && !summary.data.data_status.stale ? (
+            {summary.isSuccess && !b.insufficient && !stale ? (
               <ThemedText type="sectionTitle">
-                내 기준에 맞는 곳{' '}
+                {region === 'all' ? '전국' : region}에서 내 기준에 맞는 곳{' '}
                 <ThemedText type="sectionTitle" themeColor={b.meets.length ? 'success' : 'textSecondary'}>
                   {b.meets.length}곳
                 </ThemedText>
@@ -361,9 +377,22 @@ function ExploreTeaser({ home }: { home: Place | null }) {
             )}
             <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
               {criteriaLabel(criteria)}
-              {b.meets.length && home ? ` · ${home.name}에서 가까운 순` : ''}
             </ThemedText>
           </View>
+        </View>
+        <View style={styles.scopeRow}>
+          <ThemedText type="small" themeColor="textSecondary">
+            지역
+          </ThemedText>
+          <Dropdown label="탐색 지역" value={region} options={regionOptions} onChange={setRegion} compact />
+          <Pressable
+            accessibilityRole="button"
+            hitSlop={8}
+            onPress={() => router.push({ pathname: '/explore', params: { near: '1', mode: 'criteria' } })}>
+            <ThemedText type="smallBold" themeColor="tint">
+              내 주변에서 보기 ›
+            </ThemedText>
+          </Pressable>
         </View>
         {summary.isPending ? (
           <ThemedText type="small" themeColor="textSecondary">
@@ -374,24 +403,32 @@ function ExploreTeaser({ home }: { home: Place | null }) {
             해황 자료를 불러오지 못했어요. {summary.error.message}
           </ThemedText>
         ) : (
-          <CriteriaResult
-            dataStatus={summary.data.data_status}
-            b={b}
-            criteria={criteria}
-            places={places.data ?? []}
-            origin={home ? { lat: home.lat, lon: home.lon, label: home.name } : null}
-            onChangeCriteria={openCriteria}
-          />
+          <>
+            <CriteriaResult
+              dataStatus={summary.data.data_status}
+              b={b}
+              criteria={criteria}
+              places={places.data ?? []}
+              origin={null}
+              showList={region !== 'all'}
+              onChangeCriteria={openCriteria}
+            />
+            {region === 'all' && b.meets.length > 0 && !stale ? (
+              <ThemedText type="small" themeColor="textSecondary">
+                지역을 고르거나 「내 주변에서 보기」를 누르면 맞는 낚시터 목록을 보여드려요.
+              </ThemedText>
+            ) : null}
+          </>
         )}
         {summary.isSuccess ? (
-          <ThemedText type="small" themeColor={summary.data.data_status.stale ? 'warning' : 'textSecondary'}>
+          <ThemedText type="small" themeColor={stale ? 'warning' : 'textSecondary'}>
             {freshnessLine(summary.data.data_status)}
           </ThemedText>
         ) : null}
-        {b.meets.length > 0 && !summary.data?.data_status.stale ? (
+        {b.meets.length > 0 && !stale ? (
           <Pressable accessibilityRole="button" onPress={openCriteria} hitSlop={8}>
             <ThemedText type="smallBold" themeColor="tint">
-              {`맞는 곳 ${b.meets.length}곳 모두 지도에서 보기 ›`}
+              {`맞는 곳 ${b.meets.length}곳 지도에서 보기 ›`}
             </ThemedText>
           </Pressable>
         ) : null}
@@ -483,6 +520,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   explore: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  scopeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   exploreArt: { width: 56, height: 56, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   list: { gap: 0, paddingVertical: 4 },
   divider: { height: StyleSheet.hairlineWidth },
