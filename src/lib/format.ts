@@ -20,12 +20,13 @@ export const METRIC_LABEL: Record<Metric, string> = {
   water_temp: '수온',
 };
 
+// 서버 지급 사유 (services/points.py). 모두 관리자 인증이 완료된 기록에서만 생긴다
 export const POINT_REASON_LABEL: Record<PointReason, string> = {
-  JOURNAL_CREATED: '일지 작성',
-  DETAIL_FILLED: '어종·크기 기록',
+  JOURNAL_CREATED: '인증 완료 기록',
+  DETAIL_FILLED: '어종·크기 기록 (인증)',
   PHOTO_ATTACHED: '사진 첨부 (폐지된 규칙)',
-  FIRST_PLACE: '첫 장소 기록',
-  PERSONAL_BEST: '개인 최대어 갱신',
+  FIRST_PLACE: '처음 간 낚시터 (인증)',
+  PERSONAL_BEST: '같은 어종 최대 길이 갱신 (인증)',
 };
 
 /** 값이 없으면 0 이 아니라 「자료 없음」 (TC-02) */

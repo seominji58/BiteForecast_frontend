@@ -21,10 +21,10 @@ const TITLES: [string, number][] = [
   ['바다의 고수', 600],
 ];
 const POINT_RULES: [string, number][] = [
-  ['인증 완료 기록', 10],
-  ['어종·크기까지 기록', 5],
-  ['처음 가 본 낚시터', 15],
-  ['같은 어종 최대어 갱신', 20],
+  ['인증 완료된 기록 1건', 10],
+  ['어종과 최대 길이까지 기록', 5],
+  ['처음 가 본 낚시터 (낚시터마다 한 번)', 15],
+  ['같은 어종 최대 길이 갱신 (이전 인증 기록보다 길 때)', 20],
 ];
 
 function PlaceRows({ places, empty }: { places: Place[]; empty: string }) {
