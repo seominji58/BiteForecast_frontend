@@ -154,7 +154,9 @@ export type SeriesReason =
   /** 원본 좌표가 의심돼 자료를 연결하지 않음 */
   | 'LOCATION_CHECK'
   /** 가까운 조위관측소가 다른 바다를 봄 */
-  | 'DIFFERENT_SEA';
+  | 'DIFFERENT_SEA'
+  /** 좌표 불일치 의심 — 좌표 기준 자료 판단 보류 */
+  | 'LOCATION_REVIEW';
 export type RegulationStatus = 'PROHIBITED' | 'CONDITIONAL' | 'OFFICIALLY_OPEN' | 'UNVERIFIED';
 
 export type SeriesSource = {
@@ -217,6 +219,10 @@ export type Warning = {
   issued_at: string | null;
   fetched_at: string | null;
   source: string;
+  /** 특보 연결 기준 — 등록 주소의 시·도·시군 */
+  basis?: 'address';
+  /** 주소 기준 특보의 한계 안내 (좌표 불일치 의심 곳) */
+  note?: string | null;
 };
 
 export type PlaceCompare = {
@@ -450,7 +456,7 @@ export type StopOutlook = {
   stop_id: number;
   day: string;
   place_id: number;
-  forecast_status: 'available' | 'pending' | 'past' | 'location_check';
+  forecast_status: 'available' | 'pending' | 'past' | 'location_check' | 'location_review';
   wave_fc_max: ValueAt | null;
   wind_fc_max: ValueAt | null;
   warning_level: Warning['level'] | null;
@@ -458,6 +464,7 @@ export type StopOutlook = {
   /** 특보는 「지금」 상태 — 오늘이 아니면 false (앱은 「그날 특보 발표 전」) */
   warning_is_current: boolean;
   tides: TideEvent[];
+  warning_note?: string | null;
 };
 
 export type TripOutlook = {

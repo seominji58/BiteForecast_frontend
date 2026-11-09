@@ -73,6 +73,21 @@ export function outlookLine(o: StopOutlook | undefined, c: Criteria, lastDay: st
   if (o.forecast_status === 'location_check')
     return { text: '위치 확인 필요 — 좌표가 주소와 맞지 않아 해황을 연결하지 않았어요', fit: null, tone: 'warning', tide: null };
   if (o.forecast_status === 'past') return { text: '지난 날짜예요', fit: null, tone: 'textSecondary', tide: null };
+  if (o.forecast_status === 'location_review') {
+    // 좌표 기준 자료(파고·풍속·물때)는 판단 보류, 특보만 주소 기준으로
+    const w =
+      o.warning_level == null
+        ? '특보 확인 불가'
+        : o.warning_is_current
+          ? `특보(주소 기준) ${WARNING_SHORT[o.warning_level].text}`
+          : '그날 특보 발표 전';
+    return {
+      text: `위치 검증 중 · 해황 판단 보류 · ${w}`,
+      fit: null,
+      tone: o.warning_is_current && o.warning_level === 'warning' ? 'danger' : 'warning',
+      tide: o.warning_note ?? null,
+    };
+  }
   if (o.forecast_status === 'pending')
     return {
       text: `파고·풍속 예보 발표 전${lastDay ? ` (예보는 ${dayLabel(lastDay)}까지)` : ''} · 출조 3~4일 전부터 보여드려요`,

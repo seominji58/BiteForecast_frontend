@@ -510,6 +510,11 @@ export function SelectedSea({
             </ThemedText>
           </View>
           <AddToTripButton placeId={p.id} placeName={p.name} date={date} />
+          {pc.warning.note ? (
+            <ThemedText type="small" themeColor="warning">
+              {pc.warning.note}
+            </ThemedText>
+          ) : null}
           {future ? (
             <ThemedText type="small" themeColor="textSecondary">
               특보는 「지금」 발효 상태예요. 그날 특보는 아직 발표 전이니 출조 전 꼭 다시 확인하세요.

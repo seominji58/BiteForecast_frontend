@@ -81,6 +81,12 @@ export function MarineWarningBanner({ w, compact }: { w: Warning; compact?: bool
           </ThemedText>
         </View>
       </View>
+      {w.note ? (
+        // 좌표 불일치 의심 곳: 주소 기준 특보의 한계 — 접혀 있어도 보이게
+        <ThemedText type="small" themeColor="warning">
+          {w.note}
+        </ThemedText>
+      ) : null}
       {open ? (
         <View style={styles.detail}>
           {lines.map((l) => (

@@ -52,6 +52,7 @@ export const REASON_TEXT: Record<SeriesReason, string> = {
   TOO_FAR: '가까운 지수 지점 없음',
   LOCATION_CHECK: '위치 확인 필요 — 등록된 좌표가 실제 주소와 맞지 않아 자료를 연결하지 않았어요',
   DIFFERENT_SEA: '가까운 조위관측소가 다른 바다를 봐서 물때를 표시하지 않아요',
+  LOCATION_REVIEW: '위치 검증 중 · 해황 판단 보류 (좌표가 주소와 다른 시·군에 있어요)',
 };
 
 export const KIND_TEXT: Record<DataKind, string> = { forecast: '예보', observed: '실측' };
