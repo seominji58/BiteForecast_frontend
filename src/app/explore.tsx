@@ -20,6 +20,7 @@ import {
   checkPlace,
   type Criteria,
   criteriaLabel,
+  freshnessLine,
   INDEX_STEPS,
   WAVE_STEPS,
   WARNING_SHORT,
@@ -98,6 +99,7 @@ export default function ExploreScreen() {
     [gps.coords, home],
   );
 
+  const stale = !!summary.data?.data_status.stale;
   const byId = useMemo(() => new Map((summary.data?.places ?? []).map((s) => [s.place_id, s])), [summary.data]);
 
   const rows = useMemo(() => {
@@ -106,12 +108,13 @@ export default function ExploreScreen() {
         const s = byId.get(p.id);
         return { place: p, s, dist: origin ? km(origin.coords, p) : null, check: checkPlace(s, criteria) };
       })
-      .filter((r) => !onlyMatching || r.check.status === 'meets');
+      // 자료가 오래됐으면 「조건에 맞는 곳」을 고르지 않는다 (최신처럼 보이지 않게)
+      .filter((r) => !onlyMatching || (!stale && r.check.status === 'meets'));
     list.sort((a, b) =>
       a.dist != null && b.dist != null ? a.dist - b.dist : a.place.region_name.localeCompare(b.place.region_name),
     );
     return list;
-  }, [places.data, byId, origin, criteria, onlyMatching]);
+  }, [places.data, byId, origin, criteria, onlyMatching, stale]);
 
   const selected = rows.find((r) => r.place.id === selectedId) ?? null;
 
@@ -131,7 +134,7 @@ export default function ExploreScreen() {
 
   const pinColor = (r: (typeof rows)[number]) => {
     if (r.s?.warning_level === 'warning') return theme.danger;
-    if (onlyMatching || params.mode === 'criteria') return r.check.status === 'meets' ? Brand.teal : '#9AA5B1';
+    if (!stale && (onlyMatching || params.mode === 'criteria')) return r.check.status === 'meets' ? Brand.teal : '#9AA5B1';
     return Brand.navy;
   };
 
@@ -218,6 +221,12 @@ export default function ExploreScreen() {
           </ThemedText>
         </Card>
 
+        {summary.isSuccess ? (
+          <ThemedText type="small" themeColor={stale ? 'warning' : 'textSecondary'}>
+            {stale ? `⚠ ${summary.data.data_status.stale_reason} · ` : ''}
+            {freshnessLine(summary.data.data_status)}
+          </ThemedText>
+        ) : null}
         {summary.isError ? <ErrorView message={summary.error.message} onRetry={() => summary.refetch()} /> : null}
         {places.isError ? <ErrorView message={places.error.message} onRetry={() => places.refetch()} /> : null}
 
@@ -226,7 +235,7 @@ export default function ExploreScreen() {
             place={selected.place}
             s={selected.s}
             dist={selected.dist}
-            check={onlyMatching || params.mode === 'criteria' ? selected.check : null}
+            check={!stale && (onlyMatching || params.mode === 'criteria') ? selected.check : null}
             homeId={homeId}
             pick={params.pick === 'compare' ? { a: params.a ? Number(params.a) : null } : null}
             onClose={() => setSelectedId(null)}
@@ -240,6 +249,7 @@ export default function ExploreScreen() {
         {rows.length === 0 && summary.isSuccess ? (
           <Card>
             <CriteriaResult
+              dataStatus={summary.data.data_status}
               b={breakdown(summary.data.places, criteria)}
               criteria={criteria}
               places={places.data ?? []}
@@ -255,7 +265,7 @@ export default function ExploreScreen() {
             place={r.place}
             s={r.s}
             dist={r.dist}
-            check={onlyMatching || params.mode === 'criteria' ? r.check : null}
+            check={!stale && (onlyMatching || params.mode === 'criteria') ? r.check : null}
             selected={r.place.id === selectedId}
             onPress={() => {
               setSelectedId(r.place.id);

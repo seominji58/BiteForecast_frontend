@@ -1,14 +1,14 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import type { Place, PlaceSummary } from '@/api/types';
+import type { DataStatus, Place, PlaceSummary } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { Button } from '@/components/form';
 import { ThemedText } from '@/components/themed-text';
 import { IconSize } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { Breakdown, Criteria } from '@/lib/criteria';
-import { WARNING_SHORT } from '@/lib/criteria';
+import { freshnessLine, WARNING_SHORT } from '@/lib/criteria';
 import { km, PLACE_IMAGE } from '@/lib/place';
 
 /**
@@ -24,7 +24,10 @@ export function CriteriaResult({
   origin,
   limit = 3,
   onChangeCriteria,
+  dataStatus,
 }: {
+  /** 자료가 오래됐으면 개수·목록 대신 상태만 안내한다 */
+  dataStatus?: DataStatus;
   b: Breakdown;
   criteria: Criteria;
   places: Place[];
@@ -33,6 +36,20 @@ export function CriteriaResult({
   onChangeCriteria: () => void;
 }) {
   const theme = useTheme();
+  if (dataStatus?.stale) {
+    return (
+      <View style={styles.box}>
+        <ThemedText type="smallBold" themeColor="warning">
+          {dataStatus.stale_reason ?? '자료가 오래됐어요'}
+        </ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">
+          {freshnessLine(dataStatus)}. 오래된 예보·특보로는 출조 조건을 판단하지 않아요. 출조 전 기상청 특보를 꼭 직접
+          확인하세요.
+        </ThemedText>
+        <Button label="지도에서 낚시터별 자료 보기" variant="secondary" onPress={() => router.push('/explore')} />
+      </View>
+    );
+  }
   if (b.insufficient) {
     return (
       <View style={styles.box}>

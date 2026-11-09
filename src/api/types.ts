@@ -228,7 +228,24 @@ export type PlaceSummary = {
     station_km: number | null;
   } | null;
 };
-export type PlacesSummary = { date: string; generated_at: string; places: PlaceSummary[]; disclaimer: string };
+/** 자료별 마지막 수집 시각. stale 이면 출조 탐색 판단에 쓰지 않는다 */
+export type DataStatus = {
+  forecast_fetched_at: string | null;
+  warning_fetched_at: string | null;
+  buoy_fetched_at: string | null;
+  tide_fetched_at: string | null;
+  index_fetched_at: string | null;
+  stale: boolean;
+  stale_reason: string | null;
+  stale_after_hours: number;
+};
+export type PlacesSummary = {
+  date: string;
+  generated_at: string;
+  places: PlaceSummary[];
+  disclaimer: string;
+  data_status: DataStatus;
+};
 
 export type PlaceConditions = {
   date: string;

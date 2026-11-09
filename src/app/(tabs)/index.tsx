@@ -15,7 +15,7 @@ import { ThemedText } from '@/components/themed-text';
 import type { AppIconName } from '@/constants/icons';
 import { Brand, IconSize, Layout } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { breakdown, criteriaLabel, WARNING_SHORT } from '@/lib/criteria';
+import { breakdown, criteriaLabel, freshnessLine, WARNING_SHORT } from '@/lib/criteria';
 import { catchLine, shortDate, whereLine } from '@/lib/community';
 import { timeAgo } from '@/lib/format';
 import { matches, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
@@ -349,7 +349,7 @@ function ExploreTeaser({ home }: { home: Place | null }) {
             <AppIcon name="find-criteria" size={32} badge />
           </View>
           <View style={styles.flex}>
-            {summary.isSuccess && !b.insufficient ? (
+            {summary.isSuccess && !b.insufficient && !summary.data.data_status.stale ? (
               <ThemedText type="sectionTitle">
                 내 기준에 맞는 곳{' '}
                 <ThemedText type="sectionTitle" themeColor={b.meets.length ? 'success' : 'textSecondary'}>
@@ -375,6 +375,7 @@ function ExploreTeaser({ home }: { home: Place | null }) {
           </ThemedText>
         ) : (
           <CriteriaResult
+            dataStatus={summary.data.data_status}
             b={b}
             criteria={criteria}
             places={places.data ?? []}
@@ -382,7 +383,12 @@ function ExploreTeaser({ home }: { home: Place | null }) {
             onChangeCriteria={openCriteria}
           />
         )}
-        {b.meets.length > 0 ? (
+        {summary.isSuccess ? (
+          <ThemedText type="small" themeColor={summary.data.data_status.stale ? 'warning' : 'textSecondary'}>
+            {freshnessLine(summary.data.data_status)}
+          </ThemedText>
+        ) : null}
+        {b.meets.length > 0 && !summary.data?.data_status.stale ? (
           <Pressable accessibilityRole="button" onPress={openCriteria} hitSlop={8}>
             <ThemedText type="smallBold" themeColor="tint">
               {`맞는 곳 ${b.meets.length}곳 모두 지도에서 보기 ›`}

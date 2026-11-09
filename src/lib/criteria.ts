@@ -118,3 +118,14 @@ export function breakdown(list: PlaceSummary[], c: Criteria): Breakdown {
   b.insufficient = b.total === 0 || b.unknown >= b.total / 2;
   return b;
 }
+
+/** 「11/5 16:22 갱신 (2시간 전)」 — 예보·특보 중 더 오래된 쪽 기준 */
+export function freshnessLine(ds: { forecast_fetched_at: string | null; warning_fetched_at: string | null }): string {
+  const times = [ds.forecast_fetched_at, ds.warning_fetched_at].filter((t): t is string => !!t).map((t) => new Date(t));
+  if (times.length === 0) return '아직 수집한 자료가 없어요';
+  const t = new Date(Math.min(...times.map((d) => d.getTime())));
+  const mins = Math.max(0, Math.round((Date.now() - t.getTime()) / 60000));
+  const ago = mins < 60 ? `${mins}분 전` : mins < 1440 ? `${Math.floor(mins / 60)}시간 전` : `${Math.floor(mins / 1440)}일 전`;
+  const p2 = (n: number) => String(n).padStart(2, '0');
+  return `기상청 예보·특보 ${t.getMonth() + 1}/${t.getDate()} ${p2(t.getHours())}:${p2(t.getMinutes())} 갱신 (${ago})`;
+}

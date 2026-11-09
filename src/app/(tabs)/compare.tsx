@@ -15,7 +15,7 @@ import type { AppIconName } from '@/constants/icons';
 import { Brand, IconSize } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { dayLabel, dayList } from '@/lib/compare';
-import { CHECK_TEXT, checkPlace, criteriaLabel } from '@/lib/criteria';
+import { CHECK_TEXT, checkPlace, criteriaLabel, freshnessLine } from '@/lib/criteria';
 import { getCurrentCoords } from '@/lib/location';
 import { km, nearby, PLACE_IMAGE } from '@/lib/place';
 import { getRecent, pushRecent, RECENT_COMPARES, RECENT_PLACES, useCriteria, useHomePlace } from '@/lib/prefs';
@@ -323,6 +323,19 @@ function CriteriaFit({ a, b, day, today }: { a: Place; b: Place; day: string; to
   const summary = usePlacesSummary(today);
   const [criteria] = useCriteria();
   if (!summary.data) return null;
+  if (summary.data.data_status.stale) {
+    return (
+      <Card>
+        <ThemedText type="smallBold">내 기준과 비교</ThemedText>
+        <ThemedText type="small" themeColor="warning">
+          {summary.data.data_status.stale_reason} · {freshnessLine(summary.data.data_status)}
+        </ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">
+          오래된 예보·특보로는 기준 충족 여부를 보여드리지 않아요. 아래 표의 자료 시각을 확인하세요.
+        </ThemedText>
+      </Card>
+    );
+  }
   const rows = [a, b].map((p, i) => ({
     label: i === 0 ? 'A' : 'B',
     p,
