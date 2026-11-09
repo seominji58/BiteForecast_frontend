@@ -4,9 +4,9 @@ import { currentToken, loadToken, setToken } from '@/lib/session';
 /**
  * API 기본 주소. .env 의 EXPO_PUBLIC_API_URL 로 지정한다.
  * 실기기(Expo Go)에서는 localhost 가 휴대폰 자신을 가리키므로 개발 PC 의 LAN IP 를 넣어야 한다.
- * 예) EXPO_PUBLIC_API_URL=http://192.168.0.10:8000/api/v1
+ * 예) EXPO_PUBLIC_API_URL=http://192.168.0.10:8001/api/v1
  */
-export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
+export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8001/api/v1';
 
 const TIMEOUT_MS = 10_000;
 

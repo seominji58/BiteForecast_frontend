@@ -12,11 +12,12 @@ iOS와 Android를 하나의 코드로 만든다.
 
 ```bash
 npm install
-cp .env.example .env   # EXPO_PUBLIC_API_URL: 시뮬레이터면 http://localhost:8000/api/v1
+cp .env.example .env   # EXPO_PUBLIC_API_URL: 시뮬레이터면 http://localhost:8001/api/v1
 npx expo start         # 휴대폰이 다른 네트워크면 --tunnel. 창에서 i = iPhone 시뮬레이터
 ```
 
-- **iPhone / 갤럭시**: 스토어에서 **Expo Go**를 설치하고 터미널에 뜬 QR 코드를 스캔한다.
+- **시뮬레이터**: 개발용 앱(development build)을 쓴다. 처음 한 번 `npx expo run:ios`, 이후에는 `npx expo start` → `i` (화면 코드는 핫리로드)
+- 백엔드는 **8001** 포트 (8000 은 다른 프로젝트가 사용)
 - `.env` 를 바꾸면 `npx expo start --clear` 로 다시 켠다.
 
 ## 점검
