@@ -23,6 +23,14 @@ import { type Coords, getCurrentCoords } from '@/lib/location';
 import { km, matches, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
 import { SEA_GROUPS, type SeaChoice, useCriteria, useHomeSea, useHomeSelection } from '@/lib/prefs';
 
+/** 받아 둔 기상청 예보가 하루 전체를 덮는 마지막 날짜 (KST, YYYY-MM-DD) */
+function forecastLastDay(validUntil: string | null): string | null {
+  if (!validUntil) return null;
+  // valid_until 이 KST 자정이면 그 전날까지가 온전한 하루 예보
+  const kst = new Date(new Date(validUntil).getTime() - 1000 + 9 * 3600_000);
+  return kst.toISOString().slice(0, 10);
+}
+
 /** 「내 주변」 후보로 볼 거리 (현재 위치 기준) */
 const NEAR_KM = 60;
 const CANDIDATES = 3;
@@ -44,6 +52,9 @@ export default function HomeScreen() {
   const date = dateSel ?? today;
   const future = !!date && !!today && date !== today;
   const summary = usePlacesSummary(date);
+  const lastForecastDay = forecastLastDay(summary.data?.data_status.forecast_valid_until ?? null);
+  // 예보 범위 밖 날짜: 「예보 발표 전」 — 다른 날짜 자료로 대신하거나 조건 충족으로 보지 않는다
+  const pending = !!date && !!lastForecastDay && date > lastForecastDay;
   const [criteria] = useCriteria();
   const [sea, setSea] = useHomeSea();
   const [near, setNear] = useState(false);
@@ -53,7 +64,7 @@ export default function HomeScreen() {
     error: null,
   });
   const [picked, setPicked, pickedLoaded] = useHomeSelection();
-  const [pickedFrom, setPickedFrom] = useState<'search' | 'candidate' | null>(null);
+  const [pickedFrom, setPickedFrom] = useState<'search' | 'candidate' | 'map' | null>(null);
   const favorites = useFavorites();
   const [query, setQuery] = useState('');
 
@@ -103,12 +114,13 @@ export default function HomeScreen() {
   const dots = useMemo<MapDot[]>(() => {
     const base = chosen ? scope : (summary.data?.places ?? []).filter((s) => !s.location_suspect);
     return base
-      .map((s) => {
+      .map((s): MapDot | null => {
         const place = byId.get(s.place_id);
         if (!place) return null;
         const c = checkPlace(s, criteria, { future });
-        const tone: MapDot['tone'] =
-          s.warning_level === 'warning'
+        const tone: MapDot['tone'] = pending
+          ? 'pending'
+          : s.warning_level === 'warning'
             ? 'warning'
             : stale || c.status === 'unknown'
               ? 'unknown'
@@ -118,13 +130,17 @@ export default function HomeScreen() {
         return { place, tone };
       })
       .filter((d): d is MapDot => !!d);
-  }, [chosen, scope, summary.data, byId, criteria, future, stale]);
+  }, [chosen, scope, summary.data, byId, criteria, future, stale, pending]);
 
   // 해황 대상: 내가 고른 곳 → 즐겨찾기 첫 곳 → 안내
   const fav = favorites.data?.[0];
   const target: { id: number; basis: string; clearable: boolean } | null =
     picked != null && byId.has(picked)
-      ? { id: picked, basis: pickedFrom === 'candidate' ? '후보에서 고른 곳' : '내가 고른 곳', clearable: true }
+      ? {
+          id: picked,
+          basis: pickedFrom === 'candidate' ? '후보에서 고른 곳' : pickedFrom === 'map' ? '지도에서 고른 곳' : '내가 고른 곳',
+          clearable: true,
+        }
       : fav
         ? { id: fav.id, basis: '즐겨찾기', clearable: false }
         : null;
@@ -167,10 +183,13 @@ export default function HomeScreen() {
                 key={d}
                 accessibilityRole="button"
                 accessibilityState={{ selected: on }}
-                accessibilityLabel={`${dayLabel(d)} 해황 보기`}
+                accessibilityLabel={`${dayLabel(d)} 해황 보기${lastForecastDay && d > lastForecastDay ? ', 예보 발표 전' : ''}`}
                 onPress={() => setDate(d)}
                 style={({ pressed }) => [styles.datePill, on && styles.datePillOn, pressed && styles.pressed]}>
-                <Text style={[styles.dateText, on && styles.dateTextOn]}>{shortDay(d)}</Text>
+                <Text style={[styles.dateText, lastForecastDay && d > lastForecastDay && styles.dateTextPending, on && styles.dateTextOn]}>
+                  {shortDay(d)}
+                  {lastForecastDay && d > lastForecastDay ? ' · 예보 전' : ''}
+                </Text>
               </Pressable>
             );
           })}
@@ -237,6 +256,10 @@ export default function HomeScreen() {
           text={`${summary.data.data_status.stale_reason ?? '자료가 오래됐어요'}. 오래된 예보·특보로는 후보를 고르지 않아요.`}
           tone="warning"
         />
+      ) : pending ? (
+        <Hint
+          text={`${dayLabel(date!)}은 아직 예보 발표 전이에요. 기상청 예보는 ${dayLabel(lastForecastDay!)}까지 나와 있어요. 예보가 나오기 전에는 출조 후보를 고르지 않아요.`}
+        />
       ) : scope.length === 0 ? (
         <Hint text={near ? `현재 위치에서 ${NEAR_KM}km 안에 등록된 바다 낚시터가 없어요. 바다를 골라 주세요.` : '이 바다에 등록된 낚시터가 없어요.'} />
       ) : b.insufficient ? (
@@ -288,7 +311,15 @@ export default function HomeScreen() {
       {/* 지역별 바다 상황 */}
       <SectionHeader title="지역별 바다 상황" actionLabel="전체 지도" onAction={() => router.push('/explore')} />
       {summary.isSuccess ? (
-        <SeaMap dots={dots} title={`${chosen ? scopeName : '전국'} · ${date ? dayLabel(date) : ''}`} />
+        <SeaMap
+          dots={dots}
+          title={`${chosen ? scopeName : '전국'} · ${date ? dayLabel(date) : ''}`}
+          selectedId={target?.id ?? null}
+          onPick={(id) => {
+            setPicked(id);
+            setPickedFrom('map');
+          }}
+        />
       ) : (
         <Hint text={summary.isError ? '지도 자료를 불러오지 못했어요.' : '지도 자료를 불러오는 중이에요…'} loading={summary.isPending} />
       )}
@@ -301,18 +332,11 @@ export default function HomeScreen() {
           basis={target.basis}
           date={date}
           today={today}
+          pending={pending}
           onClear={target.clearable ? () => setPicked(null) : undefined}
         />
       ) : (
-        <Card style={styles.prompt}>
-          <AppIcon name="tide" size={30} />
-          <View style={styles.flex}>
-            <ThemedText type="smallBold">낚시터를 고르면 물때·파고·바람을 보여드려요</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              위 후보 카드를 누르거나 검색으로 고르세요. 즐겨찾기한 곳이 있으면 그곳을 먼저 보여드려요.
-            </ThemedText>
-          </View>
-        </Card>
+        <Hint text="후보 카드·지도 점을 누르거나 검색으로 고르면 물때·파고·바람을 보여드려요." />
       )}
 
       {/* 낚시 정보 */}
@@ -595,6 +619,7 @@ const styles = StyleSheet.create({
   },
   datePillOn: { backgroundColor: Brand.orange, borderColor: Brand.orange },
   dateText: { color: Brand.onNavySecondary, fontSize: 14, fontWeight: '600' },
+  dateTextPending: { opacity: 0.6 },
   dateTextOn: { color: '#fff', fontWeight: '800' },
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
@@ -611,7 +636,6 @@ const styles = StyleSheet.create({
   hintCol: { gap: 4 },
   cands: { gap: 8 },
   linkRow: { minHeight: 40, justifyContent: 'center' },
-  prompt: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   tiles: { flexDirection: 'row', gap: 8 },
   tile: { flex: 1, alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 4 },
   writeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 12, padding: 12, minHeight: 56 },

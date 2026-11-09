@@ -8,8 +8,8 @@
  * - 사진처럼 보이는 가짜 이미지를 쓰지 않는다 (낚시터 유형 아이콘 + 정보 카드)
  */
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker, type Region } from 'react-native-maps';
 
 import { useConditions } from '@/api/queries';
@@ -127,7 +127,8 @@ function Metric({ icon, label, value }: { icon: 'wave' | 'wind'; label: string; 
 
 const KOREA: Region = { latitude: 35.9, longitude: 127.6, latitudeDelta: 6.4, longitudeDelta: 6.4 };
 
-export type MapDot = { place: Place; tone: 'warning' | 'meets' | 'other' | 'unknown' };
+/** pending = 그 날짜 예보 발표 전 (판단하지 않음) */
+export type MapDot = { place: Place; tone: 'warning' | 'meets' | 'other' | 'unknown' | 'pending' };
 
 function regionFor(dots: MapDot[]): Region {
   const pts = dots.filter((d) => d.place.lat != null && d.place.lon != null);
@@ -138,61 +139,177 @@ function regionFor(dots: MapDot[]): Region {
   return {
     latitude: (a + b) / 2,
     longitude: (c + d) / 2,
-    latitudeDelta: Math.max(0.6, (b - a) * 1.35),
-    longitudeDelta: Math.max(0.6, (d - c) * 1.35),
+    latitudeDelta: Math.max(0.25, (b - a) * 1.4),
+    longitudeDelta: Math.max(0.25, (d - c) * 1.4),
   };
 }
 
-export function SeaMap({ dots, title }: { dots: MapDot[]; title: string }) {
+type Cluster = { key: string; lat: number; lon: number; dots: MapDot[] };
+
+/** 화면 격자(약 CELL px) 단위로 가까운 점을 묶는다 — 실제 좌표의 평균 위치에 표시 */
+const CELL = 40;
+function clusterDots(dots: MapDot[], region: Region, size: { w: number; h: number }): Cluster[] {
+  if (!size.w) return [];
+  const pxLon = size.w / region.longitudeDelta;
+  const pxLat = size.h / region.latitudeDelta;
+  const cells = new Map<string, MapDot[]>();
+  for (const d of dots) {
+    if (d.place.lat == null || d.place.lon == null) continue;
+    const k = `${Math.floor((d.place.lon * pxLon) / CELL)}:${Math.floor((d.place.lat * pxLat) / CELL)}`;
+    cells.set(k, [...(cells.get(k) ?? []), d]);
+  }
+  return [...cells.entries()].map(([key, list]) => ({
+    key,
+    lat: list.reduce((s, d) => s + d.place.lat!, 0) / list.length,
+    lon: list.reduce((s, d) => s + d.place.lon!, 0) / list.length,
+    dots: list,
+  }));
+}
+
+const TONE_ORDER: MapDot['tone'][] = ['warning', 'meets', 'other', 'unknown', 'pending'];
+
+/**
+ * 지역별 바다 상황 지도. 화면 스크롤과 겹치지 않게 손가락 이동·확대는 막고, 누르는 동작만 쓴다.
+ * - 묶음(숫자)을 누르면 그 묶음 범위로 확대 · 낚시터 점을 누르면 그 낚시터 해황을 보여준다
+ * - 권역을 바꾸면 그 권역 낚시터 범위로 이동
+ */
+export function SeaMap({
+  dots,
+  title,
+  selectedId,
+  onPick,
+}: {
+  dots: MapDot[];
+  title: string;
+  selectedId: number | null;
+  onPick: (placeId: number) => void;
+}) {
   const theme = useTheme();
-  const color = {
+  const color: Record<MapDot['tone'], string> = {
     warning: theme.danger,
     meets: Brand.teal,
     other: '#8A97A6',
     unknown: '#C3CBD4',
-  } as const;
-  // 지도 영역은 낚시터 묶음이 바뀔 때만 다시 계산 (실제 좌표 기준)
+    pending: '#AEB8C4',
+  };
+  const mapRef = useRef<MapView>(null);
+  const [size, setSize] = useState({ w: 0, h: 0 });
   const key = dots.map((d) => d.place.id).join(',');
-  const region = useMemo(() => regionFor(dots), [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const home = useMemo(() => regionFor(dots), [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [region, setRegion] = useState<Region>(home);
+  const [zoomed, setZoomed] = useState(false);
+
+  // 권역(낚시터 묶음)이 바뀌면 그 범위로 이동 (렌더 중 상태 맞춤 → 지도는 effect 에서 이동)
+  const [lastHome, setLastHome] = useState(home);
+  if (lastHome !== home) {
+    setLastHome(home);
+    setRegion(home);
+    setZoomed(false);
+  }
+  useEffect(() => {
+    mapRef.current?.animateToRegion(home, 350);
+  }, [home]);
+
+  const go = (r: Region, z: boolean) => {
+    setRegion(r);
+    setZoomed(z);
+    mapRef.current?.animateToRegion(r, 350);
+  };
+  const clusters = useMemo(() => clusterDots(dots, region, size), [dots, region, size]);
   const count = (t: MapDot['tone']) => dots.filter((d) => d.tone === t).length;
-  const open = () => router.push('/explore');
+
   return (
     <View style={[styles.mapCard, { borderColor: theme.border, backgroundColor: theme.backgroundElement }]}>
-      <View style={styles.mapBox}>
+      <View style={styles.mapBox} onLayout={(e) => setSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
         <MapView
-          key={key.length ? key.slice(0, 40) : 'all'}
+          ref={mapRef}
           style={StyleSheet.absoluteFill}
-          initialRegion={region}
+          initialRegion={home}
           scrollEnabled={false}
           zoomEnabled={false}
           rotateEnabled={false}
           pitchEnabled={false}
-          toolbarEnabled={false}
-          liteMode
-          onPress={open}>
-          {dots
-            .filter((d) => d.place.lat != null && d.place.lon != null)
-            .map((d) => (
+          toolbarEnabled={false}>
+          {clusters.map((c) => {
+            if (c.dots.length === 1) {
+              const d = c.dots[0];
+              const on = d.place.id === selectedId;
+              return (
+                <Marker
+                  key={`p${d.place.id}${on ? 's' : ''}`}
+                  coordinate={{ latitude: d.place.lat!, longitude: d.place.lon! }}
+                  tracksViewChanges={false}
+                  anchor={{ x: 0.5, y: 0.5 }}
+                  accessibilityLabel={`${d.place.name} 해황 보기`}
+                  onPress={() => onPick(d.place.id)}>
+                  <View style={styles.hit}>
+                    <View style={[on ? styles.dotOn : styles.dot, { backgroundColor: color[d.tone] }]} />
+                  </View>
+                </Marker>
+              );
+            }
+            const tones = TONE_ORDER.map((t) => [t, c.dots.filter((d) => d.tone === t).length] as const);
+            const main = [...tones].sort((x, y) => y[1] - x[1])[0][0];
+            const warn = tones[0][1];
+            const lats = c.dots.map((d) => d.place.lat!);
+            const lons = c.dots.map((d) => d.place.lon!);
+            return (
               <Marker
-                key={d.place.id}
-                coordinate={{ latitude: d.place.lat!, longitude: d.place.lon! }}
+                key={`c${c.key}:${c.dots.length}:${main}:${warn}`}
+                coordinate={{ latitude: c.lat, longitude: c.lon }}
                 tracksViewChanges={false}
-                onPress={open}
-                anchor={{ x: 0.5, y: 0.5 }}>
-                <View style={[styles.dot, { backgroundColor: color[d.tone] }]} />
+                anchor={{ x: 0.5, y: 0.5 }}
+                accessibilityLabel={`낚시터 ${c.dots.length}곳 묶음, 눌러서 확대`}
+                onPress={() =>
+                  go(
+                    {
+                      latitude: (Math.min(...lats) + Math.max(...lats)) / 2,
+                      longitude: (Math.min(...lons) + Math.max(...lons)) / 2,
+                      latitudeDelta: Math.max(0.08, (Math.max(...lats) - Math.min(...lats)) * 1.8),
+                      longitudeDelta: Math.max(0.08, (Math.max(...lons) - Math.min(...lons)) * 1.8),
+                    },
+                    true,
+                  )
+                }>
+                <View style={[styles.cluster, { backgroundColor: color[main] }]}>
+                  <Text style={styles.clusterText}>{c.dots.length}</Text>
+                  {warn && main !== 'warning' ? (
+                    <View style={[styles.clusterWarn, { backgroundColor: color.warning }]}>
+                      <Text style={styles.clusterWarnText}>{warn}</Text>
+                    </View>
+                  ) : null}
+                </View>
               </Marker>
-            ))}
+            );
+          })}
         </MapView>
+        {zoomed ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => go(home, false)}
+            style={({ pressed }) => [styles.mapBack, pressed && styles.pressed]}>
+            <Text style={styles.mapBackText}>‹ 전체 범위</Text>
+          </Pressable>
+        ) : null}
       </View>
       <View style={styles.legend}>
         <ThemedText type="smallBold">
-          {title} <ThemedText type="small" themeColor="textSecondary">· 지도를 누르면 전체 지도</ThemedText>
+          {title}{' '}
+          <ThemedText type="small" themeColor="textSecondary">
+            · 숫자는 묶음(눌러서 확대), 점을 누르면 해황
+          </ThemedText>
         </ThemedText>
         <View style={styles.legendRow}>
-          <Legend color={color.warning} label={`특보 발효 ${count('warning')}`} />
-          <Legend color={color.meets} label={`내 기준 충족 ${count('meets')}`} />
-          <Legend color={color.other} label={`기준 밖 ${count('other')}`} />
-          {count('unknown') ? <Legend color={color.unknown} label={`자료 부족 ${count('unknown')}`} /> : null}
+          {count('pending') ? (
+            <Legend color={color.pending} label={`예보 발표 전 ${count('pending')}`} />
+          ) : (
+            <>
+              <Legend color={color.warning} label={`특보 발효 ${count('warning')}`} />
+              <Legend color={color.meets} label={`내 기준 충족 ${count('meets')}`} />
+              <Legend color={color.other} label={`기준 밖 ${count('other')}`} />
+              {count('unknown') ? <Legend color={color.unknown} label={`자료 부족 ${count('unknown')}`} /> : null}
+            </>
+          )}
         </View>
       </View>
     </View>
@@ -217,6 +334,7 @@ export function SelectedSea({
   basis,
   date,
   today,
+  pending,
   onClear,
 }: {
   placeId: number;
@@ -224,6 +342,8 @@ export function SelectedSea({
   basis: string;
   date: string;
   today: string;
+  /** 그 날짜 예보 발표 전 */
+  pending?: boolean;
   onClear?: () => void;
 }) {
   const theme = useTheme();
@@ -338,6 +458,7 @@ export function SelectedSea({
               obs={future ? undefined : waveObs}
               unit="m"
               after={after}
+              pending={pending}
             />
             <SeaMetric
               icon="wind"
@@ -346,6 +467,7 @@ export function SelectedSea({
               obs={future ? undefined : windObs}
               unit="m/s"
               after={after}
+              pending={pending}
             />
           </View>
 
@@ -377,7 +499,9 @@ function SeaMetric({
   obs,
   unit,
   after,
+  pending,
 }: {
+  pending?: boolean;
   icon: 'wave' | 'wind';
   title: string;
   fc: Series | undefined;
@@ -386,7 +510,7 @@ function SeaMetric({
   after: number | null;
 }) {
   const theme = useTheme();
-  const vals = (fc?.status === 'ok' ? (fc.points ?? []) : []).filter(
+  const vals = (fc?.status === 'ok' && !pending ? (fc.points ?? []) : []).filter(
     (x) => x.v != null && (after == null || new Date(x.t).getTime() >= after - 3 * 3600_000),
   );
   const peak = vals.reduce<{ t: string; v: number } | null>((m, x) => (m == null || x.v! > m.v ? { t: x.t, v: x.v! } : m), null);
@@ -399,11 +523,13 @@ function SeaMetric({
           {title} 예보 최대
         </ThemedText>
       </View>
-      <ThemedText type="sectionTitle">{peak ? `${peak.v}${unit}` : '없음'}</ThemedText>
+      <ThemedText type="sectionTitle">{peak ? `${peak.v}${unit}` : pending ? '발표 전' : '없음'}</ThemedText>
       <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
         {peak
           ? `${timeLabel(peak.t)} 무렵 · 기상청 예보`
-          : fc?.reason
+          : pending
+            ? '이 날짜 예보는 아직 발표 전이에요'
+            : fc?.reason
             ? REASON_TEXT[fc.reason]
             : '예보 자료 없음'}
       </ThemedText>
@@ -514,8 +640,44 @@ const styles = StyleSheet.create({
   metric: { flex: 1, borderRadius: 8, paddingVertical: 6, paddingHorizontal: 8, gap: 1 },
   metricLabel: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   mapCard: { borderWidth: 1, borderRadius: 12, overflow: 'hidden' },
-  mapBox: { height: 170 },
-  dot: { width: 10, height: 10, borderRadius: 5, borderWidth: 1.5, borderColor: '#fff' },
+  mapBox: { height: 190 },
+  hit: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
+  dot: { width: 12, height: 12, borderRadius: 6, borderWidth: 1.5, borderColor: '#fff' },
+  dotOn: { width: 18, height: 18, borderRadius: 9, borderWidth: 3, borderColor: Brand.orange },
+  cluster: {
+    minWidth: 30,
+    height: 30,
+    paddingHorizontal: 6,
+    borderRadius: 15,
+    borderWidth: 2,
+    borderColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clusterText: { color: '#fff', fontSize: 13, fontWeight: '800' },
+  clusterWarn: {
+    position: 'absolute',
+    top: -6,
+    right: -8,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clusterWarnText: { color: '#fff', fontSize: 10, fontWeight: '800' },
+  mapBack: {
+    position: 'absolute',
+    left: 8,
+    top: 8,
+    minHeight: 36,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+  },
+  mapBackText: { color: Brand.navy, fontSize: 14, fontWeight: '700' },
   legend: { padding: 10, gap: 4 },
   legendRow: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 12, rowGap: 2 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
