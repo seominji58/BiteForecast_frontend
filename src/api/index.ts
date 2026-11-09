@@ -19,6 +19,7 @@ import type {
   PlaceConditions,
   PlacesSummary,
   PostCategory,
+  PostFilter,
   PostDetail,
   PostInput,
   PostSummary,
@@ -57,8 +58,16 @@ export const api = {
   compare: (placeA: number, placeB: number, date: string) =>
     request<CompareResult>(`/compare?place_a=${placeA}&place_b=${placeB}&date=${date}`),
 
-  posts: (category: PostCategory | null, sort: 'latest' | 'popular') =>
-    request<PostSummary[]>(`/community/posts?sort=${sort}${category ? `&category=${category}` : ''}`, { auth: true }),
+  posts: (category: PostCategory | null, sort: 'latest' | 'popular', filter: PostFilter = {}) => {
+    const qs = new URLSearchParams({ sort });
+    if (category) qs.set('category', category);
+    if (filter.sido) qs.set('sido', filter.sido);
+    if (filter.species) qs.set('species', filter.species);
+    return request<PostSummary[]>(`/community/posts?${qs.toString()}`);
+  },
+  favorites: () => request<Place[]>('/me/favorites'),
+  setFavorite: (placeId: number, on: boolean) =>
+    request<void>(`/me/favorites/${placeId}`, { method: on ? 'PUT' : 'DELETE' }),
   post: (id: number) => request<PostDetail>(`/community/posts/${id}`, { auth: true }),
   createPost: (input: PostInput) => request<PostDetail>('/community/posts', { method: 'POST', body: input, auth: true }),
   deletePost: (id: number) => request<void>(`/community/posts/${id}`, { method: 'DELETE', auth: true }),

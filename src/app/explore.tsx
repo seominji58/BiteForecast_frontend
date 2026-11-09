@@ -13,7 +13,9 @@ import { ThemedView } from '@/components/themed-view';
 import { Brand, IconSize, Layout } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { timeLabel } from '@/lib/compare';
+import { CriteriaResult } from '@/components/criteria-result';
 import {
+  breakdown,
   CHECK_TEXT,
   checkPlace,
   type Criteria,
@@ -38,7 +40,8 @@ type Origin = { kind: 'gps' | 'home'; coords: Coords; label: string } | null;
  * - mode=criteria: 「조건으로 찾기」 — 사용자가 정한 파고·풍속 상한 + 특보 + 공식 지수로 거른다 (앱 판정 없음)
  */
 export default function ExploreScreen() {
-  const params = useLocalSearchParams<{ near?: string; mode?: string }>();
+  // pick=compare: 비교 화면에서 「지도에서 고르기」로 들어옴 (a = 이미 고른 A)
+  const params = useLocalSearchParams<{ near?: string; mode?: string; pick?: string; a?: string }>();
   const theme = useTheme();
   const places = usePlaces();
   const range = useDateRange();
@@ -225,6 +228,7 @@ export default function ExploreScreen() {
             dist={selected.dist}
             check={onlyMatching || params.mode === 'criteria' ? selected.check : null}
             homeId={homeId}
+            pick={params.pick === 'compare' ? { a: params.a ? Number(params.a) : null } : null}
             onClose={() => setSelectedId(null)}
           />
         ) : null}
@@ -235,9 +239,14 @@ export default function ExploreScreen() {
         {summary.isPending || places.isPending ? <ActivityIndicator color={theme.tint} /> : null}
         {rows.length === 0 && summary.isSuccess ? (
           <Card>
-            <ThemedText themeColor="textSecondary">
-              지금 기준에 맞는 곳이 없어요. 기준을 바꾸거나 「내 조건에 맞는 곳만」을 끄고 둘러보세요.
-            </ThemedText>
+            <CriteriaResult
+              b={breakdown(summary.data.places, criteria)}
+              criteria={criteria}
+              places={places.data ?? []}
+              origin={null}
+              onChangeCriteria={() => setEditCriteria(true)}
+            />
+            <Button label="모든 낚시터 보기" variant="secondary" onPress={() => setOnlyMatching(false)} />
           </Card>
         ) : null}
         {rows.slice(0, shown).map((r) => (
@@ -375,6 +384,7 @@ function SelectedCard({
   dist,
   check,
   homeId,
+  pick,
   onClose,
 }: {
   place: Place;
@@ -382,10 +392,18 @@ function SelectedCard({
   dist: number | null;
   check: ReturnType<typeof checkPlace> | null;
   homeId: number | null;
+  /** 비교 화면에서 고르러 온 경우: 이미 고른 A (없으면 이 곳이 A) */
+  pick: { a: number | null } | null;
   onClose: () => void;
 }) {
   const w = s ? WARNING_SHORT[s.warning_level] : null;
-  const compareWith = homeId != null && homeId !== place.id ? homeId : null;
+  const compareWith = pick
+    ? pick.a != null && pick.a !== place.id
+      ? pick.a
+      : null
+    : homeId != null && homeId !== place.id
+      ? homeId
+      : null;
   return (
     <Card style={styles.selected}>
       <View style={styles.between}>
@@ -435,9 +453,9 @@ function SelectedCard({
         </View>
         <View style={styles.flex}>
           <Button
-            label={compareWith ? '기준 낚시터와 비교' : '비교하기'}
+            label={pick ? (compareWith ? 'B로 담아 비교' : 'A로 담기') : compareWith ? '기준 낚시터와 비교' : '비교하기'}
             onPress={() =>
-              router.push({
+              router.navigate({
                 pathname: '/compare',
                 params: compareWith ? { a: String(compareWith), b: String(place.id) } : { a: String(place.id) },
               })

@@ -77,3 +77,32 @@ export const CHECK_TEXT: Record<CheckResult['status'], { label: string; color: '
   fails: { label: '조건 밖', color: 'textSecondary' },
   unknown: { label: '자료 부족', color: 'warning' },
 };
+
+export type Breakdown = {
+  total: number;
+  meets: PlaceSummary[];
+  /** 제외 이유별 곳 수 (한 곳이 여러 이유에 걸칠 수 있다) */
+  warning: number;
+  waveOver: number;
+  windOver: number;
+  indexLow: number;
+  unknown: number;
+  /** 자료가 모자라 판단할 수 없는 상태 (절반 이상 자료 부족이거나 자료 0) */
+  insufficient: boolean;
+};
+
+/** 전체 낚시터를 내 기준으로 나눠 센다. 「조건 밖」 곳을 추천처럼 쓰지 않도록 이유만 센다 */
+export function breakdown(list: PlaceSummary[], c: Criteria): Breakdown {
+  const b: Breakdown = { total: list.length, meets: [], warning: 0, waveOver: 0, windOver: 0, indexLow: 0, unknown: 0, insufficient: false };
+  for (const s of list) {
+    const r = checkPlace(s, c);
+    if (r.status === 'meets') b.meets.push(s);
+    if (r.status === 'unknown') b.unknown += 1;
+    if (s.warning_level === 'warning') b.warning += 1;
+    if (s.wave_fc_max && s.wave_fc_max.v > c.maxWave) b.waveOver += 1;
+    if (s.wind_fc_max && s.wind_fc_max.v > c.maxWind) b.windOver += 1;
+    if (c.minIndex && s.index && RANK[s.index.best] < RANK[c.minIndex]) b.indexLow += 1;
+  }
+  b.insufficient = b.total === 0 || b.unknown >= b.total / 2;
+  return b;
+}

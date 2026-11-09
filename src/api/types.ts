@@ -243,6 +243,8 @@ export type DataSource = { agency: string; dataset: string; kind: DataKind; conn
 // --- 커뮤니티 ---
 
 export type PostCategory = 'catch' | 'question' | 'tip';
+/** 글 목록 거르기: 시·도(예: 제주), 어종(코드 또는 직접 입력 이름) */
+export type PostFilter = { sido?: string | null; species?: string | null };
 export type Author = { nickname: string; title: string };
 
 export type PostSummary = {
@@ -263,6 +265,11 @@ export type PostSummary = {
   verified: boolean;
   photo_count: number;
   thumb: Photo | null;
+  place_id: number | null;
+  /** 예: 「제주 제주시」 */
+  region_name: string | null;
+  /** 인증 조황 글의 조과 (일반 글은 null) */
+  catch: PostCatch | null;
 };
 
 export type PostComment = { id: number; body: string; author: Author; mine: boolean; created_at: string };
@@ -276,7 +283,6 @@ export type PostDetail = PostSummary & {
   body: string;
   comments: PostComment[];
   photos: Photo[];
-  catch: PostCatch | null;
 };
 
 export type PostInput = {

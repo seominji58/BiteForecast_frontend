@@ -7,15 +7,17 @@ import { useDateRange, usePlaces, usePlacesSummary, usePosts } from '@/api/queri
 import type { Place, PostSummary } from '@/api/types';
 import { usePhotoSource } from '@/api/upload';
 import { AppIcon } from '@/components/app-icon';
+import { CriteriaResult } from '@/components/criteria-result';
 import { Card, SectionHeader, TabScreen } from '@/components/screen';
 import { SearchBar } from '@/components/search-bar';
 import { ThemedText } from '@/components/themed-text';
 import type { AppIconName } from '@/constants/icons';
 import { Brand, IconSize, Layout } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { checkPlace, criteriaLabel, WARNING_SHORT } from '@/lib/criteria';
+import { breakdown, criteriaLabel, WARNING_SHORT } from '@/lib/criteria';
+import { catchLine, shortDate, whereLine } from '@/lib/community';
 import { timeAgo } from '@/lib/format';
-import { km, matches, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
+import { matches, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
 import { useCriteria, useHomePlace } from '@/lib/prefs';
 
 // SCR-01 홈 (사용자 제안 2026-11-09): 검색·지도 중심은 그대로, 아래에 「지금 낚시판에서 일어나는 일」을 둔다.
@@ -178,9 +180,12 @@ function RecentCatches() {
   const { width } = useWindowDimensions();
   const posts = usePosts(null, 'latest');
   const source = usePhotoSource();
+  // 사진 조황(인증 먼저) → 사진 없는 조황공유 글(글 카드). 질문·팁은 커뮤니티에서
   const items = useMemo(() => {
-    const withPhoto = (posts.data ?? []).filter((p) => p.thumb);
-    return [...withPhoto.filter((p) => p.verified), ...withPhoto.filter((p) => !p.verified)].slice(0, 8);
+    const all = posts.data ?? [];
+    const photo = all.filter((p) => p.thumb && p.category === 'catch');
+    const text = all.filter((p) => !p.thumb && p.category === 'catch');
+    return [...photo.filter((p) => p.verified), ...photo.filter((p) => !p.verified), ...text].slice(0, 8);
   }, [posts.data]);
   const cardW = Math.min(240, (Math.min(width, 600) - Layout.screenPadding * 2 - 12) / 2);
 
@@ -191,7 +196,7 @@ function RecentCatches() {
         <Card style={styles.emptyCatch}>
           <AppIcon name="cat-catch" size={36} />
           <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
-            {posts.isPending ? '조황을 불러오는 중이에요…' : '아직 사진 조황이 없어요. 첫 조황을 올려 주세요!'}
+            {posts.isPending ? '조황을 불러오는 중이에요…' : '아직 올라온 조황이 없어요. 오늘 잡은 물고기를 첫 조황으로 올려 주세요!'}
           </ThemedText>
           {!posts.isPending ? (
             <Pressable accessibilityRole="button" onPress={() => router.push('/community/new')} hitSlop={8}>
@@ -229,102 +234,120 @@ function CatchCard({
   border: string;
 }) {
   const theme = useTheme();
-  const caption = [p.species_name, p.place_name].filter(Boolean).join(' · ') || p.title;
+  const where = whereLine(p);
+  const detail = p.catch ? catchLine(p.catch) : p.species_name;
+  const when = p.catch ? `${shortDate(p.catch.fished_at)} 출조` : timeAgo(p.created_at);
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${p.verified ? '인증 조황, ' : ''}${caption}, ${timeAgo(p.created_at)}`}
+      accessibilityLabel={`${p.verified ? '인증 조황, ' : ''}${p.title}, ${where ?? ''}, ${when}`}
       onPress={() => router.push({ pathname: '/community/[id]', params: { id: String(p.id) } })}
       style={({ pressed }) => [
         styles.catchCard,
         { width, borderColor: border, backgroundColor: theme.backgroundElement },
         pressed && styles.pressed,
       ]}>
-      <View>
-        {src ? <Image source={src} style={[styles.catchImg, { height: width }]} contentFit="cover" transition={150} /> : null}
-        {p.verified ? (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>✓ 인증 조황</Text>
-          </View>
-        ) : null}
-      </View>
+      {src ? (
+        <View>
+          <Image source={src} style={[styles.catchImg, { height: width * 0.9 }]} contentFit="cover" transition={150} />
+          {p.verified ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>✓ 인증 조황</Text>
+            </View>
+          ) : null}
+        </View>
+      ) : (
+        // 사진 없는 조황: 그림을 대신 넣지 않고 글로 보여준다
+        <View style={[styles.textCatch, { height: width * 0.9, backgroundColor: theme.tintSoft }]}>
+          <ThemedText type="small" themeColor="tint" style={styles.textCatchLabel}>
+            조황 이야기
+          </ThemedText>
+          <ThemedText type="small" numberOfLines={5}>
+            {p.excerpt}
+          </ThemedText>
+        </View>
+      )}
       <View style={styles.catchInfo}>
         <ThemedText type="smallBold" numberOfLines={1}>
-          {caption}
+          {p.title}
         </ThemedText>
+        {detail ? (
+          <ThemedText type="small" themeColor="tint" numberOfLines={1} style={styles.bold}>
+            {detail}
+          </ThemedText>
+        ) : null}
         <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-          {p.author.nickname} · {timeAgo(p.created_at)}
+          {[where, when].filter(Boolean).join(' · ')}
         </ThemedText>
       </View>
     </Pressable>
   );
 }
 
-/** 출조 탐색: 오늘 내 조건(파고·풍속 상한, 특보 발효 제외)에 맞는 곳이 몇 곳인지 실제 자료로 보여준다 */
+/**
+ * 오늘 출조 탐색: 내 조건(파고·풍속 상한, 특보 발효 제외)으로 전국 낚시터를 실제 자료로 나눠 보여준다.
+ * 맞는 곳 / 맞는 곳 없음(제외 이유) / 자료 부족 세 상태를 구분한다 (앱 판정 없음)
+ */
 function ExploreTeaser({ home }: { home: Place | null }) {
   const range = useDateRange();
   const summary = usePlacesSummary(range.data?.today);
   const places = usePlaces();
   const [criteria] = useCriteria();
-
-  const stat = useMemo(() => {
-    const list = summary.data?.places ?? [];
-    const byId = new Map((places.data ?? []).map((p) => [p.id, p]));
-    const meets = list.filter((s) => checkPlace(s, criteria).status === 'meets');
-    const warnings = list.filter((s) => s.warning_level === 'warning').length;
-    let nearest: { place: Place; dist: number } | null = null;
-    if (home) {
-      for (const s of meets) {
-        const p = byId.get(s.place_id);
-        if (!p) continue;
-        const d = km(home, p);
-        if (Number.isFinite(d) && (!nearest || d < nearest.dist)) nearest = { place: p, dist: d };
-      }
-    }
-    return { meets: meets.length, warnings, total: list.length, nearest };
-  }, [summary.data, places.data, criteria, home]);
+  const b = useMemo(() => breakdown(summary.data?.places ?? [], criteria), [summary.data, criteria]);
+  const openCriteria = () => router.push({ pathname: '/explore', params: { mode: 'criteria' } });
 
   return (
     <>
-      <SectionHeader
-        title="오늘 출조 탐색"
-        actionLabel="기준 바꾸기"
-        onAction={() => router.push({ pathname: '/explore', params: { mode: 'criteria' } })}
-      />
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => router.push({ pathname: '/explore', params: { mode: 'criteria' } })}
-        style={({ pressed }) => pressed && styles.pressed}>
-        <Card style={styles.explore}>
+      <SectionHeader title="오늘 출조 탐색" actionLabel="기준 바꾸기" onAction={openCriteria} />
+      <Card>
+        <View style={styles.explore}>
           <View style={[styles.exploreArt, { backgroundColor: Brand.navy }]}>
-            <AppIcon name="find-criteria" size={44} badge />
+            <AppIcon name="find-criteria" size={32} badge />
           </View>
           <View style={styles.flex}>
-            {summary.isSuccess ? (
-              <>
-                <ThemedText type="sectionTitle">
-                  내 조건에 맞는 곳 <ThemedText type="sectionTitle" themeColor="success">{stat.meets}곳</ThemedText>
+            {summary.isSuccess && !b.insufficient ? (
+              <ThemedText type="sectionTitle">
+                내 기준에 맞는 곳{' '}
+                <ThemedText type="sectionTitle" themeColor={b.meets.length ? 'success' : 'textSecondary'}>
+                  {b.meets.length}곳
                 </ThemedText>
-                <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
-                  {stat.nearest
-                    ? `${home?.name}에서 가장 가까운 곳: ${stat.nearest.place.name} ${Math.round(stat.nearest.dist)}km`
-                    : `전국 ${stat.total}곳 중 · 특보 발효 ${stat.warnings}곳 제외`}
-                </ThemedText>
-              </>
+              </ThemedText>
             ) : (
-              <ThemedText type="sectionTitle">조건 맞는 낚시터 찾아보기</ThemedText>
+              <ThemedText type="sectionTitle">조건으로 낚시터 찾기</ThemedText>
             )}
-            <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+            <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
               {criteriaLabel(criteria)}
-            </ThemedText>
-            <ThemedText type="smallBold" themeColor="tint">
-              출조 조건 확인하기 ›
+              {b.meets.length && home ? ` · ${home.name}에서 가까운 순` : ''}
             </ThemedText>
           </View>
-        </Card>
-      </Pressable>
+        </View>
+        {summary.isPending ? (
+          <ThemedText type="small" themeColor="textSecondary">
+            전국 낚시터 해황을 확인하는 중이에요…
+          </ThemedText>
+        ) : summary.isError ? (
+          <ThemedText type="small" themeColor="danger">
+            해황 자료를 불러오지 못했어요. {summary.error.message}
+          </ThemedText>
+        ) : (
+          <CriteriaResult
+            b={b}
+            criteria={criteria}
+            places={places.data ?? []}
+            origin={home ? { lat: home.lat, lon: home.lon, label: home.name } : null}
+            onChangeCriteria={openCriteria}
+          />
+        )}
+        {b.meets.length > 0 ? (
+          <Pressable accessibilityRole="button" onPress={openCriteria} hitSlop={8}>
+            <ThemedText type="smallBold" themeColor="tint">
+              {`맞는 곳 ${b.meets.length}곳 모두 지도에서 보기 ›`}
+            </ThemedText>
+          </Pressable>
+        ) : null}
+      </Card>
       <ThemedText type="small" themeColor="textSecondary">
-        앱이 좋고 나쁨을 판정하지 않아요. 오늘 남은 시간 예보 최대값과 기상청 특보로 내 기준을 비교해요.
+        앱이 좋고 나쁨을 판정하지 않아요. 오늘 남은 시간 예보 최대값과 기상청 특보를 내 기준과 비교해요.
       </ThemedText>
     </>
   );
@@ -383,6 +406,9 @@ const styles = StyleSheet.create({
   catchCard: { borderWidth: 1, borderRadius: 12, overflow: 'hidden' },
   catchImg: { width: '100%' },
   catchInfo: { padding: 10, gap: 2 },
+  bold: { fontWeight: '700' },
+  textCatch: { padding: 12, gap: 6 },
+  textCatchLabel: { fontWeight: '700' },
   badge: {
     position: 'absolute',
     left: 8,
@@ -395,7 +421,7 @@ const styles = StyleSheet.create({
   badgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
   emptyCatch: { alignItems: 'center', gap: 6, paddingVertical: 18 },
   explore: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  exploreArt: { width: 84, height: 84, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  exploreArt: { width: 56, height: 56, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   list: { gap: 0, paddingVertical: 4 },
   divider: { height: StyleSheet.hairlineWidth },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 },

@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { type ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import type { Author, PostSummary } from '@/api/types';
 import { usePhotoSource } from '@/api/upload';
@@ -9,7 +9,7 @@ import { Card } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Brand, IconSize, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { CATEGORY } from '@/lib/community';
+import { CATEGORY, catchLine, shortDate, whereLine } from '@/lib/community';
 import { timeAgo } from '@/lib/format';
 
 export function AuthorLine({ author, createdAt, right }: { author: Author; createdAt: string; right?: ReactNode }) {
@@ -59,11 +59,74 @@ export function VerifiedBadge() {
   );
 }
 
+/**
+ * 커뮤니티 글 카드. 사진이 있는 조황 글은 사진을 크게, 질문·팁·사진 없는 글은 글 중심으로 짧게.
+ * 사진이 없는 글에 그림을 대신 넣지 않는다.
+ */
 export function PostCard({ p }: { p: PostSummary }) {
+  return p.thumb && p.category === 'catch' ? <PhotoPostCard p={p} /> : <TextPostCard p={p} />;
+}
+
+function PhotoPostCard({ p }: { p: PostSummary }) {
+  const theme = useTheme();
+  const source = usePhotoSource();
+  const src = p.thumb ? source(p.thumb) : null;
+  const where = whereLine(p);
+  const ratio = p.thumb ? Math.max(0.75, Math.min(1.33, p.thumb.width / p.thumb.height)) : 4 / 3;
+  return (
+    <View style={[styles.photoCard, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+      <View>
+        {src ? <Image source={src} style={[styles.photo, { aspectRatio: ratio }]} contentFit="cover" transition={150} /> : null}
+        <View style={styles.overlayBadges}>
+          {p.verified ? (
+            <View style={[styles.overlayPill, styles.verifiedPill]}>
+              <Text style={styles.overlayText}>✓ 인증 조황</Text>
+            </View>
+          ) : null}
+          {p.popular ? (
+            <View style={[styles.overlayPill, { backgroundColor: Brand.orange }]}>
+              <Text style={styles.overlayText}>인기글</Text>
+            </View>
+          ) : null}
+        </View>
+        {p.photo_count > 1 ? (
+          <View style={styles.more}>
+            <Text style={styles.moreText}>사진 {p.photo_count}</Text>
+          </View>
+        ) : null}
+      </View>
+      <View style={styles.photoBody}>
+        <ThemedText type="sectionTitle" numberOfLines={2}>
+          {p.title}
+        </ThemedText>
+        {p.catch ? (
+          <ThemedText type="smallBold" themeColor="tint">
+            {catchLine(p.catch)}
+            <ThemedText type="small" themeColor="textSecondary">{`  ${shortDate(p.catch.fished_at)} 출조`}</ThemedText>
+          </ThemedText>
+        ) : p.species_name ? (
+          <ThemedText type="smallBold" themeColor="tint">
+            {p.species_name}
+          </ThemedText>
+        ) : null}
+        {where ? (
+          <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+            {where}
+          </ThemedText>
+        ) : null}
+        <AuthorLine author={p.author} createdAt={p.created_at} />
+        <Counts p={p} />
+      </View>
+    </View>
+  );
+}
+
+function TextPostCard({ p }: { p: PostSummary }) {
   const theme = useTheme();
   const cat = CATEGORY[p.category];
   const source = usePhotoSource();
   const thumb = p.thumb ? source(p.thumb) : null;
+  const where = whereLine(p);
   return (
     <Card>
       <View style={styles.badges}>
@@ -82,46 +145,41 @@ export function PostCard({ p }: { p: PostSummary }) {
           </ThemedText>
         </View>
       </View>
-      <AuthorLine author={p.author} createdAt={p.created_at} />
       <View style={styles.main}>
         <View style={styles.flex}>
-          <ThemedText type="sectionTitle" numberOfLines={1}>
+          <ThemedText type="sectionTitle" numberOfLines={2}>
             {p.title}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
             {p.excerpt}
           </ThemedText>
         </View>
-        {thumb ? (
-          <View>
-            <Image source={thumb} style={styles.thumb} contentFit="cover" accessibilityLabel="첨부 사진" />
-            {p.photo_count > 1 ? (
-              <View style={styles.more}>
-                <ThemedText type="small" style={styles.moreText}>
-                  +{p.photo_count - 1}
-                </ThemedText>
-              </View>
-            ) : null}
-          </View>
-        ) : null}
+        {thumb ? <Image source={thumb} style={styles.thumb} contentFit="cover" accessibilityLabel="첨부 사진" /> : null}
       </View>
-      {p.place_name || p.species_name ? (
+      {where || p.species_name ? (
         <View style={styles.tags}>
-          {p.place_name ? <Tag icon="map-marker" text={p.place_name} /> : null}
+          {where ? <Tag icon="map-marker" text={where} /> : null}
           {p.species_name ? <Tag icon="fish" text={p.species_name} /> : null}
         </View>
       ) : null}
-      <View style={styles.counts}>
-        <AppIcon name="comment" size={18} />
-        <ThemedText type="small" themeColor="textSecondary">
-          댓글 {p.comment_count}
-        </ThemedText>
-        <AppIcon name="like" size={18} style={p.liked ? undefined : styles.dim} />
-        <ThemedText type="small" themeColor={p.liked ? 'accent' : 'textSecondary'}>
-          좋아요 {p.like_count}
-        </ThemedText>
-      </View>
+      <AuthorLine author={p.author} createdAt={p.created_at} />
+      <Counts p={p} />
     </Card>
+  );
+}
+
+function Counts({ p }: { p: PostSummary }) {
+  return (
+    <View style={styles.counts}>
+      <AppIcon name="comment" size={18} />
+      <ThemedText type="small" themeColor="textSecondary">
+        댓글 {p.comment_count}
+      </ThemedText>
+      <AppIcon name="like" size={18} style={p.liked ? undefined : styles.dim} />
+      <ThemedText type="small" themeColor={p.liked ? 'accent' : 'textSecondary'}>
+        좋아요 {p.like_count}
+      </ThemedText>
+    </View>
   );
 }
 
@@ -146,17 +204,26 @@ const styles = StyleSheet.create({
   hotText: { color: '#fff', fontSize: 11, lineHeight: 16, fontWeight: '700' },
   main: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   thumb: { width: 64, height: 64, borderRadius: 8 },
-  more: {
-    position: 'absolute',
-    right: 4,
-    bottom: 4,
-    borderRadius: 6,
-    paddingHorizontal: 5,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-  },
-  moreText: { color: '#fff', fontSize: 11, lineHeight: 15, fontWeight: '700' },
   tags: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   tag: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
   tagText: { fontSize: 12, lineHeight: 16 },
   counts: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: Spacing.one },
+  // 사진 조황 카드
+  photoCard: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
+  photo: { width: '100%' },
+  photoBody: { padding: 12, gap: 6 },
+  overlayBadges: { position: 'absolute', top: 10, left: 10, flexDirection: 'row', gap: 6 },
+  overlayPill: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 },
+  verifiedPill: { backgroundColor: 'rgba(46,125,50,0.92)' },
+  overlayText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  more: {
+    position: 'absolute',
+    right: 10,
+    bottom: 10,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  moreText: { color: '#fff', fontSize: 12, fontWeight: '700' },
 });

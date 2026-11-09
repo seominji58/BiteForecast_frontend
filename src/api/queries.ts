@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api } from '@/api';
-import type { JournalInput, PostCategory, PostInput } from '@/api/types';
+import type { JournalInput, PostCategory, PostFilter, PostInput } from '@/api/types';
 import { useAuth } from '@/lib/auth';
 
 // 화면에서 쓰는 조회/변경 훅. queryKey 는 캐시 무효화 기준이 되므로 여기서만 정의한다.
@@ -115,8 +115,25 @@ export function useVerification(id: number) {
 
 // --- 커뮤니티 ---
 
-export const usePosts = (category: PostCategory | null, sort: 'latest' | 'popular') =>
-  useQuery({ queryKey: ['community', 'posts', category, sort], queryFn: () => api.posts(category, sort) });
+export const usePosts = (category: PostCategory | null, sort: 'latest' | 'popular', filter: PostFilter = {}) =>
+  useQuery({
+    queryKey: ['community', 'posts', category, sort, filter.sido ?? null, filter.species ?? null],
+    queryFn: () => api.posts(category, sort, filter),
+  });
+
+/** 즐겨찾기 낚시터 (로그인했을 때만) */
+export const useFavorites = () => {
+  const { signedIn } = useAuth();
+  return useQuery({ queryKey: ['me', 'favorites'], queryFn: api.favorites, enabled: signedIn });
+};
+
+export function useSetFavorite() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { placeId: number; on: boolean }) => api.setFavorite(v.placeId, v.on),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['me', 'favorites'] }),
+  });
+}
 
 export const usePost = (id: number) =>
   useQuery({ queryKey: ['community', 'post', id], queryFn: () => api.post(id), enabled: Number.isFinite(id) });

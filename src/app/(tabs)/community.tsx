@@ -1,8 +1,8 @@
 import { Link, router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { usePosts } from '@/api/queries';
+import { usePlaces, usePosts, useSpecies } from '@/api/queries';
 import type { PostCategory } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { Dropdown, type DropdownOption } from '@/components/dropdown';
@@ -13,6 +13,7 @@ import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { CATEGORY } from '@/lib/community';
+import { sidoOf } from '@/lib/place';
 
 type Sort = 'popular' | 'latest';
 type CatFilter = PostCategory | 'all';
@@ -38,15 +39,61 @@ export default function CommunityScreen() {
     if (paramCat && FILTER_OPTIONS.some((o) => o.value === paramCat)) setFilter(paramCat as CatFilter);
   }
   const [sort, setSort] = useState<Sort>('latest');
+  const [sido, setSido] = useState<string>('all');
+  const [speciesCode, setSpeciesCode] = useState<string>('all');
   const category = filter === 'all' ? null : filter;
-  const posts = usePosts(category, sort);
+  const posts = usePosts(category, sort, {
+    sido: sido === 'all' ? null : sido,
+    species: speciesCode === 'all' ? null : speciesCode,
+  });
   const { signedIn } = useAuth();
+  const places = usePlaces();
+  const species = useSpecies();
+
+  // 지역 선택지: 낚시터가 많은 시·도 순
+  const sidoOptions = useMemo<DropdownOption<string>[]>(() => {
+    const counts = new Map<string, number>();
+    for (const p of places.data ?? []) counts.set(sidoOf(p), (counts.get(sidoOf(p)) ?? 0) + 1);
+    return [
+      { value: 'all', label: '전체 지역' },
+      ...[...counts.entries()].sort((a, b) => b[1] - a[1]).map(([s]) => ({ value: s, label: s })),
+    ];
+  }, [places.data]);
+  const speciesOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: 'all', label: '전체 어종' },
+      ...(species.data ?? []).map((sp) => ({ value: sp.code, label: sp.name_ko.replace(/\(.*\)/, '') })),
+    ],
+    [species.data],
+  );
+  const filtered = sido !== 'all' || speciesCode !== 'all';
 
   return (
     <View style={styles.flex}>
       <TabScreen title="커뮤니티">
-        <View style={styles.toolbar}>
+        <View style={styles.filters}>
           <Dropdown label="카테고리" value={filter} options={FILTER_OPTIONS} onChange={setFilter} compact />
+          <Dropdown label="지역" value={sido} options={sidoOptions} onChange={setSido} compact />
+          <Dropdown label="어종" value={speciesCode} options={speciesOptions} onChange={setSpeciesCode} compact />
+        </View>
+        <View style={styles.toolbar}>
+          <ThemedText type="small" themeColor="textSecondary" style={styles.flex}>
+            {posts.isSuccess ? `글 ${posts.data.length}개` : ''}
+            {filtered ? ' · 필터 적용 중' : ''}
+          </ThemedText>
+          {filtered ? (
+            <Pressable
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={() => {
+                setSido('all');
+                setSpeciesCode('all');
+              }}>
+              <ThemedText type="smallBold" themeColor="tint">
+                필터 해제
+              </ThemedText>
+            </Pressable>
+          ) : null}
           <View style={[styles.segment, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
             {(
               [
@@ -79,9 +126,11 @@ export default function CommunityScreen() {
               message={
                 sort === 'popular'
                   ? '최근 30일 인기글이 없어요.'
-                  : category
-                    ? `${CATEGORY[category].label} 글이 아직 없어요.`
-                    : '아직 글이 없어요. 첫 글을 남겨보세요!'
+                  : filtered
+                    ? '조건에 맞는 글이 없어요. 지역·어종 필터를 바꿔 보세요.'
+                    : category
+                      ? `${CATEGORY[category].label} 글이 아직 없어요.`
+                      : '아직 글이 없어요. 첫 글을 남겨보세요!'
               }
             />
           ) : (
@@ -113,6 +162,7 @@ export default function CommunityScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   pressed: { opacity: 0.8 },
+  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   toolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   segment: { flexDirection: 'row', borderRadius: 999, padding: 3, borderWidth: StyleSheet.hairlineWidth },
   segItem: { paddingHorizontal: 14, paddingVertical: 5, borderRadius: 999 },

@@ -1,7 +1,8 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { useEffect } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { useConditions, useDateRange, usePlaces } from '@/api/queries';
+import { useConditions, useDateRange, useFavorites, usePlaces, useSetFavorite } from '@/api/queries';
 import { AppIcon } from '@/components/app-icon';
 import { Button } from '@/components/form';
 import { MarineWarningBanner } from '@/components/marine-warning-banner';
@@ -10,11 +11,17 @@ import { DataBasis, FishingIndexCard, MetricTable, NearbyPlaces, TideCard } from
 import { ThemedText } from '@/components/themed-text';
 import { dayLabel, timeLabel } from '@/lib/compare';
 import { nearby, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
-import { useHomePlace } from '@/lib/prefs';
+import { Brand } from '@/constants/theme';
+import { useAuth } from '@/lib/auth';
+import { pushRecentPlace, useHomePlace } from '@/lib/prefs';
 
 // 상세 해황 (재설계 v2 §4-4): 홈에서 줄인 내용을 모두 여기서 본다. 데이터는 홈과 같은 API.
 export default function PlaceDetailScreen() {
   const placeId = Number(useLocalSearchParams<{ id: string }>().id);
+  // 상세를 연 낚시터는 「최근 본 낚시터」에 남긴다 (기기 저장)
+  useEffect(() => {
+    if (Number.isFinite(placeId)) pushRecentPlace(placeId);
+  }, [placeId]);
   const places = usePlaces();
   const range = useDateRange();
   const [homeId, setHomeId] = useHomePlace();
@@ -43,6 +50,7 @@ export default function PlaceDetailScreen() {
                 {place.address ? ` · ${place.address}` : ''}
               </ThemedText>
             </View>
+            <FavoriteStar placeId={place.id} />
           </View>
           <ThemedText type="small" themeColor="textSecondary">
             {today ? `${dayLabel(today)} · ` : ''}
@@ -102,7 +110,27 @@ export default function PlaceDetailScreen() {
   );
 }
 
+/** 즐겨찾기 ☆ (로그인 필요, 계정에 저장) */
+function FavoriteStar({ placeId }: { placeId: number }) {
+  const { signedIn } = useAuth();
+  const favs = useFavorites();
+  const set = useSetFavorite();
+  const on = !!favs.data?.some((p) => p.id === placeId);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={on ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+      accessibilityState={{ selected: on }}
+      hitSlop={10}
+      disabled={set.isPending}
+      onPress={() => (signedIn ? set.mutate({ placeId, on: !on }) : router.push('/login'))}>
+      <Text style={[styles.star, { color: on ? Brand.orange : '#9AA5B1' }]}>{on ? '★' : '☆'}</Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
+  star: { fontSize: 26, lineHeight: 30 },
   flex: { flex: 1 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
 });

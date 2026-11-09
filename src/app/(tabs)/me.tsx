@@ -9,6 +9,7 @@ import type { Journal } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { Button } from '@/components/form';
 import { LoginRequired } from '@/components/login-required';
+import { FavoritesSection, MemberBenefits, RecentPlacesSection } from '@/components/me-extras';
 import { Card, EmptyView, ErrorView, Loading, SectionHeader, TabScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import type { AppIconName } from '@/constants/icons';
@@ -36,6 +37,8 @@ export default function MeScreen() {
             message="사진 인증을 받은 기록마다 포인트가 쌓이고 칭호가 올라가요. 해황 보기는 로그인 없이도 쓸 수 있어요."
           />
         )}
+        <RecentPlacesSection />
+        <MemberBenefits />
         <SettingsRow />
       </TabScreen>
     );
@@ -55,6 +58,9 @@ export default function MeScreen() {
 
       <SectionHeader title="포인트 내역" />
       <PointHistory />
+
+      <FavoritesSection />
+      <RecentPlacesSection />
 
       <SettingsRow />
       <AccountSection />
