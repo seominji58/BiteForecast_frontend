@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -45,8 +46,17 @@ export default function HomeScreen() {
     router.push({ pathname: '/place/[id]', params: { id: String(p.id) } });
   };
 
+  // 아래로 당기면 해황 요약·조황·낚시터를 다시 불러온다
+  const qc = useQueryClient();
+  const refresh = () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: ['places-summary'] }),
+      qc.invalidateQueries({ queryKey: ['community', 'posts'] }),
+      qc.invalidateQueries({ queryKey: ['meta', 'date-range'] }),
+    ]);
+
   return (
-    <TabScreen title="입질예보" logo>
+    <TabScreen title="입질예보" logo onRefresh={refresh}>
       {/* 상단: 검색 + 내 주변 + 지도 */}
       <View style={styles.hero}>
         <Text style={styles.heroTag}>낚시 가고 싶은 날, 입질예보</Text>
@@ -187,7 +197,9 @@ function RecentCatches() {
     const text = all.filter((p) => !p.thumb && p.category === 'catch');
     return [...photo.filter((p) => p.verified), ...photo.filter((p) => !p.verified), ...text].slice(0, 8);
   }, [posts.data]);
-  const cardW = Math.min(240, (Math.min(width, 600) - Layout.screenPadding * 2 - 12) / 2);
+  const full = Math.min(width, 600) - Layout.screenPadding * 2;
+  // 1개뿐이면 화면 폭 전체, 여러 개면 두 장이 보이게
+  const cardW = items.length === 1 ? full : Math.min(240, (full - 12) / 2);
 
   return (
     <>
@@ -276,7 +288,7 @@ function CatchCard({
       ]}>
       {src ? (
         <View>
-          <Image source={src} style={[styles.catchImg, { height: width * 0.9 }]} contentFit="cover" transition={150} />
+          <Image source={src} style={[styles.catchImg, { height: Math.min(width * 0.9, 260) }]} contentFit="cover" transition={150} />
           {p.verified ? (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>✓ 인증 조황</Text>
@@ -285,7 +297,7 @@ function CatchCard({
         </View>
       ) : (
         // 사진 없는 조황: 그림을 대신 넣지 않고 글로 보여준다
-        <View style={[styles.textCatch, { height: width * 0.9, backgroundColor: theme.tintSoft }]}>
+        <View style={[styles.textCatch, { height: Math.min(width * 0.9, 260), backgroundColor: theme.tintSoft }]}>
           <ThemedText type="small" themeColor="tint" style={styles.textCatchLabel}>
             조황 이야기
           </ThemedText>
@@ -303,8 +315,13 @@ function CatchCard({
             {detail}
           </ThemedText>
         ) : null}
+        {where ? (
+          <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+            {where}
+          </ThemedText>
+        ) : null}
         <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-          {[where, when].filter(Boolean).join(' · ')}
+          {when} · {p.author.nickname}
         </ThemedText>
       </View>
     </Pressable>

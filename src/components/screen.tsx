@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
-import { type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -28,13 +29,23 @@ export function TabScreen({
   title,
   logo,
   right,
+  onRefresh,
   children,
 }: {
   title: string;
   logo?: boolean;
   right?: ReactNode;
+  /** 아래로 당겨 새로고침 (Promise 가 끝날 때까지 표시) */
+  onRefresh?: () => Promise<unknown>;
   children: ReactNode;
 }) {
+  const [refreshing, setRefreshing] = useState(false);
+  const pull = onRefresh
+    ? () => {
+        setRefreshing(true);
+        onRefresh().finally(() => setRefreshing(false));
+      }
+    : undefined;
   const insets = useSafeAreaInsets();
   return (
     <ThemedView style={styles.flex}>
@@ -58,6 +69,7 @@ export function TabScreen({
         </View>
       </View>
       <ScrollView
+        refreshControl={pull ? <RefreshControl refreshing={refreshing} onRefresh={pull} /> : undefined}
         contentContainerStyle={[styles.content, styles.tabContent]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
