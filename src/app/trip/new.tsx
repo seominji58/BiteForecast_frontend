@@ -7,34 +7,50 @@ import { useDateRange, usePlaces, useTrip, useTripMutation } from '@/api/queries
 import type { Trip } from '@/api/types';
 import { PickerField } from '@/components/date-time-field';
 import { Button, Chip, ChipGroup, Field, TextField } from '@/components/form';
-import { AuthGate } from '@/components/login-required';
+import { CoordNote } from '@/components/coord-note';
+import { LoginRequired } from '@/components/login-required';
 import { Loading, StackScreen } from '@/components/screen';
 import { NO_SPECIES, SpeciesField, type SpeciesValue } from '@/components/species-field';
 import { ThemedText } from '@/components/themed-text';
 import { PlaceField } from '@/components/place-field';
 import { formatDay, parseDay } from '@/lib/compare';
+import { useAuth } from '@/lib/auth';
 import { SEA_GROUPS } from '@/lib/prefs';
+import { setTripDraft, type TripDraft, useTripDraft } from '@/lib/trip-draft';
 import { DEFAULT_CHECKLIST_HINT, periodLabel } from '@/lib/trip';
 
 const MAX_DAYS = 7;
 
 /**
  * 출조계획 만들기 · 수정 (설계안 §5-2). 한 화면 폼.
+ * - 로그인 전에도 작성할 수 있다. 「계획 만들기」를 누를 때 로그인을 요청하고,
+ *   로그인·가입 후 작성 내용이 그대로 남는다 (앱 메모리의 임시 작성본 — 기기에 저장하지 않음)
  * - ?place=147&date=2026-11-14 : 홈·상세의 「계획에 추가」에서 들어오면 장소·날짜가 채워진다
- *   (로그인하지 않았으면 로그인 후 이 화면으로 돌아와 그대로 채워진다 — 기기에 따로 저장하지 않음)
- * - ?id=3 : 수정 (장소는 계획 화면에서 바꾼다)
+ * - ?id=3 : 수정 (로그인 필요, 장소는 계획 화면에서 바꾼다)
  */
 function TripFormScreen() {
   const params = useLocalSearchParams<{ place?: string; date?: string; id?: string }>();
   const editId = params.id ? Number(params.id) : null;
+  const { status } = useAuth();
+  const draft = useTripDraft();
   const existing = useTrip(editId ?? NaN);
   const range = useDateRange();
+  if (editId != null && status !== 'signed-in') {
+    return (
+      <StackScreen>
+        {status === 'loading' ? <Loading /> : <LoginRequired message="출조계획 수정은 로그인 후 할 수 있어요." icon="trips" />}
+      </StackScreen>
+    );
+  }
   if (editId != null && existing.isPending) return <Loading />;
   if (!range.data) return <Loading />;
+  // 「계획에 추가」로 새 장소·날짜를 들고 왔으면 그것을, 아니면 작성하던 내용을 이어 쓴다
+  const resume = editId == null && !params.place ? draft : null;
   return (
     <TripForm
       today={range.data.today}
       initial={editId != null ? existing.data : undefined}
+      draft={resume}
       placeId={params.place ? Number(params.place) : null}
       date={params.date ?? null}
     />
@@ -44,25 +60,30 @@ function TripFormScreen() {
 function TripForm({
   today,
   initial,
+  draft,
   placeId: initialPlace,
   date,
 }: {
   today: string;
   initial?: Trip;
+  draft: TripDraft | null;
   placeId: number | null;
   date: string | null;
 }) {
   const places = usePlaces();
+  const { signedIn } = useAuth();
   const startDefault = initial?.start_date ?? (date && date >= today ? date : today);
-  const [title, setTitle] = useState(initial?.title ?? '');
-  const [start, setStart] = useState(startDefault);
-  const [end, setEnd] = useState(initial?.end_date ?? startDefault);
-  const [region, setRegion] = useState<string | null>(initial?.region ?? null);
+  // 작성본의 날짜가 이미 지났으면 오늘로 (지난 날짜로 새 계획을 만들지 않게)
+  const d = draft && draft.start >= today ? draft : draft ? { ...draft, start: today, end: today } : null;
+  const [title, setTitle] = useState(initial?.title ?? d?.title ?? '');
+  const [start, setStart] = useState(d?.start ?? startDefault);
+  const [end, setEnd] = useState(initial?.end_date ?? d?.end ?? startDefault);
+  const [region, setRegion] = useState<string | null>(initial?.region ?? d?.region ?? null);
   const [species, setSpecies] = useState<SpeciesValue>(
-    initial ? { code: initial.species_code, etc: initial.species_etc } : NO_SPECIES,
+    initial ? { code: initial.species_code, etc: initial.species_etc } : (d?.species ?? NO_SPECIES),
   );
-  const [memo, setMemo] = useState(initial?.memo ?? '');
-  const [placeId, setPlaceId] = useState<number | null>(initial ? null : initialPlace);
+  const [memo, setMemo] = useState(initial?.memo ?? d?.memo ?? '');
+  const [placeId, setPlaceId] = useState<number | null>(initial ? null : (d?.placeId ?? initialPlace));
   const [error, setError] = useState<string | null>(null);
 
   const save = useTripMutation((v: { id: number | null }) => {
@@ -90,11 +111,20 @@ function TripForm({
 
   const submit = () => {
     setError(null);
+    if (!signedIn) {
+      // 저장하려는 순간 로그인 요청. 작성 내용은 앱 메모리에 남겨 로그인·가입 후 이어 쓴다
+      setTripDraft({ title, start, end, region, species, memo, placeId });
+      router.push('/login');
+      return;
+    }
     save.mutate(
       { id: initial?.id ?? null },
       {
-        onSuccess: (t) =>
-          initial ? router.back() : router.replace({ pathname: '/trip/[id]', params: { id: String(t.id) } }),
+        onSuccess: (t) => {
+          if (!initial) setTripDraft(null);
+          if (initial) router.back();
+          else router.replace({ pathname: '/trip/[id]', params: { id: String(t.id) } });
+        },
         onError: (e) => setError(e.message),
       },
     );
@@ -130,6 +160,12 @@ function TripForm({
       {!initial ? (
         <Field label="첫 낚시터 (선택)">
           <PlaceField value={placeId} onChange={setPlaceId} placeholder="낚시터 고르기 — 나중에 추가해도 돼요" />
+          {place ? <CoordNote place={place} compact /> : null}
+          {place?.location_suspect ? (
+            <ThemedText type="small" themeColor="warning">
+              위치가 확인되지 않은 낚시터예요. 계획에는 넣을 수 있지만 지도·거리·해황은 보여드리지 않아요.
+            </ThemedText>
+          ) : null}
           {placeId ? (
             <ThemedText type="small" themeColor="textSecondary">
               첫날({start.slice(5).replace('-', '/')})에 넣어요. 다른 날 장소는 계획 화면에서 추가하세요.
@@ -169,17 +205,26 @@ function TripForm({
           {error}
         </ThemedText>
       ) : null}
-      <Button label={save.isPending ? '저장 중…' : initial ? '수정 저장' : '계획 만들기'} disabled={save.isPending} onPress={submit} />
+      {!signedIn ? (
+        <ThemedText type="small" themeColor="textSecondary">
+          저장은 로그인 후에 돼요. 「계획 만들기」를 누르면 로그인 화면으로 가고, 로그인하면 작성한 내용이 그대로 남아 있어요.
+        </ThemedText>
+      ) : d && !initial ? (
+        <ThemedText type="small" themeColor="tint">
+          로그인 전에 작성하던 내용이에요. 「계획 만들기」를 누르면 계정에 저장돼요.
+        </ThemedText>
+      ) : null}
+      <Button
+        label={save.isPending ? '저장 중…' : initial ? '수정 저장' : signedIn ? '계획 만들기' : '로그인하고 계획 만들기'}
+        disabled={save.isPending}
+        onPress={submit}
+      />
     </StackScreen>
   );
 }
 
 export default function NewTripScreen() {
-  return (
-    <AuthGate message="출조계획은 로그인 후 저장할 수 있어요. 로그인하면 고르던 날짜·낚시터가 그대로 채워져요." icon="trips">
-      <TripFormScreen />
-    </AuthGate>
-  );
+  return <TripFormScreen />;
 }
 
 const styles = StyleSheet.create({

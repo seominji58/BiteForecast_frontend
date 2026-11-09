@@ -16,6 +16,7 @@ import { useAuth } from '@/lib/auth';
 import { dayLabel } from '@/lib/compare';
 import { useCriteria } from '@/lib/prefs';
 import { dday, outlookLine, periodLabel } from '@/lib/trip';
+import { useTripDraft } from '@/lib/trip-draft';
 
 /**
  * 출조계획 탭 (설계안 §5-1): 다가오는 계획 + 지난 계획.
@@ -26,15 +27,38 @@ export default function TripsTab() {
   const qc = useQueryClient();
   return (
     <TabScreen title="출조계획" onRefresh={() => qc.invalidateQueries({ queryKey: ['trips'] })}>
+      <DraftCard />
       {status === 'loading' ? <Loading /> : status === 'signed-in' ? <TripList /> : <GuestIntro />}
     </TabScreen>
   );
 }
 
-/** 로그인 전: 무엇을 하는 곳인지 (실제처럼 보이는 예시 데이터는 쓰지 않는다) */
+/** 로그인 전·가입 직후: 작성하던 계획 이어 쓰기 (앱 메모리의 임시 작성본) */
+function DraftCard() {
+  const draft = useTripDraft();
+  const theme = useTheme();
+  if (!draft) return null;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => router.push('/trip/new')}
+      style={({ pressed }) => [styles.card, { borderColor: theme.tint, backgroundColor: theme.tintSoft }, pressed && styles.pressed]}>
+      <ThemedText type="smallBold" themeColor="tint">
+        작성하던 계획이 있어요 · 이어서 저장 ›
+      </ThemedText>
+      <ThemedText type="small" themeColor="textSecondary">
+        {periodLabel(draft.start, draft.end)}
+        {draft.region ? ` · ${draft.region}` : ''}
+      </ThemedText>
+    </Pressable>
+  );
+}
+
+/** 로그인 전: 무엇을 하는 곳인지 (실제처럼 보이는 예시 데이터는 쓰지 않는다). 작성은 로그인 없이 시작할 수 있다 */
 function GuestIntro() {
   return (
     <>
+      <Button label="새 출조계획 만들기" icon="trips" onPress={() => router.push('/trip/new')} />
       <Card style={styles.intro}>
         <AppIcon name="trips" size={40} />
         <ThemedText type="sectionTitle">날짜와 낚시터를 정해 두면 그날 해황을 계속 보여드려요</ThemedText>
@@ -49,7 +73,11 @@ function GuestIntro() {
           </ThemedText>
         ))}
       </Card>
-      <LoginRequired message="계획은 계정에 저장돼 다른 기기에서도 볼 수 있어요." icon="trips" />
+      <LoginRequired
+        title="저장한 계획을 보려면 로그인"
+        message="계획은 계정에 저장돼 다른 기기에서도 볼 수 있어요. 작성은 로그인 없이 시작하고, 저장할 때 로그인하면 돼요."
+        icon="trips"
+      />
     </>
   );
 }
