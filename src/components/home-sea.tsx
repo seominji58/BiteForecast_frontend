@@ -146,23 +146,31 @@ function regionFor(dots: MapDot[]): Region {
 
 type Cluster = { key: string; lat: number; lon: number; dots: MapDot[] };
 
-/** 화면 격자(약 CELL px) 단위로 가까운 점을 묶는다 — 실제 좌표의 평균 위치에 표시 */
-const CELL = 40;
+/**
+ * 화면 거리 RADIUS px 안의 점을 하나로 묶는다 (먼저 놓인 묶음 중심 기준, 겹침 방지).
+ * 묶음 위치는 묶인 낚시터 실제 좌표의 평균
+ */
+const RADIUS = 46;
 function clusterDots(dots: MapDot[], region: Region, size: { w: number; h: number }): Cluster[] {
   if (!size.w) return [];
   const pxLon = size.w / region.longitudeDelta;
   const pxLat = size.h / region.latitudeDelta;
-  const cells = new Map<string, MapDot[]>();
-  for (const d of dots) {
-    if (d.place.lat == null || d.place.lon == null) continue;
-    const k = `${Math.floor((d.place.lon * pxLon) / CELL)}:${Math.floor((d.place.lat * pxLat) / CELL)}`;
-    cells.set(k, [...(cells.get(k) ?? []), d]);
+  const groups: { x: number; y: number; dots: MapDot[] }[] = [];
+  const pts = dots
+    .filter((d) => d.place.lat != null && d.place.lon != null)
+    .sort((p, q) => q.place.lat! - p.place.lat! || p.place.lon! - q.place.lon!);
+  for (const d of pts) {
+    const x = d.place.lon! * pxLon;
+    const y = -d.place.lat! * pxLat;
+    const g = groups.find((c) => Math.hypot(c.x - x, c.y - y) < RADIUS);
+    if (g) g.dots.push(d);
+    else groups.push({ x, y, dots: [d] });
   }
-  return [...cells.entries()].map(([key, list]) => ({
-    key,
-    lat: list.reduce((s, d) => s + d.place.lat!, 0) / list.length,
-    lon: list.reduce((s, d) => s + d.place.lon!, 0) / list.length,
-    dots: list,
+  return groups.map((g) => ({
+    key: String(g.dots[0].place.id),
+    lat: g.dots.reduce((t, d) => t + d.place.lat!, 0) / g.dots.length,
+    lon: g.dots.reduce((t, d) => t + d.place.lon!, 0) / g.dots.length,
+    dots: g.dots,
   }));
 }
 
