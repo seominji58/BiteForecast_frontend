@@ -7,15 +7,34 @@ import type { EnvSnapshot, Journal } from '@/api/types';
 import { usePhotoSource } from '@/api/upload';
 import { AppIcon } from '@/components/app-icon';
 import { Button } from '@/components/form';
+import { LoginRequired } from '@/components/login-required';
 import { Card, EmptyView, ErrorView, Loading, SectionHeader, TabScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
+import { useAuth } from '@/lib/auth';
 import { formatDateTime } from '@/lib/format';
 import { VERIFY_LABEL } from '@/lib/verification';
 
 // SCR-05 낚시 기록 — 일지 목록(인증 상태 배지) + 당시 인근 관측소 기록 요약 (FR-08, FR-10)
 export default function RecordsScreen() {
   const journals = useJournals();
+  const { status } = useAuth();
+
+  if (status !== 'signed-in') {
+    return (
+      <TabScreen title="낚시 기록">
+        {status === 'loading' ? (
+          <Loading />
+        ) : (
+          <LoginRequired
+            icon="cat-catch"
+            title="내 낚시 기록을 남겨 보세요"
+            message="기록·사진 인증·포인트는 로그인 후 쓸 수 있어요. 이 기기에서 전에 쓴 기록이 있으면 가입한 계정으로 이어져요."
+          />
+        )}
+      </TabScreen>
+    );
+  }
 
   return (
     <TabScreen title="낚시 기록">

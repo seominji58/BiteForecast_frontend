@@ -1,25 +1,49 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
+
+import { api } from '@/api';
 
 import { useJournals, useMyPoints, useMyTitle } from '@/api/queries';
 import type { Journal } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
+import { Button } from '@/components/form';
+import { LoginRequired } from '@/components/login-required';
 import { Card, EmptyView, ErrorView, Loading, SectionHeader, TabScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import type { AppIconName } from '@/constants/icons';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useAuth } from '@/lib/auth';
 import { formatDateTime, POINT_REASON_LABEL } from '@/lib/format';
 import { VERIFY_LABEL } from '@/lib/verification';
 
-// SCR-06 내정보: 칭호·포인트(FR-11, 12) + 기록 요약(FR-13) + 설정 진입(SCR-07)
+// SCR-06 내정보: 계정 + 칭호·포인트(FR-11, 12) + 기록 요약(FR-13) + 설정 진입(SCR-07)
 export default function MeScreen() {
   const title = useMyTitle();
   const journals = useJournals();
+  const { status, account } = useAuth();
+
+  if (status !== 'signed-in') {
+    return (
+      <TabScreen title="내정보">
+        {status === 'loading' ? (
+          <Loading />
+        ) : (
+          <LoginRequired
+            icon="medal"
+            title="로그인하고 칭호를 모아 보세요"
+            message="사진 인증을 받은 기록마다 포인트가 쌓이고 칭호가 올라가요. 해황 보기는 로그인 없이도 쓸 수 있어요."
+          />
+        )}
+        <SettingsRow />
+      </TabScreen>
+    );
+  }
 
   return (
     <TabScreen title="내정보">
-      <ProfileCard titleName={title.data?.current.name} journals={journals.data} />
+      <ProfileCard nickname={account?.nickname} titleName={title.data?.current.name} journals={journals.data} />
 
       <SectionHeader title="사진 인증 현황" actionLabel="기록 보기" onAction={() => router.push('/records')} />
       {journals.isSuccess ? <VerificationSummary journals={journals.data} /> : null}
@@ -32,23 +56,102 @@ export default function MeScreen() {
       <SectionHeader title="포인트 내역" />
       <PointHistory />
 
-      <Pressable accessibilityRole="button" onPress={() => router.push('/settings')} style={({ pressed }) => pressed && styles.pressed}>
-        <Card style={styles.menuRow}>
-          <AppIcon name="regulation" size={26} />
-          <View style={styles.flex}>
-            <ThemedText type="smallBold">설정·정보</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              데이터 출처, 이용 안내
-            </ThemedText>
-          </View>
-          <ThemedText themeColor="textSecondary">›</ThemedText>
-        </Card>
-      </Pressable>
+      <SettingsRow />
+      <AccountSection />
     </TabScreen>
   );
 }
 
-function ProfileCard({ titleName, journals }: { titleName?: string; journals?: Journal[] }) {
+function SettingsRow() {
+  return (
+    <Pressable accessibilityRole="button" onPress={() => router.push('/settings')} style={({ pressed }) => pressed && styles.pressed}>
+      <Card style={styles.menuRow}>
+        <AppIcon name="regulation" size={26} />
+        <View style={styles.flex}>
+          <ThemedText type="smallBold">설정·정보</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            데이터 출처, 이용 안내
+          </ThemedText>
+        </View>
+        <ThemedText themeColor="textSecondary">›</ThemedText>
+      </Card>
+    </Pressable>
+  );
+}
+
+/** 계정: 로그인 수단, 약관, 로그아웃, 탈퇴 (앱스토어 5.1.1: 앱 안에서 계정 삭제 가능해야 함) */
+function AccountSection() {
+  const { account, signOut } = useAuth();
+  const qc = useQueryClient();
+  if (!account) return null;
+
+  const confirmDelete = () =>
+    Alert.alert(
+      '회원 탈퇴',
+      '낚시 기록·사진·글·댓글·포인트가 모두 삭제되고 되돌릴 수 없어요. 탈퇴할까요?',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '탈퇴',
+          style: 'destructive',
+          onPress: () =>
+            api
+              .deleteAccount()
+              .then(async () => {
+                await signOut();
+                qc.clear();
+                Alert.alert('탈퇴했어요', '그동안 이용해 주셔서 감사합니다.');
+              })
+              .catch((e: Error) => Alert.alert('탈퇴하지 못했어요', e.message)),
+        },
+      ],
+    );
+
+  return (
+    <>
+      <SectionHeader title="계정" />
+      <Card>
+        <View style={styles.between}>
+          <ThemedText type="small" themeColor="textSecondary">
+            로그인
+          </ThemedText>
+          <ThemedText type="smallBold">
+            {account.provider === 'google' ? '구글' : '이메일'}
+            {account.email ? ` · ${account.email}` : ''}
+          </ThemedText>
+        </View>
+        <View style={styles.links}>
+          <Pressable accessibilityRole="link" onPress={() => router.push('/terms')} hitSlop={6}>
+            <ThemedText type="small" themeColor="tint">
+              이용약관
+            </ThemedText>
+          </Pressable>
+          <Pressable accessibilityRole="link" onPress={() => router.push('/privacy')} hitSlop={6}>
+            <ThemedText type="small" themeColor="tint">
+              개인정보 처리방침
+            </ThemedText>
+          </Pressable>
+        </View>
+        <Button label="로그아웃" variant="secondary" onPress={() => signOut()} />
+        <Pressable accessibilityRole="button" onPress={confirmDelete} hitSlop={8} style={styles.deleteLink}>
+          <ThemedText type="small" themeColor="textSecondary">
+            회원 탈퇴
+          </ThemedText>
+        </Pressable>
+      </Card>
+    </>
+  );
+}
+
+function ProfileCard({
+  nickname,
+  titleName,
+  journals,
+}: {
+  nickname?: string;
+  titleName?: string;
+  journals?: Journal[];
+}) {
   const theme = useTheme();
   const list = journals ?? [];
   const total = list.reduce((sum, j) => sum + (j.count ?? 0), 0);
@@ -64,7 +167,7 @@ function ProfileCard({ titleName, journals }: { titleName?: string; journals?: J
         </View>
         <View style={styles.flex}>
           <ThemedText type="sectionTitle" style={styles.onNavy}>
-            익명 낚시인
+            {nickname ?? '낚시인'}
           </ThemedText>
           {titleName ? (
             <View style={styles.badge}>
@@ -75,7 +178,7 @@ function ProfileCard({ titleName, journals }: { titleName?: string; journals?: J
             </View>
           ) : null}
           <ThemedText type="small" style={styles.onNavySecondary}>
-            로그인 없이 이 기기에 연결된 기록입니다
+            내 기록은 계정에 보관돼요 · 기기를 바꿔도 이어져요
           </ThemedText>
         </View>
       </View>
@@ -248,5 +351,7 @@ const styles = StyleSheet.create({
   bar: { height: '100%' },
   menuRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   vRow: { flexDirection: 'row' },
+  links: { flexDirection: 'row', gap: 16 },
+  deleteLink: { alignSelf: 'center', paddingVertical: 4 },
   vCell: { flex: 1, alignItems: 'center' },
 });

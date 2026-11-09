@@ -11,6 +11,7 @@ import { EmptyView, ErrorView, Loading, TabScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useAuth } from '@/lib/auth';
 import { CATEGORY } from '@/lib/community';
 
 type Sort = 'popular' | 'latest';
@@ -32,6 +33,7 @@ export default function CommunityScreen() {
   const [sort, setSort] = useState<Sort>('latest');
   const category = filter === 'all' ? null : filter;
   const posts = usePosts(category, sort);
+  const { signedIn } = useAuth();
 
   return (
     <View style={styles.flex}>
@@ -90,7 +92,7 @@ export default function CommunityScreen() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="글쓰기"
-        onPress={() => router.push('/community/new')}
+        onPress={() => router.push(signedIn ? '/community/new' : '/login')}
         style={({ pressed }) => [styles.fab, { opacity: pressed ? 0.85 : 1 }]}>
         <AppIcon name="comment" size={20} badge />
         <ThemedText type="smallBold" style={styles.fabText}>

@@ -292,3 +292,18 @@ export type PostInput = {
 };
 
 export type ReportResult = { status: 'received' | 'already_reported'; hidden: boolean };
+
+// --- 회원 ---
+export type Agreements = { over_14: boolean; terms: boolean; privacy: boolean };
+export type Account = {
+  id: number;
+  nickname: string;
+  email: string | null;
+  provider: 'email' | 'google';
+  created_at: string;
+};
+/** 로그인 없이 이 기기에서 쓴 기록을 계정으로 옮겼는지/옮길 수 있는지 */
+export type MergeInfo = { done: boolean; available: boolean; journals: number; posts: number };
+export type AuthResult = { status: 'ok'; token: string; expires_at: string; account: Account; merge: MergeInfo };
+export type GoogleSignupNeeded = { status: 'signup_required'; email: string | null; name: string | null };
+export type AuthConfig = { google: boolean; email: boolean };

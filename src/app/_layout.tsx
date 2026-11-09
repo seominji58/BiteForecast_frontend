@@ -5,6 +5,7 @@ import { useColorScheme } from 'react-native';
 
 import { ApiError } from '@/api';
 import { Brand } from '@/constants/theme';
+import { AuthProvider } from '@/lib/auth';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -23,6 +24,7 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <AuthProvider>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <Stack
           screenOptions={{
@@ -37,10 +39,15 @@ export default function RootLayout() {
           <Stack.Screen name="settings" options={{ title: '설정·정보' }} />
           <Stack.Screen name="place/[id]" options={{ title: '상세 해황' }} />
           <Stack.Screen name="explore" options={{ title: '낚시터 찾기' }} />
+          <Stack.Screen name="login" options={{ title: '로그인' }} />
+          <Stack.Screen name="signup" options={{ title: '회원가입' }} />
+          <Stack.Screen name="terms" options={{ title: '이용약관' }} />
+          <Stack.Screen name="privacy" options={{ title: '개인정보 처리방침' }} />
           <Stack.Screen name="community/new" options={{ title: '글쓰기' }} />
           <Stack.Screen name="community/[id]" options={{ title: '커뮤니티' }} />
         </Stack>
       </ThemeProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

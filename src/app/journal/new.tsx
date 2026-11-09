@@ -3,12 +3,13 @@ import { Alert } from 'react-native';
 
 import { usePlaces, useSaveJournal } from '@/api/queries';
 import { JournalForm } from '@/components/journal-form';
+import { AuthGate } from '@/components/login-required';
 import { Loading, StackScreen } from '@/components/screen';
 import { pointResultMessage } from '@/lib/format';
 import { useHomePlace } from '@/lib/prefs';
 
 // SCR-04 낚시일지 작성
-export default function NewJournalScreen() {
+function NewJournalScreenInner() {
   const save = useSaveJournal();
   const [homeId, , loaded] = useHomePlace();
   const places = usePlaces();
@@ -42,5 +43,13 @@ export default function NewJournalScreen() {
         }
       />
     </StackScreen>
+  );
+}
+
+export default function NewJournalScreen() {
+  return (
+    <AuthGate message="낚시 기록은 로그인 후 남길 수 있어요." icon="write">
+      <NewJournalScreenInner />
+    </AuthGate>
   );
 }

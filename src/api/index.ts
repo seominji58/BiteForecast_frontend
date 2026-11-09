@@ -1,5 +1,11 @@
 import { request } from '@/api/client';
 import type {
+  Account,
+  Agreements,
+  AuthConfig,
+  AuthResult,
+  GoogleSignupNeeded,
+  MergeInfo,
   CompareResult,
   DataSource,
   DateRange,
@@ -70,6 +76,23 @@ export const api = {
       body: { target_type: targetType, target_id: targetId, reason },
       auth: true,
     }),
+
+  // --- 회원 ---
+  authConfig: () => request<AuthConfig>('/auth/config'),
+  signup: (b: { email: string; password: string; nickname: string; agreements: Agreements }) =>
+    request<AuthResult>('/auth/signup', { method: 'POST', body: b }),
+  login: (b: { email: string; password: string }) => request<AuthResult>('/auth/login', { method: 'POST', body: b }),
+  google: (idToken: string) =>
+    request<AuthResult | GoogleSignupNeeded>('/auth/google', { method: 'POST', body: { id_token: idToken } }),
+  googleSignup: (b: { id_token: string; nickname: string; agreements: Agreements }) =>
+    request<AuthResult>('/auth/google/signup', { method: 'POST', body: b }),
+  nicknameCheck: (nickname: string) =>
+    request<{ available: boolean; message: string | null }>(`/auth/nickname-check?nickname=${encodeURIComponent(nickname)}`),
+  logout: () => request<void>('/auth/logout', { method: 'POST' }),
+  mergeDevice: () => request<MergeInfo>('/auth/merge-device', { method: 'POST' }),
+  account: () => request<Account>('/me/account'),
+  updateNickname: (nickname: string) => request<Account>('/me/account', { method: 'PATCH', body: { nickname } }),
+  deleteAccount: () => request<void>('/me/account', { method: 'DELETE' }),
 
   myTitle: () => request<MyTitle>('/me/title', { auth: true }),
   myPoints: () => request<MyPoints>('/me/points', { auth: true }),

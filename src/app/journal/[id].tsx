@@ -5,13 +5,14 @@ import { useDeleteJournal, useJournal, useSaveJournal, useVerification } from '@
 import type { Journal } from '@/api/types';
 import { Button } from '@/components/form';
 import { JournalForm } from '@/components/journal-form';
+import { AuthGate } from '@/components/login-required';
 import { Card, ErrorView, Loading, StackScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { formatDateTime, formatEnvKind, formatEnvValue, METRIC_LABEL, pointResultMessage } from '@/lib/format';
 import { VERIFY_LABEL } from '@/lib/verification';
 
 // SCR-04/05 낚시일지 상세: 인증 상태·신청·공유 → 당시 관측소 기록 → 수정 폼 → 삭제
-export default function JournalDetailScreen() {
+function JournalDetailScreenInner() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const journalId = Number(id);
   const journal = useJournal(journalId);
@@ -162,3 +163,11 @@ const styles = StyleSheet.create({
   envLabel: { width: 48 },
   delete: { marginTop: 16 },
 });
+
+export default function JournalDetailScreen() {
+  return (
+    <AuthGate message="내 낚시 기록은 로그인 후 볼 수 있어요." icon="cat-catch">
+      <JournalDetailScreenInner />
+    </AuthGate>
+  );
+}

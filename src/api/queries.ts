@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api } from '@/api';
 import type { JournalInput, PostCategory, PostInput } from '@/api/types';
+import { useAuth } from '@/lib/auth';
 
 // 화면에서 쓰는 조회/변경 훅. queryKey 는 캐시 무효화 기준이 되므로 여기서만 정의한다.
 export const queryKeys = {
@@ -23,10 +24,20 @@ export const usePlaces = (q?: string, regionId?: number) =>
 export const useSpecies = () =>
   useQuery({ queryKey: queryKeys.species, queryFn: api.species, staleTime: Infinity });
 
-export const useJournals = () => useQuery({ queryKey: queryKeys.journals, queryFn: api.journals });
+/** 내 기록·포인트·칭호는 로그인했을 때만 불러온다 (손님이면 401 대신 요청 안 함) */
+export const useJournals = () => {
+  const { signedIn } = useAuth();
+  return useQuery({ queryKey: queryKeys.journals, queryFn: api.journals, enabled: signedIn });
+};
 
-export const useJournal = (id: number) =>
-  useQuery({ queryKey: queryKeys.journal(id), queryFn: () => api.journal(id), enabled: Number.isFinite(id) });
+export const useJournal = (id: number) => {
+  const { signedIn } = useAuth();
+  return useQuery({
+    queryKey: queryKeys.journal(id),
+    queryFn: () => api.journal(id),
+    enabled: signedIn && Number.isFinite(id),
+  });
+};
 
 export const useRegions = () => useQuery({ queryKey: ['regions'], queryFn: api.regions });
 
@@ -57,9 +68,18 @@ export const usePlacesSummary = (date: string | undefined) =>
 
 export const useSources = () => useQuery({ queryKey: ['meta', 'sources'], queryFn: api.sources, staleTime: Infinity });
 
-export const useMyTitle = () => useQuery({ queryKey: queryKeys.myTitle, queryFn: api.myTitle });
+export const useMyTitle = () => {
+  const { signedIn } = useAuth();
+  return useQuery({ queryKey: queryKeys.myTitle, queryFn: api.myTitle, enabled: signedIn });
+};
 
-export const useMyPoints = () => useQuery({ queryKey: queryKeys.myPoints, queryFn: api.myPoints });
+export const useMyPoints = () => {
+  const { signedIn } = useAuth();
+  return useQuery({ queryKey: queryKeys.myPoints, queryFn: api.myPoints, enabled: signedIn });
+};
+
+export const useAuthConfig = () =>
+  useQuery({ queryKey: ['auth', 'config'], queryFn: api.authConfig, staleTime: 10 * 60_000 });
 
 /** 일지가 바뀌면 일지 목록과 포인트·칭호를 함께 갱신한다 */
 function useInvalidateJournalData() {

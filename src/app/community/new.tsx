@@ -10,6 +10,7 @@ import { Dropdown } from '@/components/dropdown';
 import { Button, Field, TextField } from '@/components/form';
 import { PhotoPicker, usePhotoUploads } from '@/components/photo-picker';
 import { PlaceField } from '@/components/place-field';
+import { AuthGate } from '@/components/login-required';
 import { Card, ErrorView, Loading, StackScreen } from '@/components/screen';
 import { NO_SPECIES, SpeciesField, type SpeciesValue } from '@/components/species-field';
 import { ThemedText } from '@/components/themed-text';
@@ -24,7 +25,7 @@ const CATEGORY_OPTIONS = (Object.keys(CATEGORY) as PostCategory[]).map((k) => ({
 
 // 커뮤니티 글쓰기 (재설계 v2 §7): 카테고리 드롭다운 · 제목 · 본문 · 사진 · 장소·어종 검색
 // ?journal=ID 로 열면 인증 완료된 내 기록 공유 (장소·어종·사진은 기록 것을 그대로 사용)
-export default function NewPostScreen() {
+function NewPostScreenInner() {
   const journalId = Number(useLocalSearchParams<{ journal?: string }>().journal);
   const sharing = Number.isFinite(journalId);
   const journal = useJournal(sharing ? journalId : NaN);
@@ -187,3 +188,11 @@ const styles = StyleSheet.create({
   thumbs: { flexDirection: 'row', gap: 6 },
   thumb: { width: 60, height: 60, borderRadius: 8 },
 });
+
+export default function NewPostScreen() {
+  return (
+    <AuthGate message="커뮤니티 글쓰기는 로그인 후 할 수 있어요. 글 읽기는 로그인 없이 돼요." icon="comment">
+      <NewPostScreenInner />
+    </AuthGate>
+  );
+}

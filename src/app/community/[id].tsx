@@ -14,6 +14,7 @@ import { Card, ErrorView, Loading, StackScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useAuth } from '@/lib/auth';
 import { CATEGORY } from '@/lib/community';
 import { formatDateTime } from '@/lib/format';
 
@@ -28,6 +29,8 @@ export default function PostScreen() {
   const deleteComment = useDeleteComment();
   const theme = useTheme();
   const source = usePhotoSource();
+  const { signedIn } = useAuth();
+  const needLogin = () => router.push('/login');
 
   const [comment, setComment] = useState('');
   const [reportTarget, setReportTarget] = useState<{ type: 'post' | 'comment'; id: number } | null>(null);
@@ -92,7 +95,7 @@ export default function PostScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="글 신고"
                 hitSlop={8}
-                onPress={() => setReportTarget({ type: 'post', id: p.id })}>
+                onPress={() => (signedIn ? setReportTarget({ type: 'post', id: p.id }) : needLogin())}>
                 <AppIcon name="report" size={22} />
               </Pressable>
             )
@@ -133,7 +136,7 @@ export default function PostScreen() {
           accessibilityRole="button"
           accessibilityState={{ selected: p.liked }}
           disabled={like.isPending}
-          onPress={() => like.mutate(!p.liked)}
+          onPress={() => (signedIn ? like.mutate(!p.liked) : needLogin())}
           style={[styles.like, { borderColor: p.liked ? Brand.orange : theme.border }]}>
           <AppIcon name="like" size={20} style={p.liked ? undefined : styles.dim} />
           <ThemedText type="smallBold" themeColor={p.liked ? 'accent' : 'textSecondary'}>
@@ -153,7 +156,13 @@ export default function PostScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={c.mine ? '댓글 삭제' : '댓글 신고'}
                 hitSlop={8}
-                onPress={() => (c.mine ? confirmDeleteComment(c) : setReportTarget({ type: 'comment', id: c.id }))}>
+                onPress={() =>
+                  c.mine
+                    ? confirmDeleteComment(c)
+                    : signedIn
+                      ? setReportTarget({ type: 'comment', id: c.id })
+                      : needLogin()
+                }>
                 {c.mine ? (
                   <ThemedText type="small" themeColor="danger">
                     삭제
@@ -168,15 +177,19 @@ export default function PostScreen() {
         </Card>
       ))}
 
-      <Card>
-        <TextField value={comment} onChangeText={setComment} placeholder="댓글을 입력하세요" maxLength={500} multiline />
-        <Button
-          label={addComment.isPending ? '등록 중…' : '댓글 등록'}
-          variant="secondary"
-          onPress={sendComment}
-          disabled={addComment.isPending || !comment.trim()}
-        />
-      </Card>
+      {signedIn ? (
+        <Card>
+          <TextField value={comment} onChangeText={setComment} placeholder="댓글을 입력하세요" maxLength={500} multiline />
+          <Button
+            label={addComment.isPending ? '등록 중…' : '댓글 등록'}
+            variant="secondary"
+            onPress={sendComment}
+            disabled={addComment.isPending || !comment.trim()}
+          />
+        </Card>
+      ) : (
+        <Button label="로그인하고 댓글 쓰기" variant="secondary" onPress={needLogin} />
+      )}
 
       <ReportSheet target={reportTarget} onClose={() => setReportTarget(null)} />
     </StackScreen>

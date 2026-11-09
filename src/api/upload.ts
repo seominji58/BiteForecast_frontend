@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 
-import { API_URL, ApiError } from '@/api/client';
+import { API_URL, ApiError, authHeaders } from '@/api/client';
 import type { Photo } from '@/api/types';
-import { getDeviceId } from '@/lib/device-id';
+import { currentToken, loadToken, onTokenChange } from '@/lib/session';
 
 export type PhotoPurpose = 'journal' | 'post';
 
@@ -18,7 +18,7 @@ export async function uploadPhoto(
   onProgress: (ratio: number) => void,
   takenAt?: string | null,
 ): Promise<Photo> {
-  const deviceId = await getDeviceId();
+  const headers = await authHeaders();
   const form = new FormData();
   // React Native FormData 는 {uri,name,type} 객체로 파일을 보낸다
   form.append('file', {
@@ -32,7 +32,7 @@ export async function uploadPhoto(
   return new Promise<Photo>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `${API_URL}/photos`);
-    xhr.setRequestHeader('X-Device-Id', deviceId);
+    Object.entries(headers).forEach(([k, v]) => xhr.setRequestHeader(k, v));
     xhr.setRequestHeader('Accept', 'application/json');
     xhr.timeout = UPLOAD_TIMEOUT_MS;
     xhr.upload.onprogress = (e) => {
@@ -59,16 +59,32 @@ export async function uploadPhoto(
   });
 }
 
-/** 서버 사진을 expo-image 로 보여줄 때의 source (본인·공개 글 사진만 서버가 내려준다) */
+/**
+ * 서버 사진을 expo-image 로 보여줄 때의 source.
+ * 공개 글 사진은 로그인 없이도 보이고, 내 비공개(인증용) 사진은 로그인 토큰이 있어야 서버가 내려준다.
+ */
 export function usePhotoSource() {
-  const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [token, setTok] = useState<string | null>(currentToken());
+  const [ready, setReady] = useState(currentToken() != null);
   useEffect(() => {
     let alive = true;
-    getDeviceId().then((id) => alive && setDeviceId(id));
+    loadToken().then((t) => {
+      if (!alive) return;
+      setTok(t);
+      setReady(true);
+    });
+    const off = onTokenChange((t) => setTok(t));
     return () => {
       alive = false;
+      off();
     };
   }, []);
   return (photo: Photo) =>
-    deviceId ? { uri: `${API_URL}${photo.url}`, headers: { 'X-Device-Id': deviceId }, cacheKey: `photo-${photo.id}` } : null;
+    ready
+      ? {
+          uri: `${API_URL}${photo.url}`,
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          cacheKey: `photo-${photo.id}`,
+        }
+      : null;
 }

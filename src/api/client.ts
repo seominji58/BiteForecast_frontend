@@ -1,4 +1,5 @@
 import { getDeviceId } from '@/lib/device-id';
+import { currentToken, loadToken, setToken } from '@/lib/session';
 
 /**
  * API 기본 주소. .env 의 EXPO_PUBLIC_API_URL 로 지정한다.
@@ -22,16 +23,23 @@ export class ApiError extends Error {
 }
 
 type RequestOptions = {
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
-  /** /me, /journals 계열은 true (X-Device-Id 헤더 첨부) */
+  /** @deprecated 로그인 토큰은 항상 붙는다 (있을 때). 호환용으로만 남김 */
   auth?: boolean;
 };
 
-export async function request<T>(path: string, { method = 'GET', body, auth = false }: RequestOptions = {}): Promise<T> {
-  const headers: Record<string, string> = { Accept: 'application/json' };
+/** 공통 헤더: 로그인 토큰(있으면) + 기기 ID(로그인 없이 쓰던 기록을 계정으로 옮길 때 사용) */
+export async function authHeaders(): Promise<Record<string, string>> {
+  const headers: Record<string, string> = { 'X-Device-Id': await getDeviceId() };
+  const token = currentToken() ?? (await loadToken());
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
+export async function request<T>(path: string, { method = 'GET', body }: RequestOptions = {}): Promise<T> {
+  const headers: Record<string, string> = { Accept: 'application/json', ...(await authHeaders()) };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
-  if (auth) headers['X-Device-Id'] = await getDeviceId();
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -56,6 +64,8 @@ export async function request<T>(path: string, { method = 'GET', body, auth = fa
   const data = await res.json().catch(() => null);
   if (!res.ok) {
     const err = data?.error;
+    // 로그인이 만료됐거나 다른 기기에서 탈퇴한 경우: 토큰을 지우고 로그인 화면으로 유도
+    if (res.status === 401 && headers.Authorization) await setToken(null);
     throw new ApiError(res.status, err?.code ?? 'ERROR', err?.message ?? `요청에 실패했습니다 (${res.status})`);
   }
   return data as T;
