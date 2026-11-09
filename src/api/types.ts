@@ -16,6 +16,8 @@ export type Place = {
   lat: number | null;
   lon: number | null;
   address: string | null;
+  /** 원본 좌표가 의심됨 (예: 다른 시·도 좌표로 등록) → 해황 자료를 연결하지 않음 */
+  location_suspect?: boolean;
 };
 
 export type Species = { code: string; name_ko: string };
@@ -123,7 +125,16 @@ export type MyPoints = { total_points: number; history: PointHistoryItem[] };
 
 // --- A/B 비교 (FR-02~05, FR-07) ---
 
-export type SeriesReason = 'NO_STATION' | 'NO_DATA' | 'FUTURE_DATE' | 'NOT_CONNECTED' | 'TOO_FAR';
+export type SeriesReason =
+  | 'NO_STATION'
+  | 'NO_DATA'
+  | 'FUTURE_DATE'
+  | 'NOT_CONNECTED'
+  | 'TOO_FAR'
+  /** 원본 좌표가 의심돼 자료를 연결하지 않음 */
+  | 'LOCATION_CHECK'
+  /** 가까운 조위관측소가 다른 바다를 봄 */
+  | 'DIFFERENT_SEA';
 export type RegulationStatus = 'PROHIBITED' | 'CONDITIONAL' | 'OFFICIALLY_OPEN' | 'UNVERIFIED';
 
 export type SeriesSource = {
@@ -179,7 +190,7 @@ export type FishingIndex = {
 export type WarningMatch = { type: string; areas: string[]; when: string | null; severe: boolean };
 export type Warning = {
   level: 'warning' | 'nearby' | 'preliminary' | 'none' | 'unknown';
-  reason: 'NO_DATA' | 'UNKNOWN_SEA' | null;
+  reason: 'NO_DATA' | 'UNKNOWN_SEA' | 'LOCATION_CHECK' | null;
   seas: string[];
   active: WarningMatch[];
   preliminary: WarningMatch[];
@@ -208,9 +219,16 @@ export type CompareResult = {
 export type DateRange = { today: string; min: string; max: string; timezone: string };
 
 // --- 전체 낚시터 요약 (지도·주변·조건으로 찾기). 실측(obs)과 예보(fc)는 다른 필드 ---
+export type SeaGroup = '서해' | '남해' | '동해' | '제주';
 export type ValueAt = { v: number; t: string };
 export type PlaceSummary = {
   place_id: number;
+  /** 원본 좌표 의심 → 출조 후보·지도에서 제외 */
+  location_suspect: boolean;
+  /** 특보 해역 기준 바다 권역 */
+  sea_group: SeaGroup | null;
+  /** 다음(또는 그날 첫) 만조·간조 — 같은 바다 조위관측소 예보일 때만 */
+  next_tide: { type: 'high' | 'low'; t: string; v: number | null; station_name: string; station_km: number | null } | null;
   warning_level: Warning['level'];
   warning_types: string[];
   wave_obs: ValueAt | null;

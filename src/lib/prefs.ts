@@ -114,3 +114,45 @@ export function useHomePlace(): [number | null, (id: number) => void, boolean] {
   };
   return [id, update, loaded];
 }
+
+/** 기기 저장 문자열 값 하나 (불러오기 전에는 loaded=false) */
+function useStored(key: string): [string | null, (v: string | null) => void, boolean] {
+  const [v, setV] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    read(key)
+      .catch(() => null)
+      .then((x) => {
+        if (!alive) return;
+        setV(x || null);
+        setLoaded(true);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [key]);
+  const update = (next: string | null) => {
+    setV(next);
+    write(key, next ?? '').catch(() => undefined);
+  };
+  return [v, update, loaded];
+}
+
+/**
+ * 홈 「선택한 낚시터의 해황」에 쓸, 사용자가 홈에서 직접 고른 낚시터 (검색·후보에서 고름).
+ * 최근 본 낚시터(useHomePlace)와 다르다 — 상세 화면을 둘러본 것만으로 바뀌지 않는다.
+ */
+export function useHomeSelection(): [number | null, (id: number | null) => void, boolean] {
+  const [v, setV, loaded] = useStored('biteforecast.home_selected_place');
+  return [v ? Number(v) : null, (id) => setV(id == null ? null : String(id)), loaded];
+}
+
+export const SEA_GROUPS = ['서해', '남해', '동해', '제주'] as const;
+export type SeaChoice = (typeof SEA_GROUPS)[number];
+
+/** 홈 「오늘의 출조 탐색」에서 고른 바다 권역. 「내 주변」은 위치를 매번 버튼으로 확인하므로 저장하지 않는다 */
+export function useHomeSea(): [SeaChoice | null, (v: SeaChoice | null) => void] {
+  const [v, setV] = useStored('biteforecast.home_sea');
+  return [(SEA_GROUPS as readonly string[]).includes(v ?? '') ? (v as SeaChoice) : null, setV];
+}

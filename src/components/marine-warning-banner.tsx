@@ -95,9 +95,11 @@ export function MarineWarningBanner({ w, compact }: { w: Warning; compact?: bool
           ) : null}
           {w.level === 'unknown' ? (
             <ThemedText type="small" themeColor="textSecondary">
-              {w.reason === 'UNKNOWN_SEA'
-                ? '이 장소가 속한 해역을 알 수 없어 특보를 연결하지 못했어요.'
-                : '최근 특보 자료를 받지 못했어요.'}{' '}
+              {w.reason === 'LOCATION_CHECK'
+                ? '등록된 좌표가 실제 주소와 맞지 않아(위치 확인 필요) 특보·해황 자료를 연결하지 않았어요.'
+                : w.reason === 'UNKNOWN_SEA'
+                  ? '이 장소가 속한 해역을 알 수 없어 특보를 연결하지 못했어요.'
+                  : '최근 특보 자료를 받지 못했어요.'}{' '}
               출조 전 기상청 날씨누리(weather.go.kr)에서 특보를 꼭 확인하세요.
             </ThemedText>
           ) : (

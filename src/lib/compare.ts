@@ -50,6 +50,8 @@ export const REASON_TEXT: Record<SeriesReason, string> = {
   FUTURE_DATE: '미래 날짜에는 실측 자료가 없습니다',
   NOT_CONNECTED: '예보 자료 연결 준비 중',
   TOO_FAR: '가까운 지수 지점 없음',
+  LOCATION_CHECK: '위치 확인 필요 — 등록된 좌표가 실제 주소와 맞지 않아 자료를 연결하지 않았어요',
+  DIFFERENT_SEA: '가까운 조위관측소가 다른 바다를 봐서 물때를 표시하지 않아요',
 };
 
 export const KIND_TEXT: Record<DataKind, string> = { forecast: '예보', observed: '실측' };

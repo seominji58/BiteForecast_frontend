@@ -104,7 +104,7 @@ export type Breakdown = {
 };
 
 /** 전체 낚시터를 내 기준으로 나눈다. 「조건 밖」 곳을 추천처럼 쓰지 않도록 이유별 곳 수만 센다 */
-export function breakdown(list: PlaceSummary[], c: Criteria): Breakdown {
+export function breakdown(list: PlaceSummary[], c: Criteria, opts: { future?: boolean } = {}): Breakdown {
   const b: Breakdown = {
     total: list.length,
     meets: [],
@@ -116,7 +116,7 @@ export function breakdown(list: PlaceSummary[], c: Criteria): Breakdown {
     insufficient: false,
   };
   for (const s of list) {
-    const r = checkPlace(s, c);
+    const r = checkPlace(s, c, opts);
     if (r.status === 'meets') b.meets.push(s);
     else if (s.warning_level === 'warning') b.warning += 1;
     else if (r.status === 'unknown') b.unknown += 1;
