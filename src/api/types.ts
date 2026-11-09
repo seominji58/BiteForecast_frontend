@@ -212,7 +212,7 @@ export type FishingIndex = {
 export type WarningMatch = { type: string; areas: string[]; when: string | null; severe: boolean };
 export type Warning = {
   level: 'warning' | 'nearby' | 'preliminary' | 'none' | 'unknown';
-  reason: 'NO_DATA' | 'UNKNOWN_SEA' | 'LOCATION_CHECK' | null;
+  reason: 'NO_DATA' | 'UNKNOWN_SEA' | 'LOCATION_CHECK' | 'LOCATION_REVIEW' | null;
   seas: string[];
   active: WarningMatch[];
   preliminary: WarningMatch[];
@@ -223,6 +223,10 @@ export type Warning = {
   basis?: 'address';
   /** 주소 기준 특보의 한계 안내 (좌표 불일치 의심 곳) */
   note?: string | null;
+  /** 참고용 특보(실제 낚시 위치의 특보는 확인 안 됨) — level 의 none 은 unknown 으로 바뀌어 온다 */
+  reference_only?: boolean;
+  /** 참고용일 때 주소 기준 원래 단계 */
+  address_level?: Warning['level'] | null;
 };
 
 export type PlaceCompare = {

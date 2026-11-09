@@ -75,11 +75,12 @@ export function outlookLine(o: StopOutlook | undefined, c: Criteria, lastDay: st
   if (o.forecast_status === 'past') return { text: '지난 날짜예요', fit: null, tone: 'textSecondary', tide: null };
   if (o.forecast_status === 'location_review') {
     // 좌표 기준 자료(파고·풍속·물때)는 판단 보류, 특보만 주소 기준으로
+    // 주소 기준 특보는 참고용 — 없더라도 「특보 없음」이라 하지 않는다 (서버가 none → unknown 으로 바꿔 줌)
     const w =
-      o.warning_level == null
-        ? '특보 확인 불가'
+      o.warning_level == null || o.warning_level === 'unknown'
+        ? '실제 위치 특보 확인 안 됨'
         : o.warning_is_current
-          ? `특보(주소 기준) ${WARNING_SHORT[o.warning_level].text}`
+          ? `참고 · 주소 기준 ${WARNING_SHORT[o.warning_level].text}`
           : '그날 특보 발표 전';
     return {
       text: `위치 검증 중 · 해황 판단 보류 · ${w}`,

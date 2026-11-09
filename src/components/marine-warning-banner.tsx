@@ -35,6 +35,12 @@ export function MarineWarningBanner({ w, compact }: { w: Warning; compact?: bool
           : { bg: theme.background, fg: 'textSecondary' as const };
 
   const issued = w.issued_at ? `기상청 ${timeLabel(w.issued_at)} 발표` : '기상청';
+  // 참고용(좌표 불일치 의심 곳): 실제 위치의 특보는 확인 안 됨 — 「특보 없음」이라고 하지 않는다
+  const title = w.reference_only
+    ? w.level === 'unknown'
+      ? '실제 위치 특보 확인 안 됨'
+      : `참고 · 주소 기준 ${TITLE[w.level]}`
+    : TITLE[w.level];
   const basis = w.seas.length ? `${w.seas.join('·')} 해역 기준` : '';
   const lines = [
     ...w.active.map((a) => `${a.type} · ${a.areas.join(', ')}`),
@@ -45,7 +51,7 @@ export function MarineWarningBanner({ w, compact }: { w: Warning; compact?: bool
     return (
       <View>
         <ThemedText type="smallBold" themeColor={tone.fg}>
-          {TITLE[w.level]}
+          {title}
         </ThemedText>
         {w.active.length > 0 ? (
           <ThemedText type="small" themeColor={tone.fg}>
@@ -72,7 +78,7 @@ export function MarineWarningBanner({ w, compact }: { w: Warning; compact?: bool
         <AppIcon name="report" size={22} />
         <View style={styles.flex}>
           <ThemedText type="smallBold" themeColor={tone.fg}>
-            {TITLE[w.level]}
+            {title}
             {w.active.length > 0 ? ` · ${w.active.map((a) => a.type).join(', ')}` : ''}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">

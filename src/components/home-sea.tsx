@@ -505,7 +505,11 @@ export function SelectedSea({
               해상 특보
             </ThemedText>
             <ThemedText type="smallBold" themeColor={w.color} style={styles.flex} numberOfLines={2}>
-              {w.text}
+              {pc.warning.reference_only
+                ? pc.warning.level === 'unknown'
+                  ? '실제 위치 특보 확인 안 됨'
+                  : `참고 · 주소 기준 ${w.text}`
+                : w.text}
               {pc.warning.active.length ? ` (${pc.warning.active.map((m) => m.type).join('·')})` : ''}
             </ThemedText>
           </View>
