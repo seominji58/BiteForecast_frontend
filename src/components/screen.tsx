@@ -54,12 +54,16 @@ export function TabScreen({
     <ThemedView style={styles.flex}>
       <View style={[styles.appBar, immersive && styles.immersiveAppBar, { paddingTop: insets.top }]}>
         <View style={styles.appBarInner}>
-          <View style={styles.titleRow}>
-            {logo ? <AppIcon name="fishing-index" size={16} badge /> : null}
-            <Text style={styles.title} accessibilityRole="header" numberOfLines={1}>
-              {title}
-            </Text>
-          </View>
+          {logo || title ? (
+            <View style={styles.titleRow}>
+              {logo ? <AppIcon name="fishing-index" size={16} badge /> : null}
+              {title ? (
+                <Text style={styles.title} accessibilityRole="header" numberOfLines={1}>
+                  {title}
+                </Text>
+              ) : null}
+            </View>
+          ) : <View />}
           {right ?? (
             <Pressable
               accessibilityRole="button"
