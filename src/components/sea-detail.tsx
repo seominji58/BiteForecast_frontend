@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import type { Place, PlaceCompare } from '@/api/types';
+import type { FishingIndex, Place, PlaceCompare } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { LEVEL_COLOR } from '@/components/compare-view';
 import { Card } from '@/components/screen';
@@ -201,6 +201,24 @@ export function DataBasis({ pc, initiallyOpen = false }: { pc: PlaceCompare; ini
 }
 
 /** 공식 바다낚시지수 (시간대·어종별) */
+type FishingItem = NonNullable<FishingIndex['periods']>[number]['items'][number];
+
+function envRangeText(min: number | null, max: number | null, unit: string): string | null {
+  if (min == null || max == null) return null;
+  return min === max ? `${min}${unit}` : `${min}~${max}${unit}`;
+}
+
+function indexConditionText(item: FishingItem): string | null {
+  const parts = [
+    envRangeText(item.min_wave_m, item.max_wave_m, 'm') ? `파고 ${envRangeText(item.min_wave_m, item.max_wave_m, 'm')}` : null,
+    envRangeText(item.min_water_temp, item.max_water_temp, '°C')
+      ? `수온 ${envRangeText(item.min_water_temp, item.max_water_temp, '°C')}`
+      : null,
+    envRangeText(item.min_wind_ms, item.max_wind_ms, 'm/s') ? `풍속 ${envRangeText(item.min_wind_ms, item.max_wind_ms, 'm/s')}` : null,
+  ].filter(Boolean);
+  return parts.length ? parts.join(' · ') : null;
+}
+
 export function FishingIndexCard({ pc }: { pc: PlaceCompare }) {
   const f = pc.fishing_index;
   const periods = f.status === 'ok' ? (f.periods ?? []) : [];
@@ -222,12 +240,20 @@ export function FishingIndexCard({ pc }: { pc: PlaceCompare }) {
             {p.period === '일' ? '하루' : p.period}
             {p.tide_phase ? ` · ${p.tide_phase}` : ''}
           </ThemedText>
+          {p.items[0] && p.items.every((item) => indexConditionText(item) === indexConditionText(p.items[0])) ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              공식 발표 환경 범위 · {indexConditionText(p.items[0]) ?? '자료 없음'}
+            </ThemedText>
+          ) : null}
           <View style={styles.indexGrid}>
             {p.items.map((i) => (
               <View key={i.species} style={styles.indexItem}>
-                <ThemedText type="small" numberOfLines={1} style={styles.flex}>
-                  {i.species}
-                </ThemedText>
+                <View style={styles.flex}>
+                  <ThemedText type="small" numberOfLines={1}>{i.species}</ThemedText>
+                  {p.items.some((item) => indexConditionText(item) !== indexConditionText(p.items[0])) ? (
+                    <ThemedText type="small" themeColor="textSecondary">{indexConditionText(i) ?? '환경 범위 자료 없음'}</ThemedText>
+                  ) : null}
+                </View>
                 <ThemedText type="smallBold" themeColor={i.index ? LEVEL_COLOR[i.index] : 'textSecondary'}>
                   {i.index ?? '자료 없음'}
                 </ThemedText>
@@ -241,7 +267,7 @@ export function FishingIndexCard({ pc }: { pc: PlaceCompare }) {
         {f.source && f.source.distance_km != null && f.source.distance_km >= 1
           ? `${f.source.station_name} 지점 ${f.source.distance_km}km`
           : '이 지점 발표'}{' '}
-        · 앱이 판정한 값이 아닙니다
+        · 지수와 환경 범위 모두 기관 발표값이며 앱이 판정한 값이 아닙니다
       </ThemedText>
     </Card>
   );

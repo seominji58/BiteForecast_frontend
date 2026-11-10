@@ -204,7 +204,20 @@ export type FishingIndex = {
   source: SeriesSource | null;
   fetched_at: string | null;
   periods:
-    | { period: string; tide_phase: string | null; items: { species: string; index: FishingIndexLevel | null }[] }[]
+    | {
+        period: string;
+        tide_phase: string | null;
+        items: {
+          species: string;
+          index: FishingIndexLevel | null;
+          min_wave_m: number | null;
+          max_wave_m: number | null;
+          min_water_temp: number | null;
+          max_water_temp: number | null;
+          min_wind_ms: number | null;
+          max_wind_ms: number | null;
+        }[];
+      }[]
     | null;
 };
 
