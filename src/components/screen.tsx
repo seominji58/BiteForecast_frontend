@@ -28,12 +28,15 @@ import { useTheme } from '@/hooks/use-theme';
 export function TabScreen({
   title,
   logo,
+  immersive = false,
   right,
   onRefresh,
   children,
 }: {
   title: string;
   logo?: boolean;
+  /** 홈처럼 콘텐츠가 상태바 아래까지 이어지는 화면 */
+  immersive?: boolean;
   right?: ReactNode;
   /** 아래로 당겨 새로고침 (Promise 가 끝날 때까지 표시) */
   onRefresh?: () => Promise<unknown>;
@@ -49,7 +52,7 @@ export function TabScreen({
   const insets = useSafeAreaInsets();
   return (
     <ThemedView style={styles.flex}>
-      <View style={[styles.appBar, { paddingTop: insets.top }]}>
+      <View style={[styles.appBar, immersive && styles.immersiveAppBar, { paddingTop: insets.top }]}>
         <View style={styles.appBarInner}>
           <View style={styles.titleRow}>
             {logo ? <AppIcon name="fishing-index" size={16} badge /> : null}
@@ -70,7 +73,7 @@ export function TabScreen({
       </View>
       <ScrollView
         refreshControl={pull ? <RefreshControl refreshing={refreshing} onRefresh={pull} /> : undefined}
-        contentContainerStyle={[styles.content, styles.tabContent]}
+        contentContainerStyle={[styles.content, styles.tabContent, immersive && styles.immersiveContent]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
         {children}
@@ -167,6 +170,7 @@ export function EmptyView({ message }: { message: string }) {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   appBar: { backgroundColor: Brand.navy },
+  immersiveAppBar: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, backgroundColor: 'transparent' },
   appBarInner: {
     height: Layout.appBarHeight,
     paddingHorizontal: Layout.screenPadding,
@@ -195,6 +199,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   tabContent: { paddingBottom: Layout.gap * 3 },
+  immersiveContent: { paddingTop: 0 },
   stackContent: { paddingBottom: Layout.gap * 4 },
   card: {
     padding: Layout.cardPadding,

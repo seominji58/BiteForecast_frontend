@@ -138,7 +138,7 @@ export default function HomeScreen() {
   const openCriteria = () => router.push({ pathname: '/explore', params: { mode: 'criteria' } });
 
   return (
-    <TabScreen title="입질예보" logo onRefresh={refresh}>
+    <TabScreen title="입질예보" logo immersive onRefresh={refresh}>
       {/* 상단: 작은 검색 + 내 주변 · 지도 탐색 · 날짜 */}
       <ImageBackground source={homeBackgroundSource()} imageStyle={styles.heroImage} style={styles.hero}>
         <View pointerEvents="none" style={styles.heroShade} />
@@ -570,8 +570,8 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.7 },
   center: { textAlign: 'center' },
   bold: { fontWeight: '700' },
-  hero: { backgroundColor: Brand.navy, borderRadius: 14, padding: 12, gap: 10, overflow: 'hidden' },
-  heroImage: { borderRadius: 14 },
+  hero: { backgroundColor: Brand.navy, marginTop: -12, marginHorizontal: -12, paddingTop: 104, paddingHorizontal: 12, paddingBottom: 14, gap: 10, overflow: 'hidden' },
+  heroImage: { borderRadius: 0 },
   heroShade: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(5, 30, 58, 0.42)' },
   heroCopy: { paddingHorizontal: 4, paddingTop: 8, gap: 2 },
   heroTitle: { color: '#FFFFFF', fontSize: 25, lineHeight: 32, fontWeight: '800' },
