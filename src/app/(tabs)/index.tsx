@@ -226,58 +226,56 @@ export default function HomeScreen() {
       ) : summary.isPending ? (
         <Hint text="낚시터 해황을 확인하는 중이에요…" loading />
       ) : summary.isError ? (
-        <Hint text={`해황 자료를 불러오지 못했어요. ${summary.error.message}`} tone="danger" />
+        <DataStateNotice
+          title="조건 자료를 잠시 확인할 수 없어요"
+          detail="등록 낚시터 검색·지도 탐색과 출조계획은 계속 사용할 수 있어요."
+          actionLabel="다시 확인"
+          onAction={refresh}
+          tone="danger"
+        />
       ) : stale ? (
-        <Hint
-          text={`${summary.data.data_status.stale_reason ?? '자료가 오래됐어요'}. 오래된 예보·특보로는 후보를 고르지 않아요.`}
-          tone="warning"
+        <DataStateNotice
+          title="조건 자료를 갱신 중이에요"
+          detail={`${scopeName} 등록 장소 ${b.total}곳 · 현재 조건 판단 가능 0곳`}
+          actionLabel="등록 장소 지도 보기"
+          onAction={() => router.push('/explore')}
         />
       ) : pending ? (
-        <Hint
-          text={`${dayLabel(date!)}은 아직 예보 발표 전이에요. 기상청 예보는 ${dayLabel(lastForecastDay!)}까지 나와 있어요. 예보가 나오기 전에는 출조 후보를 고르지 않아요.`}
+        <DataStateNotice
+          title={`${dayLabel(date!)} 예보를 기다리고 있어요`}
+          detail={`등록 장소 탐색은 가능하지만, 현재 조건 후보는 고르지 않아요.`}
+          actionLabel="등록 장소 지도 보기"
+          onAction={() => router.push('/explore')}
         />
       ) : scope.length === 0 ? (
         <Hint text={near ? `현재 위치에서 ${NEAR_KM}km 안에 등록된 바다 낚시터가 없어요. 바다를 골라 주세요.` : '이 바다에 등록된 낚시터가 없어요.'} />
       ) : b.insufficient ? (
-        <Hint
-          tone="warning"
-          text={
-            future && summary.data.data_status.forecast_valid_until
-              ? `${dayLabel(date!)}은 아직 예보가 충분하지 않아요 (받아 둔 예보는 ${dayLabel(summary.data.data_status.forecast_valid_until.slice(0, 10))}까지). 자료가 없는 곳은 후보로 내지 않아요.`
-              : `${scopeName} ${b.total}곳 중 ${b.unknown}곳은 예보·특보 자료가 없어 판단할 수 없어요. 자료가 없는 곳은 후보로 내지 않아요.`
-          }
-        />
+        <View style={styles.hintCol}>
+          <DataStateNotice
+            title={`${scopeName} 등록 장소 ${b.total}곳`}
+            detail={`${b.total - b.unknown}곳은 현재 조건을 판단할 수 있어요 · ${b.unknown}곳은 자료 부족`}
+            actionLabel="등록 장소 전체 보기"
+            onAction={() => router.push('/explore')}
+          />
+          {candidates.length > 0 ? (
+            <CandidateResults
+              candidates={candidates}
+              b={b}
+              scopeName={scopeName}
+              near={near}
+              held={held}
+              future={future}
+              byId={byId}
+              dist={dist}
+              onSelect={(id) => router.push({ pathname: '/place/[id]', params: { id: String(id) } })}
+              onChange={openCriteria}
+            />
+          ) : null}
+        </View>
       ) : candidates.length === 0 ? (
         <NoMatch b={b} scopeName={scopeName} onChange={openCriteria} />
       ) : (
-        <View style={styles.cands}>
-          <ThemedText type="small" themeColor="textSecondary">
-            {scopeName} {b.total}곳 중 내 기준 충족 {b.meets.length}곳 · {near ? '가까운 순' : '파고 예보가 낮은 순'}
-          </ThemedText>
-          {held ? (
-            <ThemedText type="small" themeColor="textSecondary">
-              좌표를 검증 중인 {held}곳(주소와 좌표의 시·군이 다름)은 후보에서 뺐어요.
-            </ThemedText>
-          ) : null}
-          {candidates.map((s) => (
-            <CandidateCard
-              key={s.place_id}
-              place={byId.get(s.place_id)!}
-              s={s}
-              dist={dist(s)}
-              future={future}
-              selected={false}
-              onSelect={() => router.push({ pathname: '/place/[id]', params: { id: String(s.place_id) } })}
-            />
-          ))}
-          {b.meets.length > candidates.length ? (
-            <Pressable accessibilityRole="button" onPress={openCriteria} style={styles.linkRow}>
-              <ThemedText type="smallBold" themeColor="tint">
-                맞는 곳 {b.meets.length}곳 모두 지도에서 보기 ›
-              </ThemedText>
-            </Pressable>
-          ) : null}
-        </View>
+        <CandidateResults candidates={candidates} b={b} scopeName={scopeName} near={near} held={held} future={future} byId={byId} dist={dist} onSelect={(id) => router.push({ pathname: '/place/[id]', params: { id: String(id) } })} onChange={openCriteria} />
       )}
       {summary.isSuccess && chosen ? (
         <ThemedText type="small" themeColor={stale ? 'warning' : 'textSecondary'}>
@@ -369,6 +367,74 @@ function Hint({ text, tone, loading }: { text: string; tone?: 'warning' | 'dange
       <ThemedText type="small" themeColor={tone ?? 'textSecondary'} style={styles.flex}>
         {text}
       </ThemedText>
+    </View>
+  );
+}
+
+function DataStateNotice({
+  title,
+  detail,
+  actionLabel,
+  onAction,
+  tone = 'warning',
+}: {
+  title: string;
+  detail: string;
+  actionLabel: string;
+  onAction: () => void;
+  tone?: 'warning' | 'danger';
+}) {
+  const theme = useTheme();
+  return (
+    <View style={[styles.stateNotice, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+      <View style={styles.flex}>
+        <ThemedText type="smallBold" themeColor={tone}>{title}</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>{detail}</ThemedText>
+      </View>
+      <Pressable accessibilityRole="button" onPress={onAction} style={styles.stateAction}>
+        <ThemedText type="smallBold" themeColor="tint">{actionLabel} ›</ThemedText>
+      </Pressable>
+    </View>
+  );
+}
+
+function CandidateResults({
+  candidates,
+  b,
+  scopeName,
+  near,
+  held,
+  future,
+  byId,
+  dist,
+  onSelect,
+  onChange,
+}: {
+  candidates: PlaceSummary[];
+  b: ReturnType<typeof breakdown>;
+  scopeName: string;
+  near: boolean;
+  held: number;
+  future: boolean;
+  byId: Map<number, Place>;
+  dist: (s: PlaceSummary) => number | null;
+  onSelect: (id: number) => void;
+  onChange: () => void;
+}) {
+  return (
+    <View style={styles.cands}>
+      <ThemedText type="small" themeColor="textSecondary">
+        {scopeName} {b.total}곳 중 내 기준 충족 {b.meets.length}곳 · {near ? '가까운 순' : '파고 예보가 낮은 순'}
+      </ThemedText>
+      {held ? <ThemedText type="small" themeColor="textSecondary">좌표를 검증 중인 {held}곳은 후보에서 뺐어요.</ThemedText> : null}
+      {candidates.map((s) => (
+        <CandidateCard key={s.place_id} place={byId.get(s.place_id)!} s={s} dist={dist(s)} future={future} selected={false} onSelect={() => onSelect(s.place_id)} />
+      ))}
+      {b.meets.length > candidates.length ? (
+        <Pressable accessibilityRole="button" onPress={onChange} style={styles.linkRow}>
+          <ThemedText type="smallBold" themeColor="tint">맞는 곳 {b.meets.length}곳 모두 지도에서 보기 ›</ThemedText>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -625,6 +691,8 @@ const styles = StyleSheet.create({
   },
   hint: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, padding: 12 },
   hintCol: { gap: 4 },
+  stateNotice: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 12, padding: 12 },
+  stateAction: { paddingVertical: 4 },
   cands: { gap: 8 },
   linkRow: { minHeight: 40, justifyContent: 'center' },
   tiles: { flexDirection: 'row', gap: 8 },
