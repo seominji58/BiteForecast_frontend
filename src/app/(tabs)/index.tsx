@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Keyboard, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, ImageBackground, Keyboard, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { useDateRange, usePlaces, usePlacesSummary, usePosts } from '@/api/queries';
 import type { Place, PlaceSummary, PostSummary } from '@/api/types';
@@ -34,6 +34,16 @@ function forecastLastDay(validUntil: string | null): string | null {
 /** 「내 주변」 후보로 볼 거리 (현재 위치 기준) */
 const NEAR_KM = 60;
 const CANDIDATES = 3;
+
+// 시간대별 분위기만 바꾸고, 데이터·검색·추천 로직은 그대로 유지한다.
+// 나중에 사용자 업로드 URI를 받을 때는 이 반환값을 원격 ImageSource로 대체하면 된다.
+function homeBackgroundSource(hour = new Date().getHours()) {
+  if (hour >= 5 && hour < 9) return require('../../../assets/home-backgrounds/dawn.png');
+  if (hour >= 9 && hour < 16) return require('../../../assets/home-backgrounds/day.png');
+  if (hour >= 16 && hour < 18) return require('../../../assets/home-backgrounds/sunset.png');
+  if (hour >= 18 && hour < 21) return require('../../../assets/home-backgrounds/dusk.png');
+  return require('../../../assets/home-backgrounds/night.png');
+}
 
 /**
  * SCR-01 홈 v3 (2026-11-09, docs/05_UX/2026-11-09_홈_재설계안.md)
@@ -130,8 +140,13 @@ export default function HomeScreen() {
   return (
     <TabScreen title="입질예보" logo onRefresh={refresh}>
       {/* 상단: 작은 검색 + 내 주변 · 지도 탐색 · 날짜 */}
-      <View style={styles.hero}>
-        <SearchBar value={query} onChangeText={setQuery} onClear={() => setQuery('')} placeholder="지역·낚시터 검색 (예: 태안, 대천)" />
+      <ImageBackground source={homeBackgroundSource()} imageStyle={styles.heroImage} style={styles.hero}>
+        <View pointerEvents="none" style={styles.heroShade} />
+        <View style={styles.heroCopy}>
+          <Text style={styles.heroTitle}>오늘, 어디로 낚시 갈까요?</Text>
+          <Text style={styles.heroSubtitle}>해황·물때·특보를 한눈에, 출조를 준비해요</Text>
+        </View>
+        <SearchBar value={query} onChangeText={setQuery} onClear={() => setQuery('')} placeholder="지역·낚시터 또는 어종 검색" />
         <View style={styles.heroActions}>
           <HeroButton icon="find-gps" label="내 주변" active={near} onPress={locate} />
           <HeroButton icon="find-map" label="지도 탐색" onPress={() => router.push('/explore')} />
@@ -155,7 +170,7 @@ export default function HomeScreen() {
             );
           })}
         </ScrollView>
-      </View>
+      </ImageBackground>
 
       {query.trim() ? (
         <Card>
@@ -555,7 +570,12 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.7 },
   center: { textAlign: 'center' },
   bold: { fontWeight: '700' },
-  hero: { backgroundColor: Brand.navy, borderRadius: 14, padding: 12, gap: 8 },
+  hero: { backgroundColor: Brand.navy, borderRadius: 14, padding: 12, gap: 10, overflow: 'hidden' },
+  heroImage: { borderRadius: 14 },
+  heroShade: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(5, 30, 58, 0.42)' },
+  heroCopy: { paddingHorizontal: 4, paddingTop: 8, gap: 2 },
+  heroTitle: { color: '#FFFFFF', fontSize: 25, lineHeight: 32, fontWeight: '800' },
+  heroSubtitle: { color: 'rgba(255,255,255,0.88)', fontSize: 14, lineHeight: 20, fontWeight: '600' },
   heroActions: { flexDirection: 'row', gap: 8 },
   heroBtn: {
     flex: 1,
