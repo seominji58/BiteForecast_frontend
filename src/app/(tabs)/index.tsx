@@ -188,7 +188,7 @@ export default function HomeScreen() {
                 accessibilityLabel={`${dayLabel(d)} 해황 보기${lastForecastDay && d > lastForecastDay ? ', 예보 발표 전' : ''}`}
                 onPress={() => setDate(d)}
                 style={({ pressed }) => [styles.datePill, on && styles.datePillOn, pressed && styles.pressed]}>
-                <Text style={[styles.dateText, lastForecastDay && d > lastForecastDay && styles.dateTextPending, on && styles.dateTextOn]}>
+                <Text style={[styles.dateText, !on && lastForecastDay && d > lastForecastDay && styles.dateTextPending, on && styles.dateTextOn]}>
                   {shortDay(d)}
                   {lastForecastDay && d > lastForecastDay ? ' · 예보 전' : ''}
                 </Text>

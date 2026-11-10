@@ -74,14 +74,19 @@ export function SameCoordSheet({
 }) {
   const theme = useTheme();
   const approx = places?.some((p) => p.coord?.approx);
+  const allSame = !!places && new Set(places.map((p) => `${p.lat},${p.lon}`)).size === 1;
   return (
     <Modal visible={!!places} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <ThemedView style={styles.sheet}>
-        <ThemedText type="sectionTitle">이 위치의 낚시터 {places?.length ?? 0}곳</ThemedText>
+        <ThemedText type="sectionTitle">
+          {allSame ? '이 위치' : '이 근처'}의 낚시터 {places?.length ?? 0}곳
+        </ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
           {approx
             ? '여러 낚시터가 같은 대표 좌표(사무실·어촌계 주소 등)로 등록돼 있어요. 실제 낚시 자리는 곳마다 다를 수 있어요.'
-            : '여러 낚시터가 같은 좌표로 등록돼 있어요.'}
+            : allSame
+              ? '여러 낚시터가 같은 좌표로 등록돼 있어요.'
+              : '지도에서 겹칠 만큼 가까이 모인 낚시터예요.'}
         </ThemedText>
         <ScrollView contentContainerStyle={styles.list}>
           {(places ?? []).map((p) => (

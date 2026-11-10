@@ -218,14 +218,17 @@ export function SeaMap({
     setRegion(home);
     setZoomed(false);
   }
+  // 권역이 바뀌면 애니메이션 없이(0ms) 그 범위로 옮긴다. 350ms 애니메이션은 바탕 지도가 이전 범위에 멈춰
+  // 표시와 어긋났고, 지도를 다시 만들거나 region 을 직접 넘기면 바탕 지도가 안 그려지거나 세계 지도로 펼쳐졌다
+  // (iOS 시뮬레이터 검증 2026-11-10)
   useEffect(() => {
-    mapRef.current?.animateToRegion(home, 350);
+    mapRef.current?.animateToRegion(home, 0);
   }, [home]);
 
   const go = (r: Region, z: boolean) => {
     setRegion(r);
     setZoomed(z);
-    mapRef.current?.animateToRegion(r, 350);
+    mapRef.current?.animateToRegion(r, 0);
   };
   const clusters = useMemo(() => clusterDots(dots, region, size), [dots, region, size]);
   const count = (t: MapDot['tone']) => dots.filter((d) => d.tone === t).length;
@@ -254,9 +257,8 @@ export function SeaMap({
                   anchor={{ x: 0.5, y: 0.5 }}
                   accessibilityLabel={`${d.place.name} 해황 보기`}
                   onPress={() => onPick(d.place.id)}>
-                  <View style={styles.hit}>
-                    <View style={[on ? styles.dotOn : styles.dot, { backgroundColor: color[d.tone] }]} />
-                  </View>
+                  {/* 투명 감싸개 없이 원 하나로 — 감싸개가 있으면 iOS 지도에서 탭이 안 됐다 (시뮬레이터 검증 2026-11-10) */}
+                  <View style={[on ? styles.dotOn : styles.dot, { backgroundColor: color[d.tone] }]} />
                 </Marker>
               );
             }
@@ -272,11 +274,12 @@ export function SeaMap({
                 tracksViewChanges={false}
                 anchor={{ x: 0.5, y: 0.5 }}
                 accessibilityLabel={`낚시터 ${c.dots.length}곳 묶음, 눌러서 ${
-                  Math.max(...lats) - Math.min(...lats) < 0.003 && Math.max(...lons) - Math.min(...lons) < 0.003 ? '목록 보기' : '확대'
+                  Math.max(...lats) - Math.min(...lats) < 0.02 && Math.max(...lons) - Math.min(...lons) < 0.02 ? '목록 보기' : '확대'
                 }`}
                 onPress={() =>
-                  // 사실상 같은 좌표(약 300m 안)에 모인 곳은 확대해도 갈라지지 않으므로 목록으로 펼친다
-                  Math.max(...lats) - Math.min(...lats) < 0.003 && Math.max(...lons) - Math.min(...lons) < 0.003
+                  // 약 2km 안에 모인 곳은 가장 크게 확대해도 갈라지지 않으므로 목록으로 펼친다
+                  // (300m 기준일 때 창원 25곳 묶음이 끝없이 확대만 됐다 — 시뮬레이터 검증 2026-11-10)
+                  Math.max(...lats) - Math.min(...lats) < 0.02 && Math.max(...lons) - Math.min(...lons) < 0.02
                     ? setSamePick(c.dots.map((d) => d.place))
                     : go(
                     {
@@ -638,7 +641,8 @@ export function TideChart({
             })}
             {now != null && now >= t0 && now <= t0 + span ? (
               <View style={[styles.nowLine, { left: X(now) }]}>
-                <ThemedText type="small" style={styles.nowText}>
+                {/* 오른쪽 끝 가까이면 글자를 선 왼쪽에 둬서 잘리지 않게 (시뮬레이터 검증 2026-11-10) */}
+                <ThemedText type="small" style={[styles.nowText, X(now) > w - 40 && styles.nowTextLeft]}>
                   지금
                 </ThemedText>
               </View>
@@ -679,9 +683,8 @@ const styles = StyleSheet.create({
   metricLabel: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   mapCard: { borderWidth: 1, borderRadius: 12, overflow: 'hidden' },
   mapBox: { height: 190 },
-  hit: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
-  dot: { width: 12, height: 12, borderRadius: 6, borderWidth: 1.5, borderColor: '#fff' },
-  dotOn: { width: 18, height: 18, borderRadius: 9, borderWidth: 3, borderColor: Brand.orange },
+  dot: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: '#fff' },
+  dotOn: { width: 24, height: 24, borderRadius: 12, borderWidth: 4, borderColor: Brand.orange },
   cluster: {
     minWidth: 30,
     height: 30,
@@ -728,7 +731,9 @@ const styles = StyleSheet.create({
   chart: { height: CHART_H, marginTop: 4 },
   seg: { position: 'absolute', height: 2.5, borderRadius: 2 },
   nowLine: { position: 'absolute', top: 0, bottom: 0, width: 1.5, backgroundColor: Brand.orange },
-  nowText: { position: 'absolute', top: -2, left: 4, color: Brand.orange, fontWeight: '700' },
+  // 1.5pt 너비 선 안에 있어 글자 폭을 따로 줘야 한 글자씩 줄바꿈되지 않는다 (시뮬레이터 검증 2026-11-10)
+  nowText: { position: 'absolute', top: -2, left: 4, width: 40, color: Brand.orange, fontWeight: '700' },
+  nowTextLeft: { left: -38, textAlign: 'right', width: 34 },
   ext: { position: 'absolute', width: 8, height: 8, borderRadius: 4, borderWidth: 2 },
   axis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 },
   axisText: { fontSize: 11 },

@@ -1,0 +1,45 @@
+# 1. 홈에서 지역·날짜 선택 — 후보 카드, 예보 범위 밖 날짜 안내
+appId: com.seominji58.biteforecast
+---
+- tapOn:
+    point: "10%,94%"   # 홈 탭
+- waitForAnimationToEnd
+# 아래로 당겨 새로고침 (앱의 5분 캐시를 비우고 최신 자료로)
+- swipe:
+    start: "50%,35%"
+    end: "50%,80%"
+- waitForAnimationToEnd
+# 시작 상태 맞추기: 날짜를 오늘로
+- swipe:
+    start: "20%,30%"
+    end: "90%,30%"
+- tapOn: "11/9 \\(월\\) 해황 보기"
+- takeScreenshot: 01a_home_top
+- tapOn: "서해"
+- waitForAnimationToEnd
+- takeScreenshot: 01b_west_selected
+- assertVisible: "서해 .*곳 중 내 기준 충족.*"
+- scroll
+- takeScreenshot: 01c_west_scrolled
+- scroll
+- takeScreenshot: 01d_west_scrolled2
+- scrollUntilVisible:
+    element: "지도 탐색"
+    direction: UP
+# 날짜 줄을 왼쪽으로 밀어 예보 범위 밖 날짜가 보이게
+- swipe:
+    start: "85%,30%"
+    end: "20%,30%"
+- waitForAnimationToEnd
+- takeScreenshot: 01e0_dates_scrolled
+- tapOn: ".*예보 발표 전"
+- waitForAnimationToEnd
+- takeScreenshot: 01e_pending_date
+- assertVisible: ".*아직 예보 발표 전이에요.*"
+# 오늘로 되돌리기
+- swipe:
+    start: "20%,30%"
+    end: "90%,30%"
+- tapOn: "11/9 \\(월\\) 해황 보기"
+- waitForAnimationToEnd
+- takeScreenshot: 01f_back_today

@@ -41,7 +41,9 @@ export const useJournal = (id: number) => {
 
 export const useRegions = () => useQuery({ queryKey: ['regions'], queryFn: api.regions });
 
-export const useDateRange = () => useQuery({ queryKey: ['meta', 'date-range'], queryFn: api.dateRange });
+// 오늘 날짜는 자정에 바뀐다 — 앱을 켜 둔 채 날이 바뀌어도 따라가게 10분마다 확인
+export const useDateRange = () =>
+  useQuery({ queryKey: ['meta', 'date-range'], queryFn: api.dateRange, refetchInterval: 10 * 60_000 });
 
 export const useCompare = (placeA: number, placeB: number, date: string) =>
   useQuery({

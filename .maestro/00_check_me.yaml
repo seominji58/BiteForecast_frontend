@@ -1,0 +1,7 @@
+# 현재 로그인 상태 확인 (데이터를 만들지 않음)
+appId: com.seominji58.biteforecast
+---
+- tapOn:
+    point: "90%,94%"
+- waitForAnimationToEnd
+- takeScreenshot: 00_me

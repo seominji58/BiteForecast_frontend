@@ -1,7 +1,7 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
-import { useState } from 'react';
-import { useColorScheme } from 'react-native';
+import { useEffect, useState } from 'react';
+import { AppState, Platform, useColorScheme } from 'react-native';
 
 import { ApiError } from '@/api';
 import { Brand } from '@/constants/theme';
@@ -9,6 +9,13 @@ import { AuthProvider } from '@/lib/auth';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  // 앱이 다시 앞으로 오면 오래된 자료(오늘 날짜·예보·특보)를 다시 불러온다.
+  // 자정을 넘겨 다시 열었는데 어제를 「오늘」로 보여주던 문제 (iOS 시뮬레이터 검증 2026-11-10)
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    const sub = AppState.addEventListener('change', (st) => focusManager.setFocused(st === 'active'));
+    return () => sub.remove();
+  }, []);
   const [queryClient] = useState(
     () =>
       new QueryClient({
