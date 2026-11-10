@@ -2,6 +2,7 @@
 import type { StopOutlook, TripStop } from '@/api/types';
 import { dayLabel, formatDay, parseDay, timeLabel } from '@/lib/compare';
 import { type Criteria, WARNING_SHORT } from '@/lib/criteria';
+import { ptyLabel } from '@/lib/format';
 
 /** D-5 · D-day · 진행 중 · 지난 계획 */
 export function dday(start: string, end: string, today: string): string {
@@ -105,8 +106,10 @@ export function outlookLine(o: StopOutlook | undefined, c: Criteria, lastDay: st
   const parts = [
     o.wave_fc_max ? `파고 최대 ${o.wave_fc_max.v}m` : '파고 예보 없음',
     o.wind_fc_max ? `풍속 최대 ${o.wind_fc_max.v}m/s` : '풍속 예보 없음',
+    o.pop_fc_max ? `강수확률 최대 ${o.pop_fc_max.v}%` : null,
+    o.precipitation_types.length ? `강수 ${o.precipitation_types.map(ptyLabel).join('·')}` : null,
     warn,
-  ];
+  ].filter((v): v is string => !!v);
   // 내 기준: 홈과 같은 규칙 (특보 발효 중이면 제외, 자료 없으면 판단 안 함)
   let fit: OutlookLine['fit'];
   if (o.warning_is_current && o.warning_level === 'warning') fit = { label: '특보 발효 중', color: 'warning' };

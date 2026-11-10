@@ -9,7 +9,7 @@ import { AppIcon } from '@/components/app-icon';
 import { Button } from '@/components/form';
 import { MarineWarningBanner } from '@/components/marine-warning-banner';
 import { Card, ErrorView, Loading, SectionHeader, StackScreen } from '@/components/screen';
-import { DataBasis, FishingIndexCard, MetricTable, NearbyPlaces, TideCard } from '@/components/sea-detail';
+import { DataBasis, FishingIndexCard, MetricTable, NearbyPlaces, TideCard, WeatherForecastCard } from '@/components/sea-detail';
 import { ThemedText } from '@/components/themed-text';
 import { dayLabel, timeLabel } from '@/lib/compare';
 import { nearby, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
@@ -80,6 +80,9 @@ export default function PlaceDetailScreen() {
 
           <SectionHeader title="지금 바다" />
           <MetricTable pc={pc} />
+
+          <SectionHeader title="출조 시간 날씨" />
+          <WeatherForecastCard pc={pc} />
 
           <SectionHeader title="물때 (오늘)" />
           <TideCard pc={pc} />

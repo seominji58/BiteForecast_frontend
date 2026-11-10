@@ -24,6 +24,7 @@ import {
   timeLabel,
 } from '@/lib/compare';
 import { distanceGrade, seaState, windName } from '@/lib/describe';
+import { ptyLabel, SKY_TEXT } from '@/lib/format';
 import { distLabel, isApprox, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
 
 type MetricKey = 'wave_height' | 'wind_speed' | 'water_temp';
@@ -111,6 +112,39 @@ export function MetricTable({ pc }: { pc: PlaceCompare }) {
           </View>
         );
       })}
+    </Card>
+  );
+}
+
+/** 육상 단기예보의 기온·강수. 바다 상태나 입질로 해석하지 않고 원 발표값만 요약한다. */
+export function WeatherForecastCard({ pc }: { pc: PlaceCompare }) {
+  const temp = findSeries(pc, 'air_temp', 'forecast');
+  const pop = findSeries(pc, 'precipitation_probability', 'forecast');
+  const sky = findSeries(pc, 'sky_state', 'forecast');
+  const pty = findSeries(pc, 'precipitation_type', 'forecast');
+  const values = (s: typeof temp) => (s?.points ?? []).flatMap((p) => (p.v == null ? [] : [p.v]));
+  const temps = values(temp);
+  const pops = values(pop);
+  const skyText = [...new Set(values(sky).map((v) => SKY_TEXT[v]).filter(Boolean))].join(' → ');
+  const ptyText = [...new Set(values(pty).filter((v) => v > 0).map(ptyLabel))].join('·');
+  if (!temps.length && !pops.length && !skyText && !ptyText) {
+    return <Card><ThemedText themeColor="textSecondary">단기 날씨 예보 자료 없음</ThemedText></Card>;
+  }
+  return (
+    <Card>
+      <View style={styles.weatherRow}>
+        <ThemedText type="smallBold">기온</ThemedText>
+        <ThemedText>{temps.length ? `${f1(Math.min(...temps))}~${f1(Math.max(...temps))}°C` : '자료 없음'}</ThemedText>
+      </View>
+      <View style={styles.weatherRow}>
+        <ThemedText type="smallBold">강수확률</ThemedText>
+        <ThemedText>{pops.length ? `최대 ${f1(Math.max(...pops))}%` : '자료 없음'}</ThemedText>
+      </View>
+      <View style={styles.weatherRow}>
+        <ThemedText type="smallBold">하늘·강수</ThemedText>
+        <ThemedText>{[skyText, ptyText].filter(Boolean).join(' · ') || '자료 없음'}</ThemedText>
+      </View>
+      <ThemedText type="small" themeColor="textSecondary">기상청 단기예보 · 해상 조건이나 입질을 뜻하지 않아요</ThemedText>
     </Card>
   );
 }
@@ -329,6 +363,7 @@ const styles = StyleSheet.create({
   col: { flex: 1 },
   num: { fontSize: 17, lineHeight: 22, fontWeight: '800' },
   srcLine: { paddingLeft: 68 },
+  weatherRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
   tideRow: { flexDirection: 'row', gap: 6 },
   tideCell: { flex: 1, borderWidth: 1, borderRadius: 10, paddingVertical: 6, alignItems: 'center' },
   past: { opacity: 0.45 },

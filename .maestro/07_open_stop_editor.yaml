@@ -1,0 +1,8 @@
+appId: com.seominji58.biteforecast
+---
+- tapOn:
+    text: "시간·메모"
+    index: 0
+- waitForAnimationToEnd
+- assertVisible: "낚시 시간 \\(선택\\)"
+- assertVisible: "메모 \\(선택\\)"

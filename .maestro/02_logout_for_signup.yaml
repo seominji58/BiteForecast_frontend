@@ -1,0 +1,16 @@
+appId: com.seominji58.biteforecast
+---
+- tapOn:
+    id: BackButton
+- waitForAnimationToEnd
+- tapOn:
+    point: "90%,94%"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element: "로그아웃"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "로그아웃"
+- waitForAnimationToEnd
+- assertVisible: "로그인"
+- assertVisible: "회원가입"

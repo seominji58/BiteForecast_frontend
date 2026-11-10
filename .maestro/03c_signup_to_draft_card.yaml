@@ -1,0 +1,24 @@
+appId: com.seominji58.biteforecast
+---
+- tapOn:
+    point: "50%,20%"
+- eraseText
+- inputText: ${TEST_EMAIL}
+- tapOn:
+    point: "50%,30%"
+- eraseText
+- inputText: ${TEST_PASSWORD}
+- tapOn:
+    point: "50%,39%"
+- eraseText
+- inputText: ${TEST_PASSWORD}
+- tapOn:
+    point: "50%,48%"
+- eraseText
+- inputText: ${TEST_NICKNAME}
+- hideKeyboard
+- tapOn: "전체 동의"
+- tapOn: "가입하기"
+- waitForAnimationToEnd
+- assertVisible: "출조계획"
+- assertVisible: "작성하던 계획이 있어요 · 이어서 저장 ›"

@@ -1,0 +1,12 @@
+appId: com.seominji58.biteforecast
+---
+- tapOn: "11/10 서해 출조"
+- inputText: "11/10 가입흐름 검증"
+- tapOn: "예: 새벽 4시 출발, 동행 2명"
+- inputText: "가입 전 작성 메모 유지 확인"
+- hideKeyboard
+- tapOn: "로그인하고 계획 만들기"
+- waitForAnimationToEnd
+- tapOn: "이메일로 회원가입"
+- waitForAnimationToEnd
+- assertVisible: "이메일로 회원가입"

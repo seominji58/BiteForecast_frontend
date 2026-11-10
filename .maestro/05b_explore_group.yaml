@@ -1,0 +1,17 @@
+appId: com.seominji58.biteforecast
+---
+- assertVisible: "낚시터 212"
+- assertVisible: "좌표가 주소와 맞지 않는 7곳.*지도·거리순에서 뺐어요.*"
+- assertNotVisible: "창리해상낚시터"
+- assertNotVisible: "우리낚시터"
+- assertNotVisible: "만석낚시터"
+- assertNotVisible: "김선장낚시터"
+- assertNotVisible: "대호낚시터"
+- assertNotVisible: "항구낚시터"
+- assertNotVisible: "백년낚시터"
+- tapOn: "같은 좌표의 낚시터 25곳, 눌러서 목록 보기"
+- waitForAnimationToEnd
+- assertVisible: "이 근처의 낚시터 25곳"
+- tapOn: "원전어촌계\\(태진\\).*"
+- waitForAnimationToEnd
+- assertVisible: ".*대략 위치.*"

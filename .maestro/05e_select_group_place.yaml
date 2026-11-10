@@ -1,0 +1,7 @@
+appId: com.seominji58.biteforecast
+---
+- assertVisible: "이 위치의 낚시터 17곳"
+- tapOn: "실리도 어촌계 \\(백마\\)낚시터.*"
+- waitForAnimationToEnd
+- assertVisible: "실리도 어촌계 \\(백마\\)낚시터"
+- assertVisible: ".*대략 위치.*"

@@ -47,7 +47,10 @@ export type MyTitle = {
   points_to_next: number | null;
 };
 
+/** 일지 환경정보(관측소 자료)에 쓰는 지표 */
 export type Metric = 'tide_level' | 'wave_height' | 'wind_speed' | 'water_temp';
+/** 기상청 단기예보 육상 날씨 (TMP·POP·SKY·PTY). SKY·PTY 는 기상청 코드 그대로 */
+export type WeatherMetric = 'air_temp' | 'precipitation_probability' | 'sky_state' | 'precipitation_type';
 export type DataKind = 'forecast' | 'observed';
 
 /** 일지 당시 인근 관측소 환경정보 (FR-10). value/kind 가 null 이면 「자료 없음」 */
@@ -168,7 +171,7 @@ export type SeriesSource = {
 };
 
 export type Series = {
-  metric: 'tide_extreme' | 'tide_level' | 'wave_height' | 'wind_speed' | 'water_temp';
+  metric: 'tide_extreme' | Metric | WeatherMetric;
   unit: string;
   kind: DataKind;
   status: 'ok' | 'unavailable';
@@ -225,6 +228,19 @@ export type FishingIndex = {
 export type WarningMatch = { type: string; areas: string[]; when: string | null; severe: boolean };
 export type Warning = {
   level: 'warning' | 'nearby' | 'preliminary' | 'none' | 'unknown';
+  /** no_match: 다른 해역에만 특보 · unknown_sea: 적용 해역 모름 · collector_failed: 수집기 주기 실패(특보 API 실패와 다름) */
+  status:
+    | 'active'
+    | 'nearby'
+    | 'no_match'
+    | 'no_active_warnings'
+    | 'unknown_sea'
+    | 'stale'
+    | 'collection_failed'
+    | 'collector_failed'
+    | 'never_collected'
+    | 'location_check';
+  issues: ('stale' | 'collection_failed' | 'collector_failed')[];
   reason: 'NO_DATA' | 'UNKNOWN_SEA' | 'LOCATION_CHECK' | 'LOCATION_REVIEW' | null;
   seas: string[];
   active: WarningMatch[];
@@ -279,6 +295,10 @@ export type PlaceSummary = {
   wave_fc_max: ValueAt | null;
   wind_obs: ValueAt | null;
   wind_fc_max: ValueAt | null;
+  air_temp_fc_min: ValueAt | null;
+  air_temp_fc_max: ValueAt | null;
+  pop_fc_max: ValueAt | null;
+  precipitation_types: number[];
   temp_obs: ValueAt | null;
   index: {
     period: string;
@@ -476,6 +496,11 @@ export type StopOutlook = {
   forecast_status: 'available' | 'pending' | 'past' | 'location_check' | 'location_review';
   wave_fc_max: ValueAt | null;
   wind_fc_max: ValueAt | null;
+  air_temp_fc_min: ValueAt | null;
+  air_temp_fc_max: ValueAt | null;
+  pop_fc_max: ValueAt | null;
+  /** 기상청 PTY 코드(1 비·2 비/눈·3 눈·4 소나기). 0(없음)은 서버가 뺀다 */
+  precipitation_types: number[];
   warning_level: Warning['level'] | null;
   warning_types: string[];
   /** 특보는 「지금」 상태 — 오늘이 아니면 false (앱은 「그날 특보 발표 전」) */

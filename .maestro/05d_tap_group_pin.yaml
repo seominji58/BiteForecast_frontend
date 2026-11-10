@@ -1,0 +1,6 @@
+appId: com.seominji58.biteforecast
+---
+- tapOn:
+    point: "49%,18%"
+- waitForAnimationToEnd
+- assertVisible: "이 근처의 낚시터 17곳"

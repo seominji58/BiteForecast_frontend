@@ -1,0 +1,5 @@
+appId: com.seominji58.biteforecast
+---
+- tapOn: "계획 만들기"
+- waitForAnimationToEnd
+- assertVisible: ".*가입흐름 검증.*"

@@ -1,0 +1,6 @@
+appId: com.seominji58.biteforecast
+---
+- tapOn: "가입하기"
+- waitForAnimationToEnd
+- assertVisible: "출조계획"
+- assertVisible: "작성하던 계획이 있어요 · 이어서 저장 ›"

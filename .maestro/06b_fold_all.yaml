@@ -1,0 +1,7 @@
+appId: com.seominji58.biteforecast
+---
+- tapOn: "모두 접기"
+- assertVisible: "11/10 \\(화\\), 주 시락어촌계낚시터\\(3동\\) · 예비 1곳, 펼치기"
+- assertVisible: "11/11 \\(수\\), 주 권관항 낚시터, 펼치기"
+- tapOn: "모두 펼치기"
+- assertVisible: "11/10 \\(화\\), 주 시락어촌계낚시터\\(3동\\) · 예비 1곳, 접기"

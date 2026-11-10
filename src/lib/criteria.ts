@@ -77,7 +77,7 @@ export const WARNING_SHORT: Record<
   warning: { text: '해상 특보 발효 중', color: 'danger' },
   nearby: { text: '인근 해역 특보', color: 'warning' },
   preliminary: { text: '예비특보', color: 'warning' },
-  none: { text: '특보 없음', color: 'success' },
+  none: { text: '이 낚시터에 연결된 특보 없음', color: 'success' },
   unknown: { text: '특보 확인 불가', color: 'textSecondary' },
 };
 

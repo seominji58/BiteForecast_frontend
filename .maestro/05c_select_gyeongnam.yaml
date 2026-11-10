@@ -1,0 +1,6 @@
+appId: com.seominji58.biteforecast
+---
+- tapOn: "지역: 전국, 바꾸기"
+- tapOn: "경남.*"
+- waitForAnimationToEnd
+- assertVisible: "경남 낚시터.*"

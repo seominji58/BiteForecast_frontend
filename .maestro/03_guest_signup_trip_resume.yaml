@@ -1,0 +1,56 @@
+appId: com.seominji58.biteforecast
+env:
+  TEST_EMAIL: ${TEST_SIGNUP_EMAIL}
+  TEST_PASSWORD: ${TEST_SIGNUP_PASSWORD}
+  TEST_NICKNAME: ${TEST_SIGNUP_NICKNAME}
+---
+- tapOn:
+    point: "30%,94%"
+- waitForAnimationToEnd
+- tapOn: "새 출조계획 만들기"
+- waitForAnimationToEnd
+- tapOn: "서해"
+- scrollUntilVisible:
+    element: "제목 (선택)"
+    direction: DOWN
+- tapOn: "11/10 가입흐름 검증"
+- inputText: "11/10 가입흐름 검증"
+- tapOn: "예: 새벽 4시 출발, 동행 2명"
+- inputText: "가입 전 작성 메모 유지 확인"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "로그인하고 계획 만들기"
+    direction: DOWN
+- tapOn: "로그인하고 계획 만들기"
+- waitForAnimationToEnd
+- tapOn: "이메일로 회원가입"
+- waitForAnimationToEnd
+- tapOn: "you@example.com"
+- inputText: ${TEST_EMAIL}
+- tapOn: "영문·숫자 섞어 8자 이상"
+- inputText: ${TEST_PASSWORD}
+- tapOn:
+    index: 2
+- inputText: ${TEST_PASSWORD}
+- tapOn: "커뮤니티에 보이는 이름 (2~12자)"
+- inputText: ${TEST_NICKNAME}
+- hideKeyboard
+- tapOn: "전체 동의"
+- tapOn: "가입하기"
+- waitForAnimationToEnd
+- assertVisible: "출조계획"
+- assertVisible: "작성하던 계획이 있어요 · 이어서 저장 ›"
+- tapOn: "작성하던 계획이 있어요 · 이어서 저장 ›"
+- waitForAnimationToEnd
+- assertVisible: "작성하던 내용을 불러왔어요.*"
+- scrollUntilVisible:
+    element: "11/10 가입흐름 검증"
+    direction: DOWN
+- assertVisible: "11/10 가입흐름 검증"
+- assertVisible: "가입 전 작성 메모 유지 확인"
+- scrollUntilVisible:
+    element: "계획 만들기"
+    direction: DOWN
+- tapOn: "계획 만들기"
+- waitForAnimationToEnd
+- assertVisible: "11/10 가입흐름 검증"

@@ -20,6 +20,11 @@ export const METRIC_LABEL: Record<Metric, string> = {
   water_temp: '수온',
 };
 
+/** 기상청 단기예보 코드표 (원 코드 의미 그대로). SKY: 1 맑음·3 구름많음·4 흐림 / PTY: 0 없음·1 비·2 비/눈·3 눈·4 소나기 */
+export const SKY_TEXT: Record<number, string> = { 1: '맑음', 3: '구름많음', 4: '흐림' };
+export const PTY_TEXT: Record<number, string> = { 1: '비', 2: '비/눈', 3: '눈', 4: '소나기' };
+export const ptyLabel = (v: number) => PTY_TEXT[v] ?? `코드 ${v}`;
+
 /** 기상청 단기예보 WAV는 0.5m 단위. 0은 결측이 아니며 정밀도보다 작다는 뜻으로 표시한다. */
 export function formatForecastWave(value: number | null | undefined): string {
   if (value == null) return '자료 없음';

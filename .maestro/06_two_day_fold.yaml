@@ -1,0 +1,21 @@
+appId: com.seominji58.biteforecast
+---
+- tapOn:
+    id: BackButton
+- waitForAnimationToEnd
+- tapOn:
+    point: "30%,94%"
+- swipe:
+    start: "50%,25%"
+    end: "50%,75%"
+- waitForAnimationToEnd
+- tapOn: ".*가입흐름 검증.*"
+- waitForAnimationToEnd
+- assertVisible: "DAY 1.*"
+- assertVisible: "DAY 2.*"
+- tapOn: "모두 접기"
+- assertVisible: ".*주 장소 없음.*예비 1곳.*"
+- assertVisible: ".*주 권관항 낚시터.*"
+- tapOn: "모두 펼치기"
+- assertVisible: "시락어촌계낚시터\\(3동\\).*"
+- assertVisible: "권관항 낚시터.*"

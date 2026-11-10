@@ -1,0 +1,5 @@
+appId: com.seominji58.biteforecast
+---
+- tapOn: ".*이메일로 회원가입"
+- waitForAnimationToEnd
+- assertVisible: "이메일로 회원가입"

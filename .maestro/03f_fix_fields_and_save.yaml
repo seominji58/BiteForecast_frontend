@@ -1,0 +1,16 @@
+appId: com.seominji58.biteforecast
+---
+- tapOn:
+    point: "50%,57%"
+- eraseText
+- inputText: "11/10 가입흐름 검증"
+- hideKeyboard
+- tapOn:
+    point: "50%,70%"
+- inputText: "가입 전 작성 메모 유지 확인"
+- hideKeyboard
+- assertVisible: "11/10 가입흐름 검증"
+- assertVisible: "가입 전 작성 메모 유지 확인"
+- tapOn: "계획 만들기"
+- waitForAnimationToEnd
+- assertVisible: "11/10 가입흐름 검증"

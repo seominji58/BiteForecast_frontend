@@ -1,0 +1,10 @@
+appId: com.seominji58.biteforecast
+---
+- tapOn: "내 위치로"
+- runFlow:
+    when:
+      visible: ".*앱을 사용하는 동안 허용.*"
+    commands:
+      - tapOn: ".*앱을 사용하는 동안 허용.*"
+- waitForAnimationToEnd
+- assertVisible: ".*약 [0-9]+km.*"

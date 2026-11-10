@@ -1,0 +1,11 @@
+appId: com.seominji58.biteforecast
+---
+- tapOn: "장소 추가"
+- waitForAnimationToEnd
+- tapOn: "낚시터 검색.*"
+- inputText: "시락어촌계낚시터(3동)"
+- hideKeyboard
+- tapOn: "시락어촌계낚시터\\(3동\\).*"
+- waitForAnimationToEnd
+- assertVisible: "위치 검증 중 · 해황 판단 보류.*"
+- assertVisible: ".*참고 · 주소 기준.*특보.*"
