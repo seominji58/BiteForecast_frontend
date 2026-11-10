@@ -87,7 +87,8 @@ export default function PlaceDetailScreen() {
           <SectionHeader title="바다낚시지수 (국립해양조사원)" />
           <FishingIndexCard pc={pc} />
 
-          {place && places.data && !place.location_suspect ? (
+          {/* 위치 확인 필요·좌표 불일치 의심이면 거리 기준 목록을 내지 않는다 (시뮬레이터 검증 2026-11-10) */}
+          {place && places.data && !place.location_suspect && !place.coord?.recommend_hold ? (
             <>
               <SectionHeader title="가까운 낚시터" />
               <NearbyPlaces

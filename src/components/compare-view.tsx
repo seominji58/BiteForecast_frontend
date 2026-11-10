@@ -304,9 +304,10 @@ function FactSummary({ a, b }: { a: PlaceCompare; b: PlaceCompare }) {
     if (!r) return [];
     const kind = KIND_TEXT[r.kind];
     const vs = `${r.aMax}${unit} vs ${r.bMax}${unit}`;
-    if (!r.winner) return [`${label}(${kind} 최대)는 두 곳이 같습니다 (${vs})`];
+    // 「내 기준과 비교」는 남은 시간 예보라 숫자가 다를 수 있어 기준(하루 전체)을 적는다 (시뮬레이터 검증 2026-11-10)
+    if (!r.winner) return [`${label}(하루 ${kind} 최대)는 두 곳이 같습니다 (${vs})`];
     const name = r.winner === 'A' ? a.place.name : b.place.name;
-    return [`${label}(${kind} 최대)가 더 낮은 곳: ${name} (${vs})`];
+    return [`${label}(하루 ${kind} 최대)가 더 낮은 곳: ${name} (${vs})`];
   });
   return (
     <View style={[styles.fact, { backgroundColor: theme.accentSoft }]}>
