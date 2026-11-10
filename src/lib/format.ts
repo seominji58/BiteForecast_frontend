@@ -20,6 +20,12 @@ export const METRIC_LABEL: Record<Metric, string> = {
   water_temp: '수온',
 };
 
+/** 기상청 단기예보 WAV는 0.5m 단위. 0은 결측이 아니며 정밀도보다 작다는 뜻으로 표시한다. */
+export function formatForecastWave(value: number | null | undefined): string {
+  if (value == null) return '자료 없음';
+  return value === 0 ? '0.5m 미만' : `${value}m`;
+}
+
 // 서버 지급 사유 (services/points.py). 모두 관리자 인증이 완료된 기록에서만 생긴다
 export const POINT_REASON_LABEL: Record<PointReason, string> = {
   JOURNAL_CREATED: '인증 완료 기록',

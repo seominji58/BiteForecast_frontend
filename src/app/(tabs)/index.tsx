@@ -4,11 +4,11 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Keyboard, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-import { useDateRange, useFavorites, usePlaces, usePlacesSummary, usePosts } from '@/api/queries';
+import { useDateRange, usePlaces, usePlacesSummary, usePosts } from '@/api/queries';
 import type { Place, PlaceSummary, PostSummary } from '@/api/types';
 import { usePhotoSource } from '@/api/upload';
 import { AppIcon } from '@/components/app-icon';
-import { CandidateCard, type MapDot, SeaMap, SelectedSea } from '@/components/home-sea';
+import { CandidateCard } from '@/components/home-sea';
 import { Card, SectionHeader, TabScreen } from '@/components/screen';
 import { SearchBar } from '@/components/search-bar';
 import { ThemedText } from '@/components/themed-text';
@@ -17,11 +17,11 @@ import { Brand, IconSize, Layout } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { catchLine, shortDate, whereLine } from '@/lib/community';
 import { dayLabel, dayList } from '@/lib/compare';
-import { breakdown, checkPlace, criteriaLabel, freshnessLine } from '@/lib/criteria';
+import { breakdown, criteriaLabel, freshnessLine } from '@/lib/criteria';
 import { timeAgo } from '@/lib/format';
 import { type Coords, getCurrentCoords } from '@/lib/location';
 import { km, matches, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
-import { SEA_GROUPS, type SeaChoice, useCriteria, useHomeSea, useHomeSelection } from '@/lib/prefs';
+import { SEA_GROUPS, type SeaChoice, useCriteria, useHomeSea } from '@/lib/prefs';
 
 /** 받아 둔 기상청 예보가 하루 전체를 덮는 마지막 날짜 (KST, YYYY-MM-DD) */
 function forecastLastDay(validUntil: string | null): string | null {
@@ -37,12 +37,11 @@ const CANDIDATES = 3;
 
 /**
  * SCR-01 홈 v3 (2026-11-09, docs/05_UX/2026-11-09_홈_재설계안.md)
- * 상단(검색·내 주변·지도·날짜) → 오늘의 출조 탐색(권역 칩 + 후보 2~3곳) → 지역별 바다 상황(작은 지도)
- * → 선택한 낚시터의 해황(물때 그래프·파고·풍속·특보) → 낚시 정보 → 최근 조황
+ * 상단(검색·내 주변·지도·날짜) → 오늘의 출조 탐색(권역 칩 + 후보 2~3곳) → 지역별 바다 상황(요약)
+ * → 출조계획·비교·안전 바로가기. 상세 해황은 낚시터 상세 화면에서 확인한다.
  *
  * - 후보는 고른 날짜의 실제 예보로 「내 기준 충족」인 곳만. 특보 발효·자료 부족·좌표 의심 곳은 후보로 내지 않는다
- * - 해황 대상: 내가 고른 곳 → 즐겨찾기 첫 곳 → 없으면 고르라고 안내 (아무 곳이나 임의로 보여주지 않음)
- * - 최근 본 낚시터는 기준으로 쓰지 않는다
+ * - 추천 카드를 누르면 상세 화면으로 이동한다 (홈에서 상세 해황을 중복 노출하지 않음)
  */
 export default function HomeScreen() {
   const places = usePlaces();
@@ -63,9 +62,6 @@ export default function HomeScreen() {
     coords: null,
     error: null,
   });
-  const [picked, setPicked, pickedLoaded] = useHomeSelection();
-  const [pickedFrom, setPickedFrom] = useState<'search' | 'candidate' | 'map' | null>(null);
-  const favorites = useFavorites();
   const [query, setQuery] = useState('');
 
   const byId = useMemo(() => new Map((places.data ?? []).map((p) => [p.id, p])), [places.data]);
@@ -112,44 +108,7 @@ export default function HomeScreen() {
     return list.slice(0, CANDIDATES);
   }, [b.meets, stale, near, gps.coords, byId]);
 
-  // 지도: 고른 범위(없으면 전국)의 실제 좌표 + 특보·내 기준 상태
-  const dots = useMemo<MapDot[]>(() => {
-    const base = chosen ? scope : (summary.data?.places ?? []).filter((s) => !s.location_suspect);
-    return base
-      .map((s): MapDot | null => {
-        const place = byId.get(s.place_id);
-        if (!place) return null;
-        const c = checkPlace(s, criteria, { future });
-        const tone: MapDot['tone'] = pending
-          ? 'pending'
-          : s.warning_level === 'warning'
-            ? 'warning'
-            : stale || c.status === 'unknown'
-              ? 'unknown'
-              : c.status === 'meets'
-                ? 'meets'
-                : 'other';
-        return { place, tone };
-      })
-      .filter((d): d is MapDot => !!d);
-  }, [chosen, scope, summary.data, byId, criteria, future, stale, pending]);
-
-  // 해황 대상: 내가 고른 곳 → 즐겨찾기 첫 곳 → 안내
-  const fav = favorites.data?.[0];
-  const target: { id: number; basis: string; clearable: boolean } | null =
-    picked != null && byId.has(picked)
-      ? {
-          id: picked,
-          basis: pickedFrom === 'candidate' ? '후보에서 고른 곳' : pickedFrom === 'map' ? '지도에서 고른 곳' : '내가 고른 곳',
-          clearable: true,
-        }
-      : fav
-        ? { id: fav.id, basis: '즐겨찾기', clearable: false }
-        : null;
-
   const openSearchResult = (p: Place) => {
-    setPicked(p.id);
-    setPickedFrom('search');
     setQuery('');
     Keyboard.dismiss();
     router.push({ pathname: '/place/[id]', params: { id: String(p.id) } });
@@ -292,11 +251,8 @@ export default function HomeScreen() {
               s={s}
               dist={dist(s)}
               future={future}
-              selected={target?.id === s.place_id}
-              onSelect={() => {
-                setPicked(s.place_id);
-                setPickedFrom('candidate');
-              }}
+              selected={false}
+              onSelect={() => router.push({ pathname: '/place/[id]', params: { id: String(s.place_id) } })}
             />
           ))}
           {b.meets.length > candidates.length ? (
@@ -316,49 +272,28 @@ export default function HomeScreen() {
       ) : null}
 
       {/* 지역별 바다 상황 */}
-      <SectionHeader title="지역별 바다 상황" actionLabel="전체 지도" onAction={() => router.push('/explore')} />
+      <SectionHeader title="지역별 바다 상황" actionLabel="전체 지도 보기" onAction={() => router.push('/explore')} />
       {summary.isSuccess ? (
-        <SeaMap
-          dots={dots}
-          title={`${chosen ? scopeName : '전국'} · ${date ? dayLabel(date) : ''}`}
-          selectedId={target?.id ?? null}
-          onPick={(id) => {
-            setPicked(id);
-            setPickedFrom('map');
-          }}
+        <MapSummary
+          scopeName={chosen ? scopeName : '전국'}
+          dateLabel={date ? dayLabel(date) : ''}
+          total={chosen ? b.total : summary.data.places.filter((s) => !s.location_suspect).length}
+          meets={chosen && !pending && !stale ? b.meets.length : null}
+          warnings={future ? null : (chosen ? scope : summary.data.places).filter((s) => s.warning_level === 'warning').length}
+          onPress={() => router.push('/explore')}
         />
       ) : (
         <Hint text={summary.isError ? '지도 자료를 불러오지 못했어요.' : '지도 자료를 불러오는 중이에요…'} loading={summary.isPending} />
       )}
 
-      {/* 선택한 낚시터의 해황 */}
-      <SectionHeader title="선택한 낚시터의 해황" />
-      {!pickedLoaded ? null : target && date && today ? (
-        <SelectedSea
-          placeId={target.id}
-          basis={target.basis}
-          date={date}
-          today={today}
-          pending={pending}
-          onClear={target.clearable ? () => setPicked(null) : undefined}
-        />
-      ) : (
-        <Hint text="후보 카드·지도 점을 누르거나 검색으로 고르면 물때·파고·바람을 보여드려요." />
-      )}
-
-      {/* 낚시 정보 */}
-      <SectionHeader title="낚시 정보" />
+      {/* 바로가기 */}
+      <SectionHeader title="빠른 메뉴" />
       <View style={styles.tiles}>
-        <Tile icon="cat-tip" title="낚시 팁" onPress={() => router.push({ pathname: '/community', params: { category: 'tip' } })} />
-        <Tile
-          icon="find-compare"
-          title="두 곳 비교"
-          onPress={() => router.push(target ? { pathname: '/compare', params: { a: String(target.id) } } : '/compare')}
-        />
+        <Tile icon="trips" title="출조계획" onPress={() => router.push('/trips')} />
+        <Tile icon="find-compare" title="두 곳 비교" onPress={() => router.push('/compare')} />
         <Tile icon="regulation" title="금어기·안전" onPress={() => router.push('/info/safety')} />
       </View>
-
-      <RecentCatches />
+      {false ? <RecentCatches /> : null}
 
       <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
         국립해양조사원·기상청 공공데이터 · 조과를 보장하지 않으며 출조 전 특보를 꼭 확인하세요
@@ -459,6 +394,35 @@ function Tile({ icon, title, onPress }: { icon: AppIconName; title: string; onPr
       <ThemedText type="smallBold" style={styles.center} numberOfLines={1}>
         {title}
       </ThemedText>
+    </Pressable>
+  );
+}
+
+function MapSummary({ scopeName, dateLabel, total, meets, warnings, onPress }: {
+  scopeName: string;
+  dateLabel: string;
+  total: number;
+  meets: number | null;
+  warnings: number | null;
+  onPress: () => void;
+}) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${scopeName} 바다 상황 전체 지도 보기`}
+      onPress={onPress}
+      style={({ pressed }) => [styles.mapSummary, { borderColor: theme.border, backgroundColor: theme.backgroundElement }, pressed && styles.pressed]}>
+      <View style={[styles.mapSummaryIcon, { backgroundColor: theme.tintSoft }]}>
+        <AppIcon name="find-map" size={28} />
+      </View>
+      <View style={styles.flex}>
+        <ThemedText type="smallBold">{scopeName} · {dateLabel}</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+          등록 낚시터 {total}곳{meets != null ? ` · 내 기준 충족 ${meets}곳` : ''}{warnings != null ? ` · 특보 ${warnings}곳` : ''}
+        </ThemedText>
+      </View>
+      <ThemedText type="smallBold" themeColor="tint">전체 지도 ›</ThemedText>
     </Pressable>
   );
 }
@@ -645,6 +609,8 @@ const styles = StyleSheet.create({
   linkRow: { minHeight: 40, justifyContent: 'center' },
   tiles: { flexDirection: 'row', gap: 8 },
   tile: { flex: 1, alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 4 },
+  mapSummary: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 12, padding: 12, minHeight: 68 },
+  mapSummaryIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   writeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 12, padding: 12, minHeight: 56 },
   catchRow: { gap: 12, paddingRight: Layout.screenPadding },
   catchCard: { borderWidth: 1, borderRadius: 12, overflow: 'hidden' },

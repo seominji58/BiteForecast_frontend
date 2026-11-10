@@ -21,6 +21,7 @@ import { Brand, IconSize } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { dayLabel, findSeries, REASON_TEXT, timeLabel } from '@/lib/compare';
 import { WARNING_SHORT } from '@/lib/criteria';
+import { formatForecastWave } from '@/lib/format';
 import { CoordNote, SameCoordSheet } from '@/components/coord-note';
 import { distLabel, isApprox, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
 
@@ -90,8 +91,8 @@ export function CandidateCard({
       <CoordNote place={place} compact />
       {/* 파고 · 바람 · 특보를 따로 */}
       <View style={styles.metrics}>
-        <Metric icon="wave" label="파고 최대" value={s.wave_fc_max ? `${s.wave_fc_max.v}m` : '없음'} />
-        <Metric icon="wind" label="풍속 최대" value={s.wind_fc_max ? `${s.wind_fc_max.v}m/s` : '없음'} />
+        <Metric icon="wave" label="파고 최대" value={formatForecastWave(s.wave_fc_max?.v)} />
+        <Metric icon="wind" label="풍속 최대" value={s.wind_fc_max ? `${s.wind_fc_max.v}m/s` : '자료 없음'} />
         <View style={[styles.metric, { backgroundColor: theme.background }]}>
           <ThemedText type="small" themeColor="textSecondary">
             특보
@@ -101,12 +102,6 @@ export function CandidateCard({
           </ThemedText>
         </View>
       </View>
-      {s.next_tide ? (
-        <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-          {future ? '그날 첫' : '다음'} {TIDE_TYPE[s.next_tide.type]} {timeLabel(s.next_tide.t)} · {s.next_tide.station_name}{' '}
-          관측소 기준
-        </ThemedText>
-      ) : null}
     </Pressable>
   );
 }
