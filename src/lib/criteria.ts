@@ -77,7 +77,8 @@ export const WARNING_SHORT: Record<
   warning: { text: '해상 특보 발효 중', color: 'danger' },
   nearby: { text: '인근 해역 특보', color: 'warning' },
   preliminary: { text: '예비특보', color: 'warning' },
-  none: { text: '이 낚시터에 연결된 특보 없음', color: 'success' },
+  // 좁은 칸(홈 카드·지도 목록)용. 「이 낚시터 해역에 해당하는 특보 없음」의 줄임 — 긴 설명은 특보 배너에
+  none: { text: '해당 특보 없음', color: 'success' },
   unknown: { text: '특보 확인 불가', color: 'textSecondary' },
 };
 
