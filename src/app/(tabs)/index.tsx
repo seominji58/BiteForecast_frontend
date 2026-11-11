@@ -109,12 +109,16 @@ export default function HomeScreen() {
     if (stale) return [];
     // 좌표 불일치 의심(추가 검증 필요) 곳은 검증 전까지 후보로 내지 않는다
     const list = b.meets.filter((s) => !byId.get(s.place_id)?.coord?.recommend_hold);
-    // 내 주변: 가까운 순 / 바다 권역: 파고 예보 최대가 낮은 순 → 풍속 낮은 순 (실제 예보값 기준)
-    list.sort((x, y) =>
-      near && gps.coords
-        ? km(gps.coords, byId.get(x.place_id)!) - km(gps.coords, byId.get(y.place_id)!)
-        : x.wave_fc_max!.v - y.wave_fc_max!.v || x.wind_fc_max!.v - y.wind_fc_max!.v,
-    );
+    // 내 주변: 가까운 순 / 바다 권역: 파고 예보 최대 → 풍속 최대.
+    // 같은 값이면 장소 ID·이름으로 고정해 API 응답 순서에 의존하지 않는다.
+    list.sort((x, y) => {
+      const xPlace = byId.get(x.place_id)!;
+      const yPlace = byId.get(y.place_id)!;
+      const primary = near && gps.coords
+        ? km(gps.coords, xPlace) - km(gps.coords, yPlace)
+        : x.wave_fc_max!.v - y.wave_fc_max!.v || x.wind_fc_max!.v - y.wind_fc_max!.v;
+      return primary || x.place_id - y.place_id || xPlace.name.localeCompare(yPlace.name, 'ko') || yPlace.name.localeCompare(xPlace.name, 'ko');
+    });
     return list.slice(0, CANDIDATES);
   }, [b.meets, stale, near, gps.coords, byId]);
 
