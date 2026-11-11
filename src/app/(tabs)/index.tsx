@@ -239,8 +239,8 @@ export default function HomeScreen() {
         />
       ) : stale ? (
         <DataStateNotice
-          title="조건 자료를 갱신 중이에요"
-          detail={`${scopeName} 등록 장소 ${b.total}곳 · 현재 조건 판단 가능 0곳`}
+          title="최신 조건 자료를 확인할 수 없어요"
+          detail={`${scopeName} 등록 장소 ${b.total}곳은 확인할 수 있지만, 예보 또는 특보 자료가 오래되어 조건 충족 여부를 판단하지 않아요. ${freshnessLine(summary.data!.data_status)}`}
           actionLabel="등록 장소 지도 보기"
           onAction={() => router.push('/explore')}
         />
