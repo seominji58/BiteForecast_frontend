@@ -49,3 +49,4 @@ example
 
 # 어종 이미지 생성 후보 (검수 전, 앱에 포함하지 않음)
 assets/species/_candidates/
+__pycache__/

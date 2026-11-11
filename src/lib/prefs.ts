@@ -164,3 +164,36 @@ export function useHomeSea(): [SeaChoice | null, (v: SeaChoice | null) => void] 
   const [v, setV] = useStored('biteforecast.home_sea');
   return [(SEA_GROUPS as readonly string[]).includes(v ?? '') ? (v as SeaChoice) : null, setV];
 }
+
+// --- 홈 목표 어종 (홈·전체 어종 화면·상세가 같은 값을 본다) ---
+const HOME_SPECIES = 'biteforecast.home_species';
+let homeSpecies: string | null = null;
+let homeSpeciesLoaded = false;
+const homeSpeciesSubs = new Set<(v: string | null) => void>();
+
+/** 홈에서 고른 목표 어종 코드(lib/species.ts). null = 어종 상관없음 */
+export function useHomeSpecies(): [string | null, (code: string | null) => void] {
+  const [v, setV] = useState<string | null>(homeSpecies);
+  useEffect(() => {
+    homeSpeciesSubs.add(setV);
+    if (!homeSpeciesLoaded) {
+      read(HOME_SPECIES)
+        .catch(() => null)
+        .then((x) => {
+          homeSpeciesLoaded = true;
+          homeSpecies = x || null;
+          homeSpeciesSubs.forEach((f) => f(homeSpecies));
+        });
+    }
+    return () => {
+      homeSpeciesSubs.delete(setV);
+    };
+  }, []);
+  const update = (code: string | null) => {
+    homeSpecies = code;
+    homeSpeciesLoaded = true;
+    homeSpeciesSubs.forEach((f) => f(code));
+    write(HOME_SPECIES, code ?? '').catch(() => undefined);
+  };
+  return [v, update];
+}

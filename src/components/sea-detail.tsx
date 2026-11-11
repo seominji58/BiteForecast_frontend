@@ -9,6 +9,7 @@ import type { FishingIndex, Place, PlaceCompare } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { LEVEL_COLOR } from '@/components/compare-view';
 import { Card } from '@/components/screen';
+import { SpeciesImage } from '@/components/species';
 import { ThemedText } from '@/components/themed-text';
 import type { AppIconName } from '@/constants/icons';
 import { Brand, Layout } from '@/constants/theme';
@@ -25,6 +26,8 @@ import {
 } from '@/lib/compare';
 import { distanceGrade, seaState, windName } from '@/lib/describe';
 import { ptyLabel, SKY_TEXT } from '@/lib/format';
+import { useHomeSpecies } from '@/lib/prefs';
+import { speciesByCode, speciesByIndexName } from '@/lib/species';
 import { distLabel, isApprox, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
 
 type MetricKey = 'wave_height' | 'wind_speed' | 'water_temp';
@@ -255,6 +258,11 @@ function indexConditionText(item: FishingItem): string | null {
 
 export function FishingIndexCard({ pc }: { pc: PlaceCompare }) {
   const f = pc.fishing_index;
+  const [homeSpecies] = useHomeSpecies();
+  const want = speciesByCode(homeSpecies)?.indexName ?? null;
+  // 홈에서 고른 어종을 맨 위로 (나머지 순서는 그대로)
+  const ordered = (items: FishingItem[]) =>
+    want ? [...items.filter((i) => i.species === want), ...items.filter((i) => i.species !== want)] : items;
   const periods = f.status === 'ok' ? (f.periods ?? []) : [];
   if (periods.length === 0) {
     return (
@@ -280,8 +288,9 @@ export function FishingIndexCard({ pc }: { pc: PlaceCompare }) {
             </ThemedText>
           ) : null}
           <View style={styles.indexGrid}>
-            {p.items.map((i) => (
+            {ordered(p.items).map((i) => (
               <View key={i.species} style={styles.indexItem}>
+                {speciesByIndexName(i.species) ? <SpeciesImage code={speciesByIndexName(i.species)!.code} size={28} /> : null}
                 <View style={styles.flex}>
                   <ThemedText type="small" numberOfLines={1}>{i.species}</ThemedText>
                   {p.items.some((item) => indexConditionText(item) !== indexConditionText(p.items[0])) ? (

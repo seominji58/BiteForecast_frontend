@@ -4,24 +4,27 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, ImageBackground, Keyboard, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-import { useDateRange, usePlaces, usePlacesSummary, usePosts } from '@/api/queries';
-import type { Place, PlaceSummary, PostSummary } from '@/api/types';
+import { useDateRange, useFishingIndex, usePlaces, usePlacesSummary, usePosts, useSpecies } from '@/api/queries';
+import type { Place, PostSummary } from '@/api/types';
 import { usePhotoSource } from '@/api/upload';
 import { AppIcon } from '@/components/app-icon';
-import { CandidateCard } from '@/components/home-sea';
+import { GeneralResults, HomeActions, IndexResults, methodOk, METHODS, NoIndexNotice, SeaPreview, sortGeneral } from '@/components/home-explore';
 import { Card, SectionHeader, TabScreen } from '@/components/screen';
 import { SearchBar } from '@/components/search-bar';
+import { SpeciesImage, SpeciesRail, SpeciesStrip } from '@/components/species';
 import { ThemedText } from '@/components/themed-text';
 import type { AppIconName } from '@/constants/icons';
 import { Brand, IconSize, Layout } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { catchLine, shortDate, whereLine } from '@/lib/community';
 import { dayLabel, dayList } from '@/lib/compare';
-import { breakdown, criteriaLabel, freshnessLine } from '@/lib/criteria';
+import { freshnessLine } from '@/lib/criteria';
 import { timeAgo } from '@/lib/format';
 import { type Coords, getCurrentCoords } from '@/lib/location';
 import { km, matches, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
-import { SEA_GROUPS, type SeaChoice, useCriteria, useHomeSea } from '@/lib/prefs';
+import { SEA_GROUPS, type SeaChoice, useHomeSea, useHomeSpecies } from '@/lib/prefs';
+import { mergeWithApi, speciesByCode, type SpeciesItem } from '@/lib/species';
+import { SPECIES_IMAGES } from '@/lib/species-images';
 
 /** 받아 둔 기상청 예보가 하루 전체를 덮는 마지막 날짜 (KST, YYYY-MM-DD) */
 function forecastLastDay(validUntil: string | null): string | null {
@@ -33,7 +36,6 @@ function forecastLastDay(validUntil: string | null): string | null {
 
 /** 「내 주변」 후보로 볼 거리 (현재 위치 기준) */
 const NEAR_KM = 60;
-const CANDIDATES = 3;
 
 // 시간대별 분위기만 바꾸고, 데이터·검색·추천 로직은 그대로 유지한다.
 // 나중에 사용자 업로드 URI를 받을 때는 이 반환값을 원격 ImageSource로 대체하면 된다.
@@ -56,16 +58,20 @@ function homeBackgroundSource(hour = new Date().getHours()) {
 export default function HomeScreen() {
   const places = usePlaces();
   const range = useDateRange();
+  const speciesApi = useSpecies();
   const today = range.data?.today;
   const [dateSel, setDate] = useState<string | null>(null);
   const date = dateSel ?? today;
   const future = !!date && !!today && date !== today;
   const summary = usePlacesSummary(date);
+  const fi = useFishingIndex(date);
   const lastForecastDay = forecastLastDay(summary.data?.data_status.forecast_valid_until ?? null);
-  // 예보 범위 밖 날짜: 「예보 발표 전」 — 다른 날짜 자료로 대신하거나 조건 충족으로 보지 않는다
+  // 예보 범위 밖 날짜: 「예보 발표 전」 — 다른 날짜 자료로 대신하지 않는다
   const pending = !!date && !!lastForecastDay && date > lastForecastDay;
-  const [criteria] = useCriteria();
   const [sea, setSea] = useHomeSea();
+  const [speciesCode, setSpeciesCode] = useHomeSpecies();
+  const [method, setMethod] = useState('all');
+  const [periodSel, setPeriod] = useState<string | null>(null);
   const [near, setNear] = useState(false);
   const [gps, setGps] = useState<{ loading: boolean; coords: Coords | null; error: string | null }>({
     loading: false,
@@ -74,7 +80,11 @@ export default function HomeScreen() {
   });
   const [query, setQuery] = useState('');
 
+  const allSpecies = useMemo(() => mergeWithApi(speciesApi.data), [speciesApi.data]);
+  const railSpecies = useMemo(() => allSpecies.filter((x) => SPECIES_IMAGES[x.code]), [allSpecies]);
+  const species = speciesByCode(speciesCode) ?? allSpecies.find((x) => x.code === speciesCode) ?? null;
   const byId = useMemo(() => new Map((places.data ?? []).map((p) => [p.id, p])), [places.data]);
+  const summaryById = useMemo(() => new Map((summary.data?.places ?? []).map((s) => [s.place_id, s])), [summary.data]);
   const results = query.trim() ? (places.data ?? []).filter((p) => matches(p, query)).slice(0, 6) : [];
 
   // 내 주변: 버튼을 누를 때만 위치 권한을 묻는다 (좌표는 기기 안에서 거리 계산에만)
@@ -84,54 +94,65 @@ export default function HomeScreen() {
     const r = await getCurrentCoords();
     setGps('coords' in r ? { loading: false, coords: r.coords, error: null } : { loading: false, coords: null, error: r.error });
   };
-  const chooseSea = (v: SeaChoice) => {
+  const chooseSea = (v: SeaChoice | null) => {
     setNear(false);
     setSea(v);
   };
 
-  // 탐색 범위: 좌표 의심 낚시터는 처음부터 뺀다 (자료를 연결하지 않음)
-  const scope = useMemo(() => {
-    const list = (summary.data?.places ?? []).filter((s) => !s.location_suspect && byId.has(s.place_id));
-    if (near) {
-      if (!gps.coords) return [];
-      return list.filter((s) => km(gps.coords!, byId.get(s.place_id)!) <= NEAR_KM);
-    }
-    return sea ? list.filter((s) => s.sea_group === sea) : [];
-  }, [summary.data, byId, near, gps.coords, sea]);
-  const b = useMemo(() => breakdown(scope, criteria, { future }), [scope, criteria, future]);
-  const stale = !!summary.data?.data_status.stale;
-  const scopeName = near ? `내 주변 ${NEAR_KM}km` : (sea ?? '');
-  const chosen = near ? !!gps.coords : !!sea;
+  const distOf = (placeId: number) => (near && gps.coords && byId.has(placeId) ? km(gps.coords, byId.get(placeId)!) : null);
+  // 범위: 내 주변 60km / 바다 권역 / 전국. 방식 필터
+  const inScope = (p: Place) => {
+    if (!methodOk(method, p)) return false;
+    if (near) return !!gps.coords && km(gps.coords, p) <= NEAR_KM;
+    if (!sea) return true;
+    return summaryById.get(p.id)?.sea_group === sea;
+  };
+  const scopeName = near ? `내 주변 ${NEAR_KM}km` : (sea ?? '전국');
+  // 좌표 의심(D) 곳은 처음부터 뺀다 (기존 정책)
+  const scoped = useMemo(
+    () => (summary.data?.places ?? []).filter((s) => !s.location_suspect && byId.has(s.place_id) && inScope(byId.get(s.place_id)!)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [summary.data, byId, near, gps.coords, sea, method],
+  );
+  const general = useMemo(() => sortGeneral(scoped, byId, (s) => distOf(s.place_id)), [scoped, byId, near, gps.coords]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const dist = (s: PlaceSummary) => (gps.coords && near ? km(gps.coords, byId.get(s.place_id)!) : null);
-  const held = b.meets.filter((s) => byId.get(s.place_id)?.coord?.recommend_hold).length;
-  const candidates = useMemo(() => {
-    if (stale) return [];
-    // 좌표 불일치 의심(추가 검증 필요) 곳은 검증 전까지 후보로 내지 않는다
-    const list = b.meets.filter((s) => !byId.get(s.place_id)?.coord?.recommend_hold);
-    // 내 주변: 가까운 순 / 바다 권역: 파고 예보 최대 → 풍속 최대.
-    // 같은 값이면 장소 ID·이름으로 고정해 API 응답 순서에 의존하지 않는다.
-    list.sort((x, y) => {
-      const xPlace = byId.get(x.place_id)!;
-      const yPlace = byId.get(y.place_id)!;
-      const primary = near && gps.coords
-        ? km(gps.coords, xPlace) - km(gps.coords, yPlace)
-        : x.wave_fc_max!.v - y.wave_fc_max!.v || x.wind_fc_max!.v - y.wind_fc_max!.v;
-      return primary || x.place_id - y.place_id || xPlace.name.localeCompare(yPlace.name, 'ko') || yPlace.name.localeCompare(xPlace.name, 'ko');
-    });
-    return list.slice(0, CANDIDATES);
-  }, [b.meets, stale, near, gps.coords, byId]);
+  const day = fi.data;
+  const periods = day?.periods ?? [];
+  const period = periodSel && periods.includes(periodSel) ? periodSel : (periods[0] ?? '');
+  const indexCount = (s: SpeciesItem) =>
+    day ? day.points.filter((p) => p.places.some((l) => l.official) && p.species.some((x) => x.species === s.indexName)).length : null;
+  // 범위 안 공식 지점들의 물때 (발표값, 가장 많은 값)
+  const tide = useMemo(() => {
+    if (!day) return null;
+    const ids = new Set(scoped.map((s) => s.place_id));
+    const count = new Map<string, number>();
+    for (const p of day.points) {
+      const t = p.tide_phase[period] ?? Object.values(p.tide_phase)[0];
+      if (t && p.places.some((l) => ids.has(l.place_id))) count.set(t, (count.get(t) ?? 0) + 1);
+    }
+    return [...count].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+  }, [day, scoped, period]);
+
+  const catches = usePosts('catch', 'latest', { species: species ? (species.speciesCode ?? species.name) : null });
+  const catchCount = species && !species.indexName ? (catches.data?.length ?? null) : null;
 
   const openSearchResult = (p: Place) => {
     setQuery('');
     Keyboard.dismiss();
     router.push({ pathname: '/place/[id]', params: { id: String(p.id) } });
   };
+  // 출조계획: 고른 어종을 목표 어종으로, 장소·날짜가 있으면 함께
+  const plan = (placeId?: number) =>
+    router.push({
+      pathname: '/trip/new',
+      params: { ...(placeId ? { place: String(placeId) } : {}), ...(date ? { date } : {}), ...(species ? { species: species.code } : {}) },
+    });
 
   const qc = useQueryClient();
   const refresh = () =>
     Promise.all([
       qc.invalidateQueries({ queryKey: ['places-summary'] }),
+      qc.invalidateQueries({ queryKey: ['fishing-index'] }),
       qc.invalidateQueries({ queryKey: ['conditions'] }),
       qc.invalidateQueries({ queryKey: ['community', 'posts'] }),
       qc.invalidateQueries({ queryKey: ['meta', 'date-range'] }),
@@ -139,18 +160,19 @@ export default function HomeScreen() {
 
   const dates = range.data ? dayList(range.data.today, range.data.max) : [];
   const shortDay = (d: string) => (d === today ? '오늘' : dates[1] === d ? '내일' : dayLabel(d).replace(' ', ''));
-  const openCriteria = () => router.push({ pathname: '/explore', params: { mode: 'criteria' } });
+  const stale = !!summary.data?.data_status.stale;
+  const dateText = date ? dayLabel(date) : '';
 
   return (
     <TabScreen title="" immersive onRefresh={refresh}>
-      {/* 상단: 작은 검색 + 내 주변 · 지도 탐색 · 날짜 */}
+      {/* ① 상단: 바다 배경 · 검색 · 내 주변 · 지도 탐색 · 날짜 */}
       <ImageBackground source={homeBackgroundSource()} imageStyle={styles.heroImage} style={styles.hero}>
         <View pointerEvents="none" style={styles.heroShade} />
         <View style={styles.heroCopy}>
-          <Text style={styles.heroTitle}>오늘, 어디로 낚시 갈까요?</Text>
-          <Text style={styles.heroSubtitle}>해황·물때·특보를 한눈에, 출조를 준비해요</Text>
+          <Text style={styles.heroTitle}>오늘은 어떤 낚시를 떠나세요?</Text>
+          <Text style={styles.heroSubtitle}>어종과 지역을 고르고 바다 조건을 확인해 보세요</Text>
         </View>
-        <SearchBar value={query} onChangeText={setQuery} onClear={() => setQuery('')} placeholder="지역·낚시터 또는 어종 검색" />
+        <SearchBar value={query} onChangeText={setQuery} onClear={() => setQuery('')} placeholder="어종·지역·낚시터 검색" />
         <View style={styles.heroActions}>
           <HeroButton icon="find-gps" label="내 주변" active={near} onPress={locate} />
           <HeroButton icon="find-map" label="지도 탐색" onPress={() => router.push('/explore')} />
@@ -163,7 +185,7 @@ export default function HomeScreen() {
                 key={d}
                 accessibilityRole="button"
                 accessibilityState={{ selected: on }}
-                accessibilityLabel={`${dayLabel(d)} 해황 보기${lastForecastDay && d > lastForecastDay ? ', 예보 발표 전' : ''}`}
+                accessibilityLabel={`${dayLabel(d)} 보기${lastForecastDay && d > lastForecastDay ? ', 예보 발표 전' : ''}`}
                 onPress={() => setDate(d)}
                 style={({ pressed }) => [styles.datePill, on && styles.datePillOn, pressed && styles.pressed]}>
                 <Text style={[styles.dateText, !on && lastForecastDay && d > lastForecastDay && styles.dateTextPending, on && styles.dateTextOn]}>
@@ -178,144 +200,202 @@ export default function HomeScreen() {
 
       {query.trim() ? (
         <Card>
-          {results.length === 0 ? (
-            <ThemedText type="small" themeColor="textSecondary">
-              맞는 낚시터가 없어요. 「지도 탐색」에서 지역별로 둘러보세요.
-            </ThemedText>
-          ) : (
-            results.map((p) => (
-              <Pressable
-                key={p.id}
-                accessibilityRole="button"
-                onPress={() => openSearchResult(p)}
-                style={({ pressed }) => [styles.resultRow, pressed && styles.pressed]}>
-                <AppIcon name={PLACE_IMAGE[p.type]} size={IconSize.row} />
-                <View style={styles.flex}>
-                  <ThemedText type="smallBold" numberOfLines={1}>
-                    {p.name}
+          {(() => {
+            const sp = allSpecies.filter((x) => x.name.includes(query.trim()) || (x.alias ?? '').includes(query.trim())).slice(0, 3);
+            return (
+              <>
+                {sp.map((x) => (
+                  <Pressable
+                    key={x.code}
+                    accessibilityRole="button"
+                    onPress={() => {
+                      setSpeciesCode(x.code);
+                      setQuery('');
+                      Keyboard.dismiss();
+                    }}
+                    style={({ pressed }) => [styles.resultRow, pressed && styles.pressed]}>
+                    <SpeciesImage code={x.code} size={36} />
+                    <View style={styles.flex}>
+                      <ThemedText type="smallBold">{x.name}</ThemedText>
+                      <ThemedText type="small" themeColor="textSecondary">
+                        어종 · {x.indexName ? '공식 지수 제공' : '공식 지수 없음'}
+                      </ThemedText>
+                    </View>
+                    <ThemedText themeColor="textSecondary">›</ThemedText>
+                  </Pressable>
+                ))}
+                {results.length === 0 && sp.length === 0 ? (
+                  <ThemedText type="small" themeColor="textSecondary">
+                    맞는 어종·낚시터가 없어요. 「지도 탐색」에서 지역별로 둘러보세요.
                   </ThemedText>
-                  <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                    {p.region_name} · {PLACE_TYPE_LABEL[p.type]}
-                  </ThemedText>
-                </View>
-                <ThemedText themeColor="textSecondary">›</ThemedText>
-              </Pressable>
-            ))
-          )}
+                ) : null}
+                {results.map((p) => (
+                  <Pressable
+                    key={p.id}
+                    accessibilityRole="button"
+                    onPress={() => openSearchResult(p)}
+                    style={({ pressed }) => [styles.resultRow, pressed && styles.pressed]}>
+                    <AppIcon name={PLACE_IMAGE[p.type]} size={IconSize.row} />
+                    <View style={styles.flex}>
+                      <ThemedText type="smallBold" numberOfLines={1}>
+                        {p.name}
+                      </ThemedText>
+                      <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                        {p.region_name} · {PLACE_TYPE_LABEL[p.type]}
+                      </ThemedText>
+                    </View>
+                    <ThemedText themeColor="textSecondary">›</ThemedText>
+                  </Pressable>
+                ))}
+              </>
+            );
+          })()}
         </Card>
       ) : null}
 
-      {/* 오늘의 출조 탐색 */}
-      <SectionHeader
-        title={date && future ? `${dayLabel(date)} 출조 탐색` : '오늘의 출조 탐색'}
-        actionLabel="기준 바꾸기"
-        onAction={openCriteria}
+      {/* ② 목표 어종 */}
+      <SectionHeader title="어떤 어종을 잡으러 가세요?" actionLabel="전체 어종 보기" onAction={() => router.push('/species')} />
+      <SpeciesRail
+        items={railSpecies}
+        selected={speciesCode}
+        onSelect={setSpeciesCode}
+        status={(x) => {
+          if (!x.indexName) return '공식 지수 없음';
+          const n = indexCount(x);
+          return n == null ? '공식 지수 제공' : n ? `공식 지수 ${n}곳` : '이날 지수 없음';
+        }}
       />
+      {species ? (
+        <SpeciesStrip
+          item={species}
+          onClear={() => setSpeciesCode(null)}
+          line={
+            species.indexName
+              ? `공식 낚시지수 제공 · ${dateText} ${periods.join('·') || '발표 전'}`
+              : '공식 낚시지수 없음 · 일반 장소 탐색과 실제 조황 기록으로 안내해요'
+          }
+        />
+      ) : null}
+
+      {/* ③ 지역 · 방식 (· 시간대) */}
       <View style={styles.chipRow}>
         <SeaChip label="내 주변" icon="find-gps" on={near} onPress={locate} />
+        <SeaChip label="전국" on={!near && !sea} onPress={() => chooseSea(null)} />
         {SEA_GROUPS.map((g) => (
           <SeaChip key={g} label={g} on={!near && sea === g} onPress={() => chooseSea(g)} />
         ))}
       </View>
-      <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
-        내 기준: {criteriaLabel(criteria)}
-      </ThemedText>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.methodRow}>
+        {species?.indexName && periods.length > 1
+          ? periods.map((p) => <MiniChip key={p} label={p} on={p === period} onPress={() => setPeriod(p)} accent />)
+          : null}
+        {METHODS.map((m) => (
+          <MiniChip key={m.key} label={m.label} on={method === m.key} onPress={() => setMethod(m.key)} />
+        ))}
+      </ScrollView>
 
-      {!near && !sea ? (
-        <Hint text="바다를 고르거나 「내 주변」을 누르면, 고른 날짜의 예보로 내 기준에 맞는 낚시터를 보여드려요." />
-      ) : near && gps.loading ? (
+      {/* ④ 포인트 탐색 */}
+      <SectionHeader title={`${scopeName} · ${dateText} 포인트`} />
+      {near && gps.loading ? (
         <Hint text="현재 위치를 확인하는 중이에요…" loading />
       ) : near && gps.error ? (
-        <Hint text={`${gps.error} 위의 서해·남해·동해·제주 중에서 골라 주세요.`} tone="warning" />
-      ) : summary.isPending ? (
+        <Hint text={`${gps.error} 위의 전국·서해·남해·동해·제주 중에서 골라 주세요.`} tone="warning" />
+      ) : summary.isPending || places.isPending ? (
         <Hint text="낚시터 해황을 확인하는 중이에요…" loading />
       ) : summary.isError ? (
         <DataStateNotice
-          title="조건 자료를 잠시 확인할 수 없어요"
-          detail="등록 낚시터 검색·지도 탐색과 출조계획은 계속 사용할 수 있어요."
+          title="해황 자료를 잠시 확인할 수 없어요"
+          detail="낚시터 검색·지도 탐색과 출조계획은 계속 사용할 수 있어요."
           actionLabel="다시 확인"
           onAction={refresh}
           tone="danger"
         />
-      ) : stale ? (
-        <DataStateNotice
-          title="최신 조건 자료를 확인할 수 없어요"
-          detail={`${scopeName} 등록 장소 ${b.total}곳은 확인할 수 있지만, 예보 또는 특보 자료가 오래되어 조건 충족 여부를 판단하지 않아요. ${freshnessLine(summary.data!.data_status)}`}
-          actionLabel="등록 장소 지도 보기"
-          onAction={() => router.push('/explore')}
-        />
-      ) : pending ? (
-        <DataStateNotice
-          title={`${dayLabel(date!)} 예보를 기다리고 있어요`}
-          detail={`등록 장소 탐색은 가능하지만, 현재 조건 후보는 고르지 않아요.`}
-          actionLabel="등록 장소 지도 보기"
-          onAction={() => router.push('/explore')}
-        />
-      ) : scope.length === 0 ? (
-        <Hint text={near ? `현재 위치에서 ${NEAR_KM}km 안에 등록된 바다 낚시터가 없어요. 바다를 골라 주세요.` : '이 바다에 등록된 낚시터가 없어요.'} />
-      ) : b.insufficient ? (
-        <View style={styles.hintCol}>
-          <DataStateNotice
-            title={`${scopeName} 등록 장소 ${b.total}곳`}
-            detail={`${b.total - b.unknown}곳은 현재 조건을 판단할 수 있어요 · ${b.unknown}곳은 자료 부족`}
-            actionLabel="등록 장소 전체 보기"
-            onAction={() => router.push('/explore')}
+      ) : species?.indexName ? (
+        fi.isPending ? (
+          <Hint text="공식 낚시지수를 확인하는 중이에요…" loading />
+        ) : !day || day.points.length === 0 ? (
+          <Hint text={`${dateText} ${species.name} 공식 지수는 아직 발표 전이에요. 지수는 약 7일 앞까지 발표돼요.`} />
+        ) : (
+          <IndexResults
+            species={species}
+            day={day}
+            scope={inScope}
+            byId={byId}
+            summaryById={summaryById}
+            dist={distOf}
+            period={period}
+            pending={pending}
+            future={future}
+            scopeName={scopeName}
+            onPlan={plan}
+            onMore={() => router.push('/explore')}
           />
-          {candidates.length > 0 ? (
-            <CandidateResults
-              candidates={candidates}
-              b={b}
+        )
+      ) : (
+        <View style={styles.hintCol}>
+          {species ? (
+            <NoIndexNotice
+              species={species}
+              catchCount={catchCount}
               scopeName={scopeName}
-              near={near}
-              held={held}
-              future={future}
-              byId={byId}
-              dist={dist}
-              onSelect={(id) => router.push({ pathname: '/place/[id]', params: { id: String(id) } })}
-              onChange={openCriteria}
+              onCatches={() => router.push(catchCount === 0 ? '/community/new' : '/community')}
             />
           ) : null}
+          <GeneralResults
+            list={general}
+            byId={byId}
+            dist={(s) => distOf(s.place_id)}
+            pending={pending}
+            future={future}
+            sortLabel={near && gps.coords ? '가까운 순' : '자료가 많이 연결된 곳 먼저 · 이름순'}
+            onPlan={plan}
+            onMore={() => router.push('/explore')}
+          />
         </View>
-      ) : candidates.length === 0 ? (
-        <NoMatch b={b} scopeName={scopeName} onChange={openCriteria} />
-      ) : (
-        <CandidateResults candidates={candidates} b={b} scopeName={scopeName} near={near} held={held} future={future} byId={byId} dist={dist} onSelect={(id) => router.push({ pathname: '/place/[id]', params: { id: String(id) } })} onChange={openCriteria} />
       )}
-      {summary.isSuccess && chosen ? (
+
+      {/* ⑤ 지도 · 출조계획 */}
+      <HomeActions onMap={() => router.push('/explore')} onPlan={() => plan()} />
+
+      {/* ⑥ 오늘의 바다 미리보기 */}
+      {summary.isSuccess ? (
+        <SeaPreview list={scoped} tide={tide} future={future} pending={pending} title={`${scopeName} 바다 미리보기 · ${dateText}`} />
+      ) : null}
+      {summary.isSuccess ? (
         <ThemedText type="small" themeColor={stale ? 'warning' : 'textSecondary'}>
           {freshnessLine(summary.data.data_status)}
           {future ? ' · 특보는 지금 발효 상태 기준' : ''}
         </ThemedText>
       ) : null}
+      <Pressable accessibilityRole="button" onPress={() => router.push('/info/safety')} style={styles.linkRow}>
+        <ThemedText type="smallBold" themeColor="tint">
+          금어기·안전 수칙 보기 ›
+        </ThemedText>
+      </Pressable>
 
-      {/* 지역별 바다 상황 */}
-      <SectionHeader title="지역별 바다 상황" actionLabel="전체 지도 보기" onAction={() => router.push('/explore')} />
-      {summary.isSuccess ? (
-        <MapSummary
-          scopeName={chosen ? scopeName : '전국'}
-          dateLabel={date ? dayLabel(date) : ''}
-          total={chosen ? b.total : summary.data.places.filter((s) => !s.location_suspect).length}
-          meets={chosen && !pending && !stale ? b.meets.length : null}
-          warnings={future ? null : (chosen ? scope : summary.data.places).filter((s) => s.warning_level === 'warning').length}
-          onPress={() => router.push('/explore')}
-        />
-      ) : (
-        <Hint text={summary.isError ? '지도 자료를 불러오지 못했어요.' : '지도 자료를 불러오는 중이에요…'} loading={summary.isPending} />
-      )}
-
-      {/* 바로가기 */}
-      <SectionHeader title="빠른 메뉴" />
-      <View style={styles.tiles}>
-        <Tile icon="trips" title="출조계획" onPress={() => router.push('/trips')} />
-        <Tile icon="find-compare" title="두 곳 비교" onPress={() => router.push('/compare')} />
-        <Tile icon="regulation" title="금어기·안전" onPress={() => router.push('/info/safety')} />
-      </View>
-      {false ? <RecentCatches /> : null}
+      {/* ⑦ 최근 조황 (실제 기록만) */}
+      <RecentCatches species={species} />
 
       <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
         국립해양조사원·기상청 공공데이터 · 조과를 보장하지 않으며 출조 전 특보를 꼭 확인하세요
       </ThemedText>
     </TabScreen>
+  );
+}
+
+function MiniChip({ label, on, onPress, accent }: { label: string; on: boolean; onPress: () => void; accent?: boolean }) {
+  const theme = useTheme();
+  const bg = on ? (accent ? Brand.orange : theme.text) : theme.backgroundElement;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: on }}
+      onPress={onPress}
+      style={({ pressed }) => [styles.miniChip, { backgroundColor: bg, borderColor: on ? bg : theme.border }, pressed && styles.pressed]}>
+      <ThemedText type="small" style={[styles.bold, { color: on ? '#fff' : theme.text }]}>
+        {label}
+      </ThemedText>
+    </Pressable>
   );
 }
 
@@ -402,121 +482,10 @@ function DataStateNotice({
   );
 }
 
-function CandidateResults({
-  candidates,
-  b,
-  scopeName,
-  near,
-  held,
-  future,
-  byId,
-  dist,
-  onSelect,
-  onChange,
-}: {
-  candidates: PlaceSummary[];
-  b: ReturnType<typeof breakdown>;
-  scopeName: string;
-  near: boolean;
-  held: number;
-  future: boolean;
-  byId: Map<number, Place>;
-  dist: (s: PlaceSummary) => number | null;
-  onSelect: (id: number) => void;
-  onChange: () => void;
-}) {
-  return (
-    <View style={styles.cands}>
-      <ThemedText type="small" themeColor="textSecondary">
-        {scopeName} {b.total}곳 중 내 기준 충족 {b.meets.length}곳 · {near ? '가까운 순' : '파고 예보가 낮은 순'}
-      </ThemedText>
-      {held ? <ThemedText type="small" themeColor="textSecondary">좌표를 검증 중인 {held}곳은 후보에서 뺐어요.</ThemedText> : null}
-      {candidates.map((s) => (
-        <CandidateCard key={s.place_id} place={byId.get(s.place_id)!} s={s} dist={dist(s)} future={future} selected={false} onSelect={() => onSelect(s.place_id)} />
-      ))}
-      {b.meets.length > candidates.length ? (
-        <Pressable accessibilityRole="button" onPress={onChange} style={styles.linkRow}>
-          <ThemedText type="smallBold" themeColor="tint">맞는 곳 {b.meets.length}곳 모두 지도에서 보기 ›</ThemedText>
-        </Pressable>
-      ) : null}
-    </View>
-  );
-}
-
-/** 맞는 곳 0곳: 빠진 이유를 이유별 곳 수로 (조건 밖 곳을 추천처럼 보여주지 않음) */
-function NoMatch({ b, scopeName, onChange }: { b: ReturnType<typeof breakdown>; scopeName: string; onChange: () => void }) {
-  const reasons = [
-    b.warning ? `특보 발효 ${b.warning}곳` : null,
-    b.unknown ? `자료 부족 ${b.unknown}곳` : null,
-    b.waveOver ? `파고 초과 ${b.waveOver}곳` : null,
-    b.windOver ? `풍속 초과 ${b.windOver}곳` : null,
-    b.indexLow ? `지수 미달 ${b.indexLow}곳` : null,
-  ].filter(Boolean);
-  return (
-    <View style={styles.hintCol}>
-      <Hint text={`${scopeName} ${b.total}곳 중 내 기준에 맞는 곳이 없어요 · ${reasons.join(' · ')}`} />
-      <Pressable accessibilityRole="button" onPress={onChange} style={styles.linkRow}>
-        <ThemedText type="smallBold" themeColor="tint">
-          기준 바꾸기 ›
-        </ThemedText>
-      </Pressable>
-    </View>
-  );
-}
-
-function Tile({ icon, title, onPress }: { icon: AppIconName; title: string; onPress: () => void }) {
-  const theme = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.tile,
-        { backgroundColor: theme.backgroundElement, borderColor: theme.border },
-        pressed && styles.pressed,
-      ]}>
-      <AppIcon name={icon} size={28} />
-      <ThemedText type="smallBold" style={styles.center} numberOfLines={1}>
-        {title}
-      </ThemedText>
-    </Pressable>
-  );
-}
-
-function MapSummary({ scopeName, dateLabel, total, meets, warnings, onPress }: {
-  scopeName: string;
-  dateLabel: string;
-  total: number;
-  meets: number | null;
-  warnings: number | null;
-  onPress: () => void;
-}) {
-  const theme = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${scopeName} 바다 상황 전체 지도 보기`}
-      onPress={onPress}
-      style={({ pressed }) => [styles.mapSummary, { borderColor: theme.border, backgroundColor: theme.backgroundElement }, pressed && styles.pressed]}>
-      <View style={[styles.mapSummaryIcon, { backgroundColor: theme.tintSoft }]}>
-        <AppIcon name="find-map" size={28} />
-      </View>
-      <View style={styles.flex}>
-        <ThemedText type="smallBold">{scopeName} · {dateLabel}</ThemedText>
-        <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-          등록 낚시터 {total}곳{meets != null ? ` · 내 기준 충족 ${meets}곳` : ''}{warnings != null ? ` · 특보 ${warnings}곳` : ''}
-        </ThemedText>
-      </View>
-      <ThemedText type="smallBold" themeColor="tint">전체 지도 ›</ThemedText>
-    </Pressable>
-  );
-}
-
-/** 최근 조황: 실제 조황 글이 있을 때만 카드. 없으면 작은 글쓰기 입구만 (가짜 조황·사진 없음) */
-function RecentCatches() {
+function RecentCatches({ species }: { species: SpeciesItem | null }) {
   const theme = useTheme();
   const { width } = useWindowDimensions();
-  const posts = usePosts('catch', 'latest');
+  const posts = usePosts('catch', 'latest', { species: species ? (species.speciesCode ?? species.name) : null });
   const source = usePhotoSource();
   const items = useMemo(() => {
     const all = (posts.data ?? []).filter((p) => p.category === 'catch');
@@ -527,32 +496,11 @@ function RecentCatches() {
   const cardW = items.length === 1 ? full : Math.min(220, (full - 12) / 2);
 
   if (posts.isPending) return null;
-  if (items.length === 0) {
-    return (
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => router.push('/community/new')}
-        style={({ pressed }) => [
-          styles.writeRow,
-          { borderColor: theme.border, backgroundColor: theme.backgroundElement },
-          pressed && styles.pressed,
-        ]}>
-        <AppIcon name="cat-catch" size={IconSize.row} />
-        <View style={styles.flex}>
-          <ThemedText type="smallBold">아직 올라온 조황이 없어요</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            첫 조황을 올려 주세요
-          </ThemedText>
-        </View>
-        <ThemedText type="smallBold" themeColor="tint">
-          글쓰기 ›
-        </ThemedText>
-      </Pressable>
-    );
-  }
+  // 실제 조황이 없으면 섹션을 숨긴다 (가짜 조황 없음)
+  if (items.length === 0) return null;
   return (
     <>
-      <SectionHeader title="최근 조황" actionLabel="전체보기" onAction={() => router.push('/community')} />
+      <SectionHeader title={species ? `최근 ${species.name} 조황` : '최근 조황'} actionLabel="전체보기" onAction={() => router.push('/community')} />
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -684,6 +632,8 @@ const styles = StyleSheet.create({
   dateTextOn: { color: '#fff', fontWeight: '800' },
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  methodRow: { gap: 6, paddingRight: 16 },
+  miniChip: { minHeight: 32, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   seaChip: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -516,3 +516,21 @@ export type TripOutlook = {
   stops: StopOutlook[];
   data_status: DataStatus;
 };
+
+/** 그날 공식 바다낚시지수 (국립해양조사원 발표값 그대로, 홈 어종 탐색) */
+export type IndexPlaceLink = { place_id: number; distance_km: number | null; official: boolean };
+export type IndexPoint = {
+  station_id: number;
+  station_name: string;
+  tide_phase: Record<string, string | null>;
+  species: { species: string; grades: Record<string, string> }[];
+  places: IndexPlaceLink[];
+};
+export type FishingIndexDay = {
+  date: string;
+  periods: string[];
+  fetched_at: string | null;
+  max_km: number;
+  points: IndexPoint[];
+  disclaimer: string;
+};

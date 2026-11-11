@@ -60,6 +60,15 @@ export const useConditions = (placeId: number | null, date: string | undefined) 
   });
 
 /** 전체 낚시터 요약 (서버 10분 캐시) */
+/** 그날 공식 낚시지수 (홈 어종 탐색) */
+export const useFishingIndex = (date: string | undefined, enabled = true) =>
+  useQuery({
+    queryKey: ['fishing-index', date],
+    queryFn: () => api.fishingIndex(date!),
+    enabled: !!date && enabled,
+    staleTime: 10 * 60_000,
+  });
+
 export const usePlacesSummary = (date: string | undefined) =>
   useQuery({
     queryKey: ['places-summary', date],

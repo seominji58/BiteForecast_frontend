@@ -11,6 +11,7 @@ import { CoordNote } from '@/components/coord-note';
 import { LoginRequired } from '@/components/login-required';
 import { Loading, StackScreen } from '@/components/screen';
 import { NO_SPECIES, SpeciesField, type SpeciesValue } from '@/components/species-field';
+import { speciesByCode, toSpeciesValue } from '@/lib/species';
 import { ThemedText } from '@/components/themed-text';
 import { PlaceField } from '@/components/place-field';
 import { formatDay, parseDay } from '@/lib/compare';
@@ -26,10 +27,11 @@ const MAX_DAYS = 7;
  * - 로그인 전에도 작성할 수 있다. 「계획 만들기」를 누를 때 로그인을 요청한다
  * - 새 계획은 고칠 때마다 기기에 임시 저장 → 로그인·가입 후, 앱을 껐다 켜도 이어 쓴다 (lib/trip-draft.ts 정책)
  * - ?place=147&date=2026-11-14 : 홈·상세의 「계획에 추가」에서 들어오면 장소·날짜가 채워진다
+ * - ?species=rockfish : 홈에서 고른 목표 어종 (기준표에 없는 어종은 기타 입력으로)
  * - ?id=3 : 수정 (로그인 필요, 장소는 계획 화면에서 바꾼다)
  */
 function TripFormScreen() {
-  const params = useLocalSearchParams<{ place?: string; date?: string; id?: string }>();
+  const params = useLocalSearchParams<{ place?: string; date?: string; id?: string; species?: string }>();
   const editId = params.id ? Number(params.id) : null;
   const { status } = useAuth();
   const { draft, loaded } = useTripDraft();
@@ -45,7 +47,8 @@ function TripFormScreen() {
   if (editId != null && existing.isPending) return <Loading />;
   if (!range.data || (editId == null && !loaded)) return <Loading />;
   // 「계획에 추가」로 새 장소·날짜를 들고 왔으면 그것을, 아니면 작성하던 내용을 이어 쓴다
-  const resume = editId == null && !params.place ? draft : null;
+  const resume = editId == null && !params.place && !params.species ? draft : null;
+  const fromHome = speciesByCode(params.species);
   return (
     <TripForm
       today={range.data.today}
@@ -53,6 +56,7 @@ function TripFormScreen() {
       draft={resume}
       placeId={params.place ? Number(params.place) : null}
       date={params.date ?? null}
+      species={fromHome ? toSpeciesValue(fromHome) : null}
     />
   );
 }
@@ -63,12 +67,14 @@ function TripForm({
   draft,
   placeId: initialPlace,
   date,
+  species: initialSpecies,
 }: {
   today: string;
   initial?: Trip;
   draft: TripDraft | null;
   placeId: number | null;
   date: string | null;
+  species?: SpeciesValue | null;
 }) {
   const places = usePlaces();
   const { signedIn } = useAuth();
@@ -80,7 +86,7 @@ function TripForm({
   const [end, setEnd] = useState(initial?.end_date ?? d?.end ?? startDefault);
   const [region, setRegion] = useState<string | null>(initial?.region ?? d?.region ?? null);
   const [species, setSpecies] = useState<SpeciesValue>(
-    initial ? { code: initial.species_code, etc: initial.species_etc } : (d?.species ?? NO_SPECIES),
+    initial ? { code: initial.species_code, etc: initial.species_etc } : (initialSpecies ?? d?.species ?? NO_SPECIES),
   );
   const [memo, setMemo] = useState(initial?.memo ?? d?.memo ?? '');
   const [placeId, setPlaceId] = useState<number | null>(initial ? null : (d?.placeId ?? initialPlace));

@@ -4,10 +4,12 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSpecies } from '@/api/queries';
 import type { Species } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
+import { SpeciesImage } from '@/components/species';
 import { SearchSelect } from '@/components/search-select';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
 import { RECENT_SPECIES } from '@/lib/prefs';
+import { speciesForRecord } from '@/lib/species';
 
 /** 어종 값: 목록 어종(code) 또는 목록에 없는 어종 직접 입력(etc) 중 하나. 둘 다 null 이면 미선택 */
 export type SpeciesValue = { code: string | null; etc: string | null };
@@ -41,7 +43,11 @@ export function SpeciesField({
           accessibilityLabel={name ? `어종: ${name}, 바꾸기` : placeholder}
           onPress={() => setOpen(true)}
           style={styles.main}>
-          <AppIcon name="total-fish" size={22} />
+          {speciesForRecord(value.code, value.etc) ? (
+            <SpeciesImage code={speciesForRecord(value.code, value.etc)!.code} size={36} />
+          ) : (
+            <AppIcon name="total-fish" size={22} />
+          )}
           <View style={styles.flex}>
             <ThemedText type={name ? 'smallBold' : 'default'} themeColor={name ? 'text' : 'textSecondary'}>
               {name ?? placeholder}

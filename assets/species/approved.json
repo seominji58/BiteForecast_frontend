@@ -1,0 +1,572 @@
+{
+  "black_porgy": {
+    "code": "black_porgy",
+    "name_ko": "감성돔",
+    "scientific": "Acanthopagrus schlegelii",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "98ad3ee7761553e4",
+    "usage": {
+      "input_tokens": 255,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 255
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1704
+    },
+    "created_at": "2026-11-11T10:29:03.171Z",
+    "review": {
+      "checklist": [
+        "deep, laterally compressed oval body",
+        "silvery gray to dark gray with faint vertical bands",
+        "steep forehead profile",
+        "strong spiny dorsal fin",
+        "dark pelvic fins"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/black_porgy.png",
+    "asset_px": 384,
+    "asset_kb": 135,
+    "applied_at": "2026-11-11T10:49:12.472012+00:00"
+  },
+  "black_rockfish": {
+    "code": "black_rockfish",
+    "name_ko": "볼락",
+    "scientific": "Sebastes inermis",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "c28a061af5887d8a",
+    "usage": {
+      "input_tokens": 243,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 243
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1692
+    },
+    "created_at": "2026-11-11T10:29:46.211Z",
+    "review": {
+      "checklist": [
+        "medium oval body",
+        "very large eyes",
+        "brownish-black body with faint dark bands",
+        "spiny dorsal fin",
+        "slightly upturned mouth"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/black_rockfish.png",
+    "asset_px": 384,
+    "asset_kb": 113,
+    "applied_at": "2026-11-11T10:49:12.497783+00:00"
+  },
+  "conger": {
+    "code": "conger",
+    "name_ko": "붕장어",
+    "scientific": "Conger myriaster",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "312c92d0d27d341e",
+    "usage": {
+      "input_tokens": 276,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 276
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1725
+    },
+    "created_at": "2026-11-11T10:30:46.994Z",
+    "review": {
+      "checklist": [
+        "long eel-like cylindrical body",
+        "row of white dots along the lateral line and on the head",
+        "grayish-brown back and pale belly",
+        "dorsal and anal fins continuous around the tail",
+        "pointed head with a large mouth"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/conger.png",
+    "asset_px": 384,
+    "asset_kb": 72,
+    "applied_at": "2026-11-11T10:49:12.520924+00:00"
+  },
+  "cuttlefish": {
+    "code": "cuttlefish",
+    "name_ko": "갑오징어",
+    "scientific": "Sepia esculenta",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "9e26114b59509d36",
+    "usage": {
+      "input_tokens": 257,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 257
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1706
+    },
+    "created_at": "2026-11-11T10:30:12.284Z",
+    "review": {
+      "checklist": [
+        "broad flattened oval mantle",
+        "thin fin running along the entire edge of the mantle",
+        "eight short arms and two longer tentacles",
+        "W-shaped pupils",
+        "brown back with fine pale stripes and spots"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/cuttlefish.png",
+    "asset_px": 384,
+    "asset_kb": 154,
+    "applied_at": "2026-11-11T10:49:12.549671+00:00"
+  },
+  "flatfish": {
+    "code": "flatfish",
+    "name_ko": "광어(넙치)",
+    "scientific": "Paralichthys olivaceus",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "5a144fcaed3dace1",
+    "usage": {
+      "input_tokens": 274,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 274
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1723
+    },
+    "created_at": "2026-11-11T10:30:04.415Z",
+    "review": {
+      "checklist": [
+        "flat oval body",
+        "both eyes on the left side of the body (upper side)",
+        "olive-brown upper side with pale and dark spots",
+        "large mouth with sharp teeth",
+        "long fringe-like dorsal and anal fins running along the body edges"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/flatfish.png",
+    "asset_px": 384,
+    "asset_kb": 130,
+    "applied_at": "2026-11-11T10:49:12.579792+00:00"
+  },
+  "hairtail": {
+    "code": "hairtail",
+    "name_ko": "갈치",
+    "scientific": "Trichiurus japonicus",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "8e1be71256646449",
+    "usage": {
+      "input_tokens": 277,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 277
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1726
+    },
+    "created_at": "2026-11-11T10:30:29.674Z",
+    "review": {
+      "checklist": [
+        "very long ribbon-like compressed body",
+        "bright metallic silver color",
+        "body tapering to a thin point with no tail fin",
+        "long low dorsal fin along the whole back",
+        "large mouth with fang-like teeth and big eyes"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/hairtail.png",
+    "asset_px": 384,
+    "asset_kb": 66,
+    "applied_at": "2026-11-11T10:49:12.600921+00:00"
+  },
+  "mackerel": {
+    "code": "mackerel",
+    "name_ko": "고등어",
+    "scientific": "Scomber japonicus",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "75bca7df9a419509",
+    "usage": {
+      "input_tokens": 254,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 254
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1703
+    },
+    "created_at": "2026-11-11T10:30:38.110Z",
+    "review": {
+      "checklist": [
+        "torpedo-shaped body",
+        "blue-green back with dark wavy stripes",
+        "silvery white belly",
+        "row of small finlets behind the second dorsal and anal fins",
+        "deeply forked tail"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/mackerel.png",
+    "asset_px": 384,
+    "asset_kb": 65,
+    "applied_at": "2026-11-11T10:49:12.619959+00:00"
+  },
+  "octopus": {
+    "code": "octopus",
+    "name_ko": "문어",
+    "scientific": "Octopus sinensis",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "14eb603bb8a73b9e",
+    "usage": {
+      "input_tokens": 248,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 248
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1697
+    },
+    "created_at": "2026-11-11T10:30:21.176Z",
+    "review": {
+      "checklist": [
+        "large bulbous mantle",
+        "eight long arms",
+        "two rows of suckers on each arm",
+        "reddish-brown mottled skin",
+        "prominent eyes"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/octopus.png",
+    "asset_px": 384,
+    "asset_kb": 184,
+    "applied_at": "2026-11-11T10:49:12.654244+00:00"
+  },
+  "opaleye": {
+    "code": "opaleye",
+    "name_ko": "벵에돔",
+    "scientific": "Girella punctata",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "f4de906bd16b3e83",
+    "usage": {
+      "input_tokens": 250,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 250
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1699
+    },
+    "created_at": "2026-11-11T10:29:28.965Z",
+    "review": {
+      "checklist": [
+        "oval, moderately deep body",
+        "uniform dark blackish-green to bluish-black color",
+        "small mouth",
+        "small dark spot at each scale",
+        "forked tail"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/opaleye.png",
+    "asset_px": 384,
+    "asset_kb": 121,
+    "applied_at": "2026-11-11T10:49:12.680132+00:00"
+  },
+  "red_rockfish": {
+    "code": "red_rockfish",
+    "name_ko": "열기(불볼락)",
+    "scientific": "Sebastes thompsoni",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "bbf415d3d1218169",
+    "usage": {
+      "input_tokens": 248,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 248
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1697
+    },
+    "created_at": "2026-11-11T10:29:54.462Z",
+    "review": {
+      "checklist": [
+        "oval body",
+        "reddish-orange to pink color with faint darker blotches",
+        "large eyes",
+        "spiny dorsal fin",
+        "slightly forked tail"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/red_rockfish.png",
+    "asset_px": 384,
+    "asset_kb": 118,
+    "applied_at": "2026-11-11T10:49:12.704566+00:00"
+  },
+  "red_seabream": {
+    "code": "red_seabream",
+    "name_ko": "참돔",
+    "scientific": "Pagrus major",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "d9aae3ae12d7cb4d",
+    "usage": {
+      "input_tokens": 241,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 241
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1690
+    },
+    "created_at": "2026-11-11T10:29:38.817Z",
+    "review": {
+      "checklist": [
+        "deep oval body",
+        "pinkish-red color",
+        "scattered small bright blue spots on the upper body",
+        "steep forehead",
+        "tail fin edged dark"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/red_seabream.png",
+    "asset_px": 384,
+    "asset_kb": 127,
+    "applied_at": "2026-11-11T10:49:12.728464+00:00"
+  },
+  "rock_bream": {
+    "code": "rock_bream",
+    "name_ko": "돌돔",
+    "scientific": "Oplegnathus fasciatus",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "f14c58a6cf46f3b9",
+    "usage": {
+      "input_tokens": 252,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 252
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1701
+    },
+    "created_at": "2026-11-11T10:29:22.615Z",
+    "review": {
+      "checklist": [
+        "deep compressed body",
+        "seven bold black vertical bars on a pale grayish body",
+        "fused parrot-like beak teeth",
+        "rounded tail fin edge",
+        "spiny dorsal fin"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/rock_bream.png",
+    "asset_px": 384,
+    "asset_kb": 147,
+    "applied_at": "2026-11-11T10:49:12.758757+00:00"
+  },
+  "rockfish": {
+    "code": "rockfish",
+    "name_ko": "우럭",
+    "scientific": "Sebastes schlegelii",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "3615b0a1e7aba23a",
+    "usage": {
+      "input_tokens": 257,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 257
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1706
+    },
+    "created_at": "2026-11-11T10:23:07.857Z",
+    "review": {
+      "checklist": [
+        "dark grayish-brown mottled body",
+        "large head with spiny cheeks",
+        "large mouth with protruding lower jaw",
+        "spiny dorsal fin continuous with soft dorsal fin",
+        "dark stripes radiating from the eye"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/rockfish.png",
+    "asset_px": 384,
+    "asset_kb": 113,
+    "applied_at": "2026-11-11T10:49:12.783176+00:00"
+  },
+  "seabass": {
+    "code": "seabass",
+    "name_ko": "농어",
+    "scientific": "Lateolabrax japonicus",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "ac690d2592e9f521",
+    "usage": {
+      "input_tokens": 252,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 252
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1701
+    },
+    "created_at": "2026-11-11T10:29:12.498Z",
+    "review": {
+      "checklist": [
+        "elongated streamlined silver body",
+        "large mouth with lower jaw slightly longer",
+        "two separate dorsal fins",
+        "greenish-gray back fading to silver belly",
+        "small dark spots on the back and dorsal fin"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/seabass.png",
+    "asset_px": 384,
+    "asset_kb": 86,
+    "applied_at": "2026-11-11T10:49:12.804529+00:00"
+  },
+  "webfoot_octopus": {
+    "code": "webfoot_octopus",
+    "name_ko": "주꾸미",
+    "scientific": "Amphioctopus fangsiao",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "01d62483eaaeccf2",
+    "usage": {
+      "input_tokens": 260,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 260
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1709
+    },
+    "created_at": "2026-11-11T10:23:18.678Z",
+    "review": {
+      "checklist": [
+        "small octopus",
+        "round mantle",
+        "eight short arms with suckers",
+        "golden ring-shaped eyespot at the arm base below each eye",
+        "grayish-brown mottled skin"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/webfoot_octopus.png",
+    "asset_px": 384,
+    "asset_kb": 205,
+    "applied_at": "2026-11-11T10:49:12.838533+00:00"
+  }
+}

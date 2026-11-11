@@ -12,6 +12,7 @@ import { Button, Chip, Field, TextField } from '@/components/form';
 import { AuthGate } from '@/components/login-required';
 import { PlacePicker } from '@/components/place-picker';
 import { Card, ErrorView, Loading, SectionHeader, StackScreen } from '@/components/screen';
+import { SpeciesImage } from '@/components/species';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, IconSize } from '@/constants/theme';
@@ -20,6 +21,7 @@ import { dayLabel } from '@/lib/compare';
 import { criteriaLabel, freshnessLine } from '@/lib/criteria';
 import { PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
 import { useCriteria } from '@/lib/prefs';
+import { speciesForRecord } from '@/lib/species';
 import { dday, hmToDate, outlookLine, periodLabel, timeRange, toHm, tripDays } from '@/lib/trip';
 
 const MAX_STOPS_PER_DAY = 5;
@@ -86,9 +88,17 @@ function TripBody({
             </ThemedText>
           </View>
         </View>
-        <ThemedText type="sectionTitle" style={styles.onNavy}>
-          {trip.title}
-        </ThemedText>
+        <View style={styles.titleRow}>
+          {speciesForRecord(trip.species_code, trip.species_etc) ? (
+            // 목표 어종 그림 (기준표 코드 또는 기타 입력 이름으로 찾음)
+            <View style={styles.speciesArt}>
+              <SpeciesImage code={speciesForRecord(trip.species_code, trip.species_etc)!.code} size={44} />
+            </View>
+          ) : null}
+          <ThemedText type="sectionTitle" style={[styles.onNavy, styles.flex1]}>
+            {trip.title}
+          </ThemedText>
+        </View>
         <ThemedText type="small" style={styles.onNavySub}>
           {periodLabel(trip.start_date, trip.end_date)}
           {trip.region ? ` · ${trip.region}` : ''}
@@ -534,6 +544,9 @@ export default function TripScreen() {
 }
 
 const styles = StyleSheet.create({
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  speciesArt: { width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' },
+  flex1: { flex: 1 },
   flex: { flex: 1 },
   pressed: { opacity: 0.7 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
