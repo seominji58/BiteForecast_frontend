@@ -197,3 +197,38 @@ export function useHomeSpecies(): [string | null, (code: string | null) => void]
   };
   return [v, update];
 }
+
+// --- 홈 지역 (홈 조건 상자·포인트 보기 화면이 같은 값을 본다) ---
+export const REGIONS = ['내 주변', '전국', '서해', '남해', '동해', '제주'] as const;
+export type Region = (typeof REGIONS)[number];
+const HOME_REGION = 'biteforecast.home_region';
+let homeRegion: Region = '서해';
+let homeRegionLoaded = false;
+const homeRegionSubs = new Set<(v: Region) => void>();
+
+/** 홈 지역. 「내 주변」은 고를 때 위치 권한을 묻는다 (좌표는 저장하지 않음) */
+export function useHomeRegion(): [Region, (r: Region) => void] {
+  const [v, setV] = useState<Region>(homeRegion);
+  useEffect(() => {
+    homeRegionSubs.add(setV);
+    if (!homeRegionLoaded) {
+      read(HOME_REGION)
+        .catch(() => null)
+        .then((x) => {
+          homeRegionLoaded = true;
+          if (x && (REGIONS as readonly string[]).includes(x)) homeRegion = x as Region;
+          homeRegionSubs.forEach((f) => f(homeRegion));
+        });
+    }
+    return () => {
+      homeRegionSubs.delete(setV);
+    };
+  }, []);
+  const update = (r: Region) => {
+    homeRegion = r;
+    homeRegionLoaded = true;
+    homeRegionSubs.forEach((f) => f(r));
+    write(HOME_REGION, r).catch(() => undefined);
+  };
+  return [v, update];
+}

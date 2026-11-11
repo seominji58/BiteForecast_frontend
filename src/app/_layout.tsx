@@ -48,6 +48,7 @@ export default function RootLayout() {
           <Stack.Screen name="explore" options={{ title: '낚시터 찾기' }} />
           <Stack.Screen name="compare" options={{ title: '조건 비교' }} />
           <Stack.Screen name="species" options={{ title: '전체 어종' }} />
+          <Stack.Screen name="points" options={{ title: '포인트 보기' }} />
           <Stack.Screen name="trip/new" options={{ title: '새 출조계획' }} />
           <Stack.Screen name="trip/[id]" options={{ title: '출조계획' }} />
           <Stack.Screen name="login" options={{ title: '로그인' }} />

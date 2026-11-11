@@ -394,7 +394,7 @@ export function HomeActions({ onMap, onPlan }: { onMap: () => void; onPlan: () =
 }
 
 /** 오늘의 바다 미리보기 (지역 단위, 범위로 — 하나로 뭉뚱그리지 않음) */
-export function SeaPreview({ list, tide, future, pending, title }: { list: PlaceSummary[]; tide: string | null; future: boolean; pending: boolean; title: string }) {
+export function SeaPreview({ list, tide, future, pending }: { list: PlaceSummary[]; tide: string | null; future: boolean; pending: boolean }) {
   const theme = useTheme();
   // 지역 안 낚시터들의 예보 최댓값 (가장 거친 곳 기준 — 평균으로 낮춰 보이지 않게)
   const top = (vals: number[], fmt: (n: number) => string) => (vals.length === 0 ? '자료 없음' : `최대 ${fmt(Math.max(...vals))}`);
@@ -410,7 +410,6 @@ export function SeaPreview({ list, tide, future, pending, title }: { list: Place
   ];
   return (
     <View style={styles.col}>
-      <ThemedText type="smallBold">{title}</ThemedText>
       <View style={styles.tiles}>
         {tiles.map((t) => (
           <View key={t.label} style={[styles.tile, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
