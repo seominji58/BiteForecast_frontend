@@ -112,6 +112,11 @@ export function MarineWarningBanner({ w, compact }: { w: Warning; compact?: bool
             {[issued, basis].filter(Boolean).join(' · ')}
             {lines.length > 0 || w.level === 'unknown' ? (open ? '  ▴' : '  ▾') : ''}
           </ThemedText>
+          {w.active.length > 0 ? (
+            <ThemedText type="small" themeColor={tone.fg} numberOfLines={1}>
+              적용 해역: {[...new Set(w.active.flatMap((a) => a.areas))].join(', ')}
+            </ThemedText>
+          ) : null}
         </View>
       </View>
       {w.note ? (
