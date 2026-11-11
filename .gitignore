@@ -46,3 +46,6 @@ example
 # 개발용 앱 빌드 시 자동 생성되는 네이티브 폴더 (app.json·app.config.js 가 원본)
 /ios
 /android
+
+# 어종 이미지 생성 후보 (검수 전, 앱에 포함하지 않음)
+assets/species/_candidates/

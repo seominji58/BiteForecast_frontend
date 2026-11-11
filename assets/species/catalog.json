@@ -1,0 +1,45 @@
+{
+  "_comment": "어종 이미지 목록. index_name = 국립해양조사원 바다낚시지수의 어종 이름(fishing_index.species 그대로). species_code = 앱 어종 기준표(species) 코드(없으면 null). features = 생성 프롬프트와 검수 체크리스트에 함께 쓰는 실제 외형 특징",
+  "species": [
+    {
+      "code": "rockfish", "name_ko": "우럭", "index_name": "우럭", "species_code": "rockfish",
+      "scientific": "Sebastes schlegelii", "english": "Korean rockfish",
+      "features": ["dark grayish-brown mottled body", "large head with spiny cheeks", "large mouth with protruding lower jaw", "spiny dorsal fin continuous with soft dorsal fin", "dark stripes radiating from the eye"]
+    },
+    {
+      "code": "black_porgy", "name_ko": "감성돔", "index_name": "감성돔", "species_code": "black_porgy",
+      "scientific": "Acanthopagrus schlegelii", "english": "blackhead seabream",
+      "features": ["deep, laterally compressed oval body", "silvery gray to dark gray with faint vertical bands", "steep forehead profile", "strong spiny dorsal fin", "dark pelvic fins"]
+    },
+    {
+      "code": "seabass", "name_ko": "농어", "index_name": "농어", "species_code": "seabass",
+      "scientific": "Lateolabrax japonicus", "english": "Japanese seabass",
+      "features": ["elongated streamlined silver body", "large mouth with lower jaw slightly longer", "two separate dorsal fins", "greenish-gray back fading to silver belly", "small dark spots on the back and dorsal fin"]
+    },
+    {
+      "code": "rock_bream", "name_ko": "돌돔", "index_name": "돌돔", "species_code": null,
+      "scientific": "Oplegnathus fasciatus", "english": "barred knifejaw",
+      "features": ["deep compressed body", "seven bold black vertical bars on a pale grayish body", "fused parrot-like beak teeth", "rounded tail fin edge", "spiny dorsal fin"]
+    },
+    {
+      "code": "opaleye", "name_ko": "벵에돔", "index_name": "벵에돔", "species_code": null,
+      "scientific": "Girella punctata", "english": "largescale blackfish",
+      "features": ["oval, moderately deep body", "uniform dark blackish-green to bluish-black color", "small mouth", "small dark spot at each scale", "forked tail"]
+    },
+    {
+      "code": "red_seabream", "name_ko": "참돔", "index_name": "참돔", "species_code": "red_seabream",
+      "scientific": "Pagrus major", "english": "red seabream",
+      "features": ["deep oval body", "pinkish-red color", "scattered small bright blue spots on the upper body", "steep forehead", "tail fin edged dark"]
+    },
+    {
+      "code": "black_rockfish", "name_ko": "볼락", "index_name": "볼락", "species_code": "black_rockfish",
+      "scientific": "Sebastes inermis", "english": "dark-banded rockfish",
+      "features": ["medium oval body", "very large eyes", "brownish-black body with faint dark bands", "spiny dorsal fin", "slightly upturned mouth"]
+    },
+    {
+      "code": "red_rockfish", "name_ko": "열기(불볼락)", "index_name": "열기", "species_code": null,
+      "scientific": "Sebastes thompsoni", "english": "goldeye rockfish",
+      "features": ["oval body", "reddish-orange to pink color with faint darker blotches", "large eyes", "spiny dorsal fin", "slightly forked tail"]
+    }
+  ]
+}
