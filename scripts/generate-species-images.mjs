@@ -39,21 +39,21 @@ const only = opt('only', null)?.split(',').map((s) => s.trim());
 // 비용 추정: 출력 토큰 단가 $30/1M (2026-11 공식 가격표). 1024x1024 출력 토큰은 이전 세대 기준값을 쓰고
 // 2.6 에서 다를 수 있어 2배 여유를 둔다. 실제 사용량은 응답 usage 로 기록한다
 const OUT_PER_M = 30;
-const TOKENS = { low: 272, medium: 1056, high: 4160 };
+const TOKENS = { low: 400, medium: 1449, high: 5800 }; // medium 은 2026-11-11 시범 실측, low·high 는 비율로 추정
 const perImage = (q) => ((TOKENS[q] ?? TOKENS.high) * OUT_PER_M) / 1e6;
 
 const STYLE = [
-  'Clean, modern flat vector illustration for a Korean sea-fishing mobile app.',
-  'Single fish, full body, strict side view (lateral profile) facing left, centered, filling about 80% of a square frame.',
-  'Biologically accurate shape, fin placement and markings so an angler can recognize the species.',
-  'Soft flat shading with a subtle darker outline; natural fish colors, slightly harmonized with a palette of deep navy #0F2C4A, teal #0E5C63 and warm orange #F28C28 accents (do not recolor the fish unnaturally).',
-  'Transparent background. No water, no bubbles, no hooks, no lines, no scenery, no drop shadow, no frame.',
+  'Highly detailed, realistic natural-history illustration of a real Korean sea-fishing target species, like a premium field-guide painting, for a mobile fishing app.',
+  'Exactly one animal, whole body visible, centered, filling about 80% of a square frame.',
+  'Biologically accurate proportions, fin or arm placement, scales, skin texture and markings so an experienced angler immediately recognizes the species.',
+  'Natural true-to-life colors with soft studio lighting and gentle depth; crisp clean edges against the background. Do not stylize as cartoon, flat vector or 3D toy.',
+  'Transparent background. No water, no splash, no bubbles, no hooks, no lines, no scenery, no drop shadow, no glow, no frame, no other animals.',
   'Absolutely no text, letters, numbers, labels or logos.',
   'Must stay recognizable when shown as small as 56 pixels.',
 ].join(' ');
 
 const promptFor = (s) =>
-  `${STYLE}\nSubject: ${s.english} (${s.scientific}), known in Korea as ${s.name_ko}. ` +
+  `${STYLE}\nSubject: ${s.english} (${s.scientific}), known in Korea as ${s.name_ko}. View: ${s.view}. ` +
   `Key features to depict: ${s.features.join('; ')}.`;
 const sha = (t) => createHash('sha256').update(t).digest('hex').slice(0, 16);
 

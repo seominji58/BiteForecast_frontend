@@ -1,45 +1,260 @@
 {
-  "_comment": "어종 이미지 목록. index_name = 국립해양조사원 바다낚시지수의 어종 이름(fishing_index.species 그대로). species_code = 앱 어종 기준표(species) 코드(없으면 null). features = 생성 프롬프트와 검수 체크리스트에 함께 쓰는 실제 외형 특징",
+  "_comment": "어종 이미지 목록(15종). in_index = 국립해양조사원 바다낚시지수 제공 어종 여부, index_name = 지수의 어종 이름(fishing_index.species 그대로). species_code = 앱 어종 기준표(species) 코드, 없으면 null(출조계획에는 기타 입력으로 저장). view = 그리는 방향, features = 프롬프트·검수 체크리스트에 함께 쓰는 실제 외형 특징",
   "species": [
     {
-      "code": "rockfish", "name_ko": "우럭", "index_name": "우럭", "species_code": "rockfish",
-      "scientific": "Sebastes schlegelii", "english": "Korean rockfish",
-      "features": ["dark grayish-brown mottled body", "large head with spiny cheeks", "large mouth with protruding lower jaw", "spiny dorsal fin continuous with soft dorsal fin", "dark stripes radiating from the eye"]
+      "code": "rockfish",
+      "name_ko": "우럭",
+      "index_name": "우럭",
+      "species_code": "rockfish",
+      "scientific": "Sebastes schlegelii",
+      "english": "Korean rockfish",
+      "features": [
+        "dark grayish-brown mottled body",
+        "large head with spiny cheeks",
+        "large mouth with protruding lower jaw",
+        "spiny dorsal fin continuous with soft dorsal fin",
+        "dark stripes radiating from the eye"
+      ],
+      "in_index": true,
+      "view": "strict side view (lateral profile), head facing left"
     },
     {
-      "code": "black_porgy", "name_ko": "감성돔", "index_name": "감성돔", "species_code": "black_porgy",
-      "scientific": "Acanthopagrus schlegelii", "english": "blackhead seabream",
-      "features": ["deep, laterally compressed oval body", "silvery gray to dark gray with faint vertical bands", "steep forehead profile", "strong spiny dorsal fin", "dark pelvic fins"]
+      "code": "black_porgy",
+      "name_ko": "감성돔",
+      "index_name": "감성돔",
+      "species_code": "black_porgy",
+      "scientific": "Acanthopagrus schlegelii",
+      "english": "blackhead seabream",
+      "features": [
+        "deep, laterally compressed oval body",
+        "silvery gray to dark gray with faint vertical bands",
+        "steep forehead profile",
+        "strong spiny dorsal fin",
+        "dark pelvic fins"
+      ],
+      "in_index": true,
+      "view": "strict side view (lateral profile), head facing left"
     },
     {
-      "code": "seabass", "name_ko": "농어", "index_name": "농어", "species_code": "seabass",
-      "scientific": "Lateolabrax japonicus", "english": "Japanese seabass",
-      "features": ["elongated streamlined silver body", "large mouth with lower jaw slightly longer", "two separate dorsal fins", "greenish-gray back fading to silver belly", "small dark spots on the back and dorsal fin"]
+      "code": "seabass",
+      "name_ko": "농어",
+      "index_name": "농어",
+      "species_code": "seabass",
+      "scientific": "Lateolabrax japonicus",
+      "english": "Japanese seabass",
+      "features": [
+        "elongated streamlined silver body",
+        "large mouth with lower jaw slightly longer",
+        "two separate dorsal fins",
+        "greenish-gray back fading to silver belly",
+        "small dark spots on the back and dorsal fin"
+      ],
+      "in_index": true,
+      "view": "strict side view (lateral profile), head facing left"
     },
     {
-      "code": "rock_bream", "name_ko": "돌돔", "index_name": "돌돔", "species_code": null,
-      "scientific": "Oplegnathus fasciatus", "english": "barred knifejaw",
-      "features": ["deep compressed body", "seven bold black vertical bars on a pale grayish body", "fused parrot-like beak teeth", "rounded tail fin edge", "spiny dorsal fin"]
+      "code": "rock_bream",
+      "name_ko": "돌돔",
+      "index_name": "돌돔",
+      "species_code": null,
+      "scientific": "Oplegnathus fasciatus",
+      "english": "barred knifejaw",
+      "features": [
+        "deep compressed body",
+        "seven bold black vertical bars on a pale grayish body",
+        "fused parrot-like beak teeth",
+        "rounded tail fin edge",
+        "spiny dorsal fin"
+      ],
+      "in_index": true,
+      "view": "strict side view (lateral profile), head facing left"
     },
     {
-      "code": "opaleye", "name_ko": "벵에돔", "index_name": "벵에돔", "species_code": null,
-      "scientific": "Girella punctata", "english": "largescale blackfish",
-      "features": ["oval, moderately deep body", "uniform dark blackish-green to bluish-black color", "small mouth", "small dark spot at each scale", "forked tail"]
+      "code": "opaleye",
+      "name_ko": "벵에돔",
+      "index_name": "벵에돔",
+      "species_code": null,
+      "scientific": "Girella punctata",
+      "english": "largescale blackfish",
+      "features": [
+        "oval, moderately deep body",
+        "uniform dark blackish-green to bluish-black color",
+        "small mouth",
+        "small dark spot at each scale",
+        "forked tail"
+      ],
+      "in_index": true,
+      "view": "strict side view (lateral profile), head facing left"
     },
     {
-      "code": "red_seabream", "name_ko": "참돔", "index_name": "참돔", "species_code": "red_seabream",
-      "scientific": "Pagrus major", "english": "red seabream",
-      "features": ["deep oval body", "pinkish-red color", "scattered small bright blue spots on the upper body", "steep forehead", "tail fin edged dark"]
+      "code": "red_seabream",
+      "name_ko": "참돔",
+      "index_name": "참돔",
+      "species_code": "red_seabream",
+      "scientific": "Pagrus major",
+      "english": "red seabream",
+      "features": [
+        "deep oval body",
+        "pinkish-red color",
+        "scattered small bright blue spots on the upper body",
+        "steep forehead",
+        "tail fin edged dark"
+      ],
+      "in_index": true,
+      "view": "strict side view (lateral profile), head facing left"
     },
     {
-      "code": "black_rockfish", "name_ko": "볼락", "index_name": "볼락", "species_code": "black_rockfish",
-      "scientific": "Sebastes inermis", "english": "dark-banded rockfish",
-      "features": ["medium oval body", "very large eyes", "brownish-black body with faint dark bands", "spiny dorsal fin", "slightly upturned mouth"]
+      "code": "black_rockfish",
+      "name_ko": "볼락",
+      "index_name": "볼락",
+      "species_code": "black_rockfish",
+      "scientific": "Sebastes inermis",
+      "english": "dark-banded rockfish",
+      "features": [
+        "medium oval body",
+        "very large eyes",
+        "brownish-black body with faint dark bands",
+        "spiny dorsal fin",
+        "slightly upturned mouth"
+      ],
+      "in_index": true,
+      "view": "strict side view (lateral profile), head facing left"
     },
     {
-      "code": "red_rockfish", "name_ko": "열기(불볼락)", "index_name": "열기", "species_code": null,
-      "scientific": "Sebastes thompsoni", "english": "goldeye rockfish",
-      "features": ["oval body", "reddish-orange to pink color with faint darker blotches", "large eyes", "spiny dorsal fin", "slightly forked tail"]
+      "code": "red_rockfish",
+      "name_ko": "열기(불볼락)",
+      "index_name": "열기",
+      "species_code": null,
+      "scientific": "Sebastes thompsoni",
+      "english": "goldeye rockfish",
+      "features": [
+        "oval body",
+        "reddish-orange to pink color with faint darker blotches",
+        "large eyes",
+        "spiny dorsal fin",
+        "slightly forked tail"
+      ],
+      "in_index": true,
+      "view": "strict side view (lateral profile), head facing left"
+    },
+    {
+      "code": "flatfish",
+      "name_ko": "광어(넙치)",
+      "index_name": null,
+      "in_index": false,
+      "species_code": "flatfish",
+      "scientific": "Paralichthys olivaceus",
+      "english": "olive flounder",
+      "view": "seen from directly above showing the eyed (upper) side, head pointing left",
+      "features": [
+        "flat oval body",
+        "both eyes on the left side of the body (upper side)",
+        "olive-brown upper side with pale and dark spots",
+        "large mouth with sharp teeth",
+        "long fringe-like dorsal and anal fins running along the body edges"
+      ]
+    },
+    {
+      "code": "webfoot_octopus",
+      "name_ko": "주꾸미",
+      "index_name": null,
+      "in_index": false,
+      "species_code": "webfoot_octopus",
+      "scientific": "Amphioctopus fangsiao",
+      "english": "webfoot octopus",
+      "view": "side view of the whole animal, mantle up-left and the eight short arms curling below",
+      "features": [
+        "small octopus",
+        "round mantle",
+        "eight short arms with suckers",
+        "golden ring-shaped eyespot at the arm base below each eye",
+        "grayish-brown mottled skin"
+      ]
+    },
+    {
+      "code": "cuttlefish",
+      "name_ko": "갑오징어",
+      "index_name": null,
+      "in_index": false,
+      "species_code": "cuttlefish",
+      "scientific": "Sepia esculenta",
+      "english": "golden cuttlefish",
+      "view": "seen from above at a slight angle, head and arms pointing left",
+      "features": [
+        "broad flattened oval mantle",
+        "thin fin running along the entire edge of the mantle",
+        "eight short arms and two longer tentacles",
+        "W-shaped pupils",
+        "brown back with fine pale stripes and spots"
+      ]
+    },
+    {
+      "code": "octopus",
+      "name_ko": "문어",
+      "index_name": null,
+      "in_index": false,
+      "species_code": null,
+      "scientific": "Octopus sinensis",
+      "english": "East Asian common octopus",
+      "view": "side view of the whole animal, mantle up-left and the eight arms spread below",
+      "features": [
+        "large bulbous mantle",
+        "eight long arms",
+        "two rows of suckers on each arm",
+        "reddish-brown mottled skin",
+        "prominent eyes"
+      ]
+    },
+    {
+      "code": "hairtail",
+      "name_ko": "갈치",
+      "index_name": null,
+      "in_index": false,
+      "species_code": null,
+      "scientific": "Trichiurus japonicus",
+      "english": "Japanese hairtail (largehead hairtail)",
+      "view": "side view with the long body in a gentle S-curve so the whole animal fits inside the square, head on the left",
+      "features": [
+        "very long ribbon-like compressed body",
+        "bright metallic silver color",
+        "body tapering to a thin point with no tail fin",
+        "long low dorsal fin along the whole back",
+        "large mouth with fang-like teeth and big eyes"
+      ]
+    },
+    {
+      "code": "mackerel",
+      "name_ko": "고등어",
+      "index_name": null,
+      "in_index": false,
+      "species_code": "mackerel",
+      "scientific": "Scomber japonicus",
+      "english": "chub mackerel",
+      "view": "strict side view (lateral profile), head facing left",
+      "features": [
+        "torpedo-shaped body",
+        "blue-green back with dark wavy stripes",
+        "silvery white belly",
+        "row of small finlets behind the second dorsal and anal fins",
+        "deeply forked tail"
+      ]
+    },
+    {
+      "code": "conger",
+      "name_ko": "붕장어",
+      "index_name": null,
+      "in_index": false,
+      "species_code": null,
+      "scientific": "Conger myriaster",
+      "english": "whitespotted conger",
+      "view": "side view with the long body in a gentle S-curve so the whole animal fits inside the square, head on the left",
+      "features": [
+        "long eel-like cylindrical body",
+        "row of white dots along the lateral line and on the head",
+        "grayish-brown back and pale belly",
+        "dorsal and anal fins continuous around the tail",
+        "pointed head with a large mouth"
+      ]
     }
   ]
 }
