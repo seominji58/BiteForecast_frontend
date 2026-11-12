@@ -45,6 +45,12 @@ export function useExplore(date: string | undefined, today: string | undefined) 
     };
   }, [near, fix]);
   const gps = { loading: near && !fix, coords: fix?.coords ?? null, error: fix?.error ?? null };
+  /** 「내 주변」을 누를 때마다 권한·현재 위치를 새로 확인한다 */
+  const locate = () => {
+    lastFix = null;
+    setFix(null);
+    setRegion('내 주변');
+  };
 
   const allSpecies = useMemo(() => mergeWithApi(speciesApi.data), [speciesApi.data]);
   const species = speciesByCode(speciesCode) ?? allSpecies.find((x) => x.code === speciesCode) ?? null;
@@ -100,6 +106,7 @@ export function useExplore(date: string | undefined, today: string | undefined) 
     speciesCode,
     region,
     setRegion,
+    locate,
     near,
     gps,
     byId,

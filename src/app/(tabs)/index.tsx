@@ -94,7 +94,7 @@ export default function HomeScreen() {
         </View>
         <SearchBar value={query} onChangeText={setQuery} onClear={() => setQuery('')} placeholder="어종·지역·낚시터 검색" />
         <View style={styles.heroActions}>
-          <HeroButton icon="find-gps" label="내 주변" active={x.near} onPress={() => x.setRegion('내 주변')} />
+          <HeroButton icon="find-gps" label="내 주변" active={x.near} onPress={x.locate} />
           <HeroButton icon="find-map" label="지도 탐색" onPress={() => router.push('/explore')} />
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateRow}>
@@ -174,7 +174,12 @@ export default function HomeScreen() {
 
       {/* 오늘의 낚시 정보 미리보기 */}
       <SectionHeader title={date === today ? '오늘의 낚시 정보 미리보기' : `${dateText} 낚시 정보 미리보기`} actionLabel="포인트 보기" onAction={points} />
-      {x.summary.isSuccess ? (
+      {x.near && (x.gps.loading || x.gps.error) ? (
+        // 위치를 기다리는 동안 「자료 없음」으로 보이지 않게
+        <ThemedText type="small" themeColor={x.gps.error ? 'warning' : 'textSecondary'}>
+          {x.gps.error ?? '현재 위치를 확인하는 중이에요… 위치 권한을 허용하면 내 주변 60km 바다 정보를 보여드려요.'}
+        </ThemedText>
+      ) : x.summary.isSuccess ? (
         <SeaPreview list={x.scoped} tide={x.tide} future={x.future} pending={x.pending} onInfo={setTerm} />
       ) : (
         <ThemedText type="small" themeColor={x.summary.isError ? 'warning' : 'textSecondary'}>
@@ -208,7 +213,7 @@ export default function HomeScreen() {
         title="지역"
         value={x.region}
         options={REGIONS.map((r) => ({ value: r, label: r, sub: r === '내 주변' ? '현재 위치에서 60km 안 (위치 권한 필요)' : undefined }))}
-        onPick={x.setRegion}
+        onPick={(r) => (r === '내 주변' ? x.locate() : x.setRegion(r))}
         onClose={() => setSheet(null)}
       />
     </TabScreen>

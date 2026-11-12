@@ -216,7 +216,8 @@ export function useHomeRegion(): [Region, (r: Region) => void] {
         .catch(() => null)
         .then((x) => {
           homeRegionLoaded = true;
-          if (x && (REGIONS as readonly string[]).includes(x)) homeRegion = x as Region;
+          // 「내 주변」은 저장하지 않는다 — 앱을 열 때 위치를 저절로 묻지 않게 (버튼을 누를 때만)
+          if (x && x !== '내 주변' && (REGIONS as readonly string[]).includes(x)) homeRegion = x as Region;
           homeRegionSubs.forEach((f) => f(homeRegion));
         });
     }
@@ -228,7 +229,7 @@ export function useHomeRegion(): [Region, (r: Region) => void] {
     homeRegion = r;
     homeRegionLoaded = true;
     homeRegionSubs.forEach((f) => f(r));
-    write(HOME_REGION, r).catch(() => undefined);
+    if (r !== '내 주변') write(HOME_REGION, r).catch(() => undefined);
   };
   return [v, update];
 }
