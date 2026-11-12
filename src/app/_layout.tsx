@@ -51,6 +51,7 @@ export default function RootLayout() {
           <Stack.Screen name="points" options={{ title: '포인트 보기' }} />
           <Stack.Screen name="trip/new" options={{ title: '새 출조계획' }} />
           <Stack.Screen name="trip/[id]" options={{ title: '출조계획' }} />
+          <Stack.Screen name="trip/join" options={{ title: '초대 코드로 참여' }} />
           <Stack.Screen name="login" options={{ title: '로그인' }} />
           <Stack.Screen name="signup" options={{ title: '회원가입' }} />
           <Stack.Screen name="terms" options={{ title: '이용약관' }} />

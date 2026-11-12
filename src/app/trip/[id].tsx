@@ -7,6 +7,7 @@ import { useDateRange, useDeleteTrip, useFavorites, useTrip, useTripMutation, us
 import type { ChecklistItem, StopOutlook, Trip, TripStop } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { CoordNote } from '@/components/coord-note';
+import { OptionSheet } from '@/components/option-sheet';
 import { PickerField } from '@/components/date-time-field';
 import { Button, Chip, Field, TextField } from '@/components/form';
 import { AuthGate } from '@/components/login-required';
@@ -15,6 +16,7 @@ import { Card, ErrorView, Loading, SectionHeader, StackScreen } from '@/componen
 import { SpeciesImage } from '@/components/species';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { ownerName, participants, TripMembers } from '@/components/trip-members';
 import { Brand, IconSize } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { dayLabel } from '@/lib/compare';
@@ -62,6 +64,8 @@ function TripBody({
   const mutate = useTripMutation((fn: () => Promise<Trip>) => fn());
   const run = (fn: () => Promise<Trip>) => mutate.mutate(fn, { onError: (e) => Alert.alert('저장하지 못했어요', e.message) });
   const byStop = new Map((outlook?.stops ?? []).map((o) => [o.stop_id, o]));
+  // 함께 가는 계획: 계획·장소 수정과 삭제는 만든 사람만 (참여자는 보기 · 준비물 체크·담당 · 기록)
+  const owner = trip.my_role === 'owner';
 
   const confirmDelete = () =>
     Alert.alert('계획을 지울까요?', '이 계획에서 쓴 기록은 지워지지 않아요.', [
@@ -80,7 +84,7 @@ function TripBody({
       <View style={[styles.head, { backgroundColor: Brand.navy }]}>
         <View style={styles.headTop}>
           <ThemedText type="small" style={styles.onNavySub}>
-            나의 출조 계획
+            {owner ? '나의 출조 계획' : `${ownerName(trip) ?? '친구'}님의 출조 계획`}
           </ThemedText>
           <View style={styles.dday}>
             <ThemedText type="smallBold" style={styles.ddayText}>
@@ -109,14 +113,16 @@ function TripBody({
             {trip.memo}
           </ThemedText>
         ) : null}
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push({ pathname: '/trip/new', params: { id: String(trip.id) } })}
-          style={({ pressed }) => [styles.editBtn, pressed && styles.pressed]}>
-          <ThemedText type="smallBold" style={styles.onNavy}>
-            계획 수정
-          </ThemedText>
-        </Pressable>
+        {owner ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push({ pathname: '/trip/new', params: { id: String(trip.id) } })}
+            style={({ pressed }) => [styles.editBtn, pressed && styles.pressed]}>
+            <ThemedText type="smallBold" style={styles.onNavy}>
+              계획 수정
+            </ThemedText>
+          </Pressable>
+        ) : null}
       </View>
 
       <ThemedText type="small" themeColor="textSecondary">
@@ -204,6 +210,7 @@ function TripBody({
                           lastDay={outlook?.forecast_last_day ?? null}
                           criteria={criteria}
                           today={today}
+                          canEdit={owner}
                           onEdit={() => setEditing(s)}
                           onToggleRole={() =>
                             run(() => api.updateTripStop(trip.id, s.id, { role: s.role === 'main' ? 'alternative' : 'main' }))
@@ -220,7 +227,7 @@ function TripBody({
                   ) : null,
                 )}
                 <View style={styles.dayActions}>
-                  {stops.length < MAX_STOPS_PER_DAY ? (
+                  {owner && stops.length < MAX_STOPS_PER_DAY ? (
                     <SmallButton
                       icon="find-sea"
                       label="장소 추가"
@@ -263,13 +270,15 @@ function TripBody({
         );
       })}
 
-      <Checklist trip={trip} onSave={(items) => run(() => api.setTripChecklist(trip.id, items))} />
+      <TripMembers trip={trip} run={run} />
+
+      <Checklist trip={trip} run={run} />
 
       <ThemedText type="small" themeColor="textSecondary">
         해황은 볼 때마다 최신 공공데이터로 다시 계산해요. 물때는 가까운 조위관측소 예보(참고 자료)예요. 조과를 보장하지 않으며 출조 전
         특보를 꼭 확인하세요.
       </ThemedText>
-      <Button label="계획 지우기" variant="danger" onPress={confirmDelete} />
+      {owner ? <Button label="계획 지우기" variant="danger" onPress={confirmDelete} /> : null}
 
       <PlacePicker
         visible={pickingDay !== null}
@@ -302,6 +311,7 @@ function StopCard({
   lastDay,
   criteria,
   today,
+  canEdit,
   onEdit,
   onToggleRole,
   onDelete,
@@ -311,6 +321,7 @@ function StopCard({
   lastDay: string | null;
   criteria: ReturnType<typeof useCriteria>[0];
   today: string;
+  canEdit: boolean;
   onEdit: () => void;
   onToggleRole: () => void;
   onDelete: () => void;
@@ -362,9 +373,13 @@ function StopCard({
       </View>
       {stop.memo ? <ThemedText type="small">{stop.memo}</ThemedText> : null}
       <View style={styles.stopActions}>
-        <TextAction label="시간·메모" onPress={onEdit} />
-        <TextAction label={stop.role === 'main' ? '예비로' : '주 장소로'} onPress={onToggleRole} />
-        <TextAction label="빼기" onPress={onDelete} />
+        {canEdit ? (
+          <>
+            <TextAction label="시간·메모" onPress={onEdit} />
+            <TextAction label={stop.role === 'main' ? '예비로' : '주 장소로'} onPress={onToggleRole} />
+            <TextAction label="빼기" onPress={onDelete} />
+          </>
+        ) : null}
         <View style={styles.flex} />
         {stop.journal_ids.length ? (
           <TextAction
@@ -455,51 +470,95 @@ function StopEditorBody({
   );
 }
 
-/** 준비물 체크리스트: 누르면 체크, ✕ 로 빼기, 아래에서 추가. 바꿀 때마다 목록 전체를 저장 */
-function Checklist({ trip, onSave }: { trip: Trip; onSave: (items: { label: string; checked: boolean }[]) => void }) {
+/**
+ * 준비물 체크리스트: 누르면 체크(한 개씩 저장 — 여럿이 동시에 눌러도 서로 덮지 않게).
+ * 담당: 공용 준비물을 챙길 사람. 만든 사람은 누구든 정하고, 참여자는 자기만 맡거나 내려놓는다.
+ * 추가·빼기는 만든 사람만 (목록 전체 저장, 담당은 그대로 둔다)
+ */
+function Checklist({ trip, run }: { trip: Trip; run: (fn: () => Promise<Trip>) => void }) {
   const theme = useTheme();
   const [text, setText] = useState('');
+  const [assigning, setAssigning] = useState<ChecklistItem | null>(null);
+  const owner = trip.my_role === 'owner';
+  const together = trip.members.length > 1;
+  const me = trip.members.find((m) => m.mine);
   const items = trip.checklist;
-  const plain = (list: ChecklistItem[]) => list.map(({ label, checked }) => ({ label, checked }));
+  const plain = (list: ChecklistItem[]) =>
+    list.map(({ label, checked, assignee_user_id }) => ({ label, checked, assignee_user_id }));
+  const save = (list: ReturnType<typeof plain>) => run(() => api.setTripChecklist(trip.id, list));
+  const patch = (c: ChecklistItem, p: Parameters<typeof api.patchChecklistItem>[2]) =>
+    run(() => api.patchChecklistItem(trip.id, c.id, p));
   const add = () => {
     const label = text.trim();
     if (!label) return;
     setText('');
-    onSave([...plain(items), { label, checked: false }]);
+    save([...plain(items), { label, checked: false, assignee_user_id: null }]);
+  };
+  const onAssign = (c: ChecklistItem) => {
+    if (owner) return setAssigning(c);
+    if (!me) return;
+    if (c.assignee_user_id === me.user_id) patch(c, { assignee_user_id: null });
+    else if (c.assignee_user_id === null) patch(c, { assignee_user_id: me.user_id });
   };
   return (
     <>
       <SectionHeader title={`준비물 ${items.filter((c) => c.checked).length}/${items.length}`} />
       <Card style={styles.check}>
-        {items.map((c, i) => (
-          <View key={c.id} style={styles.checkRow}>
-            <Pressable
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: c.checked }}
-              onPress={() => onSave(plain(items).map((x, j) => (j === i ? { ...x, checked: !x.checked } : x)))}
-              style={({ pressed }) => [styles.checkHit, pressed && styles.pressed]}>
-              <View
-                style={[
-                  styles.box,
-                  { borderColor: c.checked ? theme.tint : theme.textSecondary, backgroundColor: c.checked ? theme.tint : 'transparent' },
-                ]}>
-                {c.checked ? <ThemedText style={styles.tick}>✓</ThemedText> : null}
-              </View>
-              <ThemedText style={[styles.flex, c.checked && styles.done]} themeColor={c.checked ? 'textSecondary' : 'text'}>
-                {c.label}
-              </ThemedText>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`${c.label} 빼기`}
-              hitSlop={8}
-              onPress={() => onSave(plain(items).filter((_, j) => j !== i))}
-              style={styles.link}>
-              <ThemedText themeColor="textSecondary">✕</ThemedText>
-            </Pressable>
-          </View>
-        ))}
-        {items.length < 30 ? (
+        {items.length === 0 && !owner ? (
+          <ThemedText type="small" themeColor="textSecondary">
+            아직 준비물이 없어요. 계획을 만든 사람이 추가할 수 있어요.
+          </ThemedText>
+        ) : null}
+        {items.map((c, i) => {
+          const mineItem = !!me && c.assignee_user_id === me.user_id;
+          // 참여자가 다른 사람 담당을 바꿀 수는 없다 (보여주기만)
+          const canAssign = together && (owner || c.assignee_user_id === null || mineItem);
+          const assignLabel = c.assignee_nickname ? `담당 ${c.assignee_nickname}${mineItem ? '(나)' : ''}` : owner ? '담당 정하기' : '내가 챙길게';
+          return (
+            <View key={c.id} style={styles.checkRow}>
+              <Pressable
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: c.checked }}
+                onPress={() => patch(c, { checked: !c.checked })}
+                style={({ pressed }) => [styles.checkHit, pressed && styles.pressed]}>
+                <View
+                  style={[
+                    styles.box,
+                    { borderColor: c.checked ? theme.tint : theme.textSecondary, backgroundColor: c.checked ? theme.tint : 'transparent' },
+                  ]}>
+                  {c.checked ? <ThemedText style={styles.tick}>✓</ThemedText> : null}
+                </View>
+                <ThemedText style={[styles.flex, c.checked && styles.done]} themeColor={c.checked ? 'textSecondary' : 'text'}>
+                  {c.label}
+                </ThemedText>
+              </Pressable>
+              {together && (canAssign || c.assignee_nickname) ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`${c.label} ${assignLabel}`}
+                  disabled={!canAssign}
+                  hitSlop={6}
+                  onPress={() => onAssign(c)}
+                  style={styles.link}>
+                  <ThemedText type="small" themeColor={c.assignee_nickname ? 'tint' : 'textSecondary'}>
+                    {assignLabel}
+                  </ThemedText>
+                </Pressable>
+              ) : null}
+              {owner ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`${c.label} 빼기`}
+                  hitSlop={8}
+                  onPress={() => save(plain(items).filter((_, j) => j !== i))}
+                  style={styles.link}>
+                  <ThemedText themeColor="textSecondary">✕</ThemedText>
+                </Pressable>
+              ) : null}
+            </View>
+          );
+        })}
+        {owner && items.length < 30 ? (
           <View style={styles.row}>
             <View style={styles.flex}>
               <TextField value={text} onChangeText={setText} placeholder="준비물 추가" maxLength={40} onSubmitEditing={add} returnKeyType="done" />
@@ -508,6 +567,21 @@ function Checklist({ trip, onSave }: { trip: Trip; onSave: (items: { label: stri
           </View>
         ) : null}
       </Card>
+      <OptionSheet
+        open={assigning !== null}
+        title={assigning ? `「${assigning.label}」 누가 챙길까요?` : ''}
+        options={[
+          { value: 'none', label: '담당 없음' },
+          ...participants(trip).map((m) => ({ value: String(m.user_id), label: m.mine ? `${m.nickname} (나)` : m.nickname })),
+        ]}
+        value={assigning ? (assigning.assignee_user_id === null ? 'none' : String(assigning.assignee_user_id)) : null}
+        onPick={(v) => {
+          const c = assigning!;
+          setAssigning(null);
+          patch(c, { assignee_user_id: v === 'none' ? null : Number(v) });
+        }}
+        onClose={() => setAssigning(null)}
+      />
     </>
   );
 }

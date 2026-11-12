@@ -434,7 +434,36 @@ export type TripStop = {
   journal_ids: number[];
 };
 
-export type ChecklistItem = { id: number; label: string; checked: boolean };
+/** 준비물. 담당자(assignee)는 공용 준비물을 챙길 사람 — 함께 가는 사람 중 한 명 */
+export type ChecklistItem = {
+  id: number;
+  label: string;
+  checked: boolean;
+  assignee_user_id: number | null;
+  assignee_nickname: string | null;
+};
+
+/** 함께 가는 사람. 만든 사람(owner)은 항상 joined */
+export type MemberStatus = 'joined' | 'maybe' | 'declined';
+export type TripMember = {
+  user_id: number;
+  nickname: string;
+  role: 'owner' | 'member';
+  status: MemberStatus;
+  mine: boolean;
+};
+export type TripInvite = { code: string; expires_at: string };
+export type TripInvitePreview = {
+  trip_id: number;
+  title: string;
+  start_date: string;
+  end_date: string;
+  owner_nickname: string;
+  /** 만든 사람 포함, 참여·미정 */
+  member_count: number;
+  /** 이미 만든 사람이거나 참여자 */
+  already: boolean;
+};
 
 export type Trip = {
   id: number;
@@ -450,6 +479,9 @@ export type Trip = {
   checklist: ChecklistItem[];
   created_at: string;
   updated_at: string;
+  /** owner 만 계획·장소를 고칠 수 있다 */
+  my_role: 'owner' | 'member';
+  members: TripMember[];
 };
 
 export type TripListItem = {
@@ -463,6 +495,9 @@ export type TripListItem = {
   checklist_total: number;
   journal_count: number;
   first_stop: TripStop | null;
+  my_role: 'owner' | 'member';
+  /** 만든 사람 포함, 참여·미정 */
+  member_count: number;
 };
 
 export type TripStopInput = {

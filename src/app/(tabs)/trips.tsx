@@ -91,6 +91,7 @@ function TripList() {
   return (
     <>
       <Button label="새 출조계획" icon="trips" onPress={() => router.push('/trip/new')} />
+      <Button label="초대 코드로 참여" variant="secondary" onPress={() => router.push('/trip/join')} />
       <SectionHeader title="다가오는 계획" />
       {upcoming.isPending ? (
         <Loading />
@@ -148,6 +149,7 @@ function TripCard({ t, today }: { t: TripListItem; today: string }) {
         {periodLabel(t.start_date, t.end_date)}
       </ThemedText>
       <ThemedText type="small" themeColor="textSecondary">
+        {t.member_count > 1 ? `함께 ${t.member_count}명${t.my_role === 'member' ? ' · 초대받은 계획' : ''} · ` : ''}
         장소 {t.stop_count}곳 · 준비물 {t.checklist_done}/{t.checklist_total}
         {t.journal_count ? ` · 기록 ${t.journal_count}개` : ''}
       </ThemedText>

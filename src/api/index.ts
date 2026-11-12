@@ -1,7 +1,11 @@
 import { request } from '@/api/client';
 import type {
   FishingIndexDay,
+  ChecklistItem,
+  MemberStatus,
   Trip,
+  TripInvite,
+  TripInvitePreview,
   TripInput,
   TripListItem,
   TripOutlook,
@@ -89,9 +93,20 @@ export const api = {
     request<Trip>(`/me/trips/${id}/stops/${stopId}`, { method: 'PATCH', body: patch, auth: true }),
   deleteTripStop: (id: number, stopId: number) =>
     request<Trip>(`/me/trips/${id}/stops/${stopId}`, { method: 'DELETE', auth: true }),
-  setTripChecklist: (id: number, items: { label: string; checked: boolean }[]) =>
+  setTripChecklist: (id: number, items: { label: string; checked: boolean; assignee_user_id: number | null }[]) =>
     request<Trip>(`/me/trips/${id}/checklist`, { method: 'PUT', body: items, auth: true }),
   tripOutlook: (id: number) => request<TripOutlook>(`/me/trips/${id}/outlook`, { auth: true }),
+  // 함께 가는 출조
+  createTripInvite: (id: number) => request<TripInvite>(`/me/trips/${id}/invite`, { method: 'POST' }),
+  revokeTripInvite: (id: number) => request<void>(`/me/trips/${id}/invite`, { method: 'DELETE' }),
+  tripInvite: (code: string) => request<TripInvitePreview>(`/trip-invites/${encodeURIComponent(code)}`),
+  joinTrip: (code: string) => request<Trip>(`/trip-invites/${encodeURIComponent(code)}/join`, { method: 'POST' }),
+  setMyTripStatus: (id: number, status: MemberStatus) =>
+    request<Trip>(`/me/trips/${id}/members/me`, { method: 'PATCH', body: { status } }),
+  removeTripMember: (id: number, userId: number) =>
+    request<void>(`/me/trips/${id}/members/${userId}`, { method: 'DELETE' }),
+  patchChecklistItem: (id: number, itemId: number, patch: Partial<Pick<ChecklistItem, 'checked' | 'assignee_user_id'>>) =>
+    request<Trip>(`/me/trips/${id}/checklist/${itemId}`, { method: 'PATCH', body: patch }),
   setFavorite: (placeId: number, on: boolean) =>
     request<void>(`/me/favorites/${placeId}`, { method: on ? 'PUT' : 'DELETE' }),
   post: (id: number) => request<PostDetail>(`/community/posts/${id}`, { auth: true }),
