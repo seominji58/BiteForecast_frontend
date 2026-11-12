@@ -71,6 +71,16 @@ export function useExplore(date: string | undefined, today: string | undefined) 
   );
   const distOf = (placeId: number) => (near && gps.coords && byId.has(placeId) ? km(gps.coords, byId.get(placeId)!) : null);
   const scopeName = near ? `내 주변 ${NEAR_KM}km` : region;
+  // 잡힌 위치가 어디쯤인지: 가장 가까운 낚시터의 시·군 (외부 API 없이, 좌표는 기기 안에서만)
+  const nearArea = useMemo(() => {
+    if (!near || !gps.coords || !places.data?.length) return null;
+    let best: { d: number; name: string } | null = null;
+    for (const p of places.data) {
+      const d = km(gps.coords, p);
+      if (Number.isFinite(d) && (!best || d < best.d)) best = { d, name: p.region_name };
+    }
+    return best ? { area: best.name, km: best.d } : null;
+  }, [near, gps.coords, places.data]);
 
   const day = fi.data;
   const periods = day?.periods ?? [];
@@ -115,6 +125,7 @@ export function useExplore(date: string | undefined, today: string | undefined) 
     scoped,
     distOf,
     scopeName,
+    nearArea,
     tide,
     indexCount,
     lastForecastDay,

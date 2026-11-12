@@ -164,7 +164,7 @@ export default function HomeScreen() {
       {/* 출조 날짜 | 지역 */}
       <ConditionBox
         dateText={dateText}
-        regionText={x.near ? (x.gps.loading ? '내 주변 · 위치 확인 중' : x.gps.error ? '내 주변 · 위치 확인 안 됨' : x.scopeName) : x.region}
+        regionText={x.near ? (x.gps.loading ? '내 주변 · 위치 확인 중' : x.gps.error ? '내 주변 · 위치 확인 안 됨' : x.nearArea ? `내 주변 · ${x.nearArea.area} 부근` : x.scopeName) : x.region}
         onDate={() => setSheet('date')}
         onRegion={() => setSheet('region')}
       />
