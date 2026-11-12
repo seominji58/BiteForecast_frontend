@@ -16,6 +16,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { WARNING_SHORT } from '@/lib/criteria';
 import { seaState, windName } from '@/lib/describe';
 import { formatForecastWave } from '@/lib/format';
+import { type TermKey, tideWord } from '@/lib/glossary';
 import { distLabel, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
 import { GRADE_RANK, GRADE_TONE, INDEX_DISCLAIMER, josa, type SpeciesItem } from '@/lib/species';
 
@@ -394,34 +395,78 @@ export function HomeActions({ onMap, onPlan }: { onMap: () => void; onPlan: () =
 }
 
 /** 오늘의 바다 미리보기 (지역 단위, 범위로 — 하나로 뭉뚱그리지 않음) */
-export function SeaPreview({ list, tide, future, pending }: { list: PlaceSummary[]; tide: string | null; future: boolean; pending: boolean }) {
+export function SeaPreview({
+  list,
+  tide,
+  future,
+  pending,
+  onInfo,
+}: {
+  list: PlaceSummary[];
+  tide: string | null;
+  future: boolean;
+  pending: boolean;
+  /** 칸을 누르면 용어 풀이 */
+  onInfo?: (t: TermKey) => void;
+}) {
   const theme = useTheme();
-  // 지역 안 낚시터들의 예보 최댓값 (가장 거친 곳 기준 — 평균으로 낮춰 보이지 않게)
-  const top = (vals: number[], fmt: (n: number) => string) => (vals.length === 0 ? '자료 없음' : `최대 ${fmt(Math.max(...vals))}`);
   const waves = list.flatMap((s) => (s.wave_fc_max ? [s.wave_fc_max.v] : []));
   const winds = list.flatMap((s) => (s.wind_fc_max ? [s.wind_fc_max.v] : []));
+  // 지역 안 낚시터들의 예보 최댓값 (가장 거친 곳 기준 — 평균으로 낮춰 보이지 않게)
+  const wMax = waves.length ? Math.max(...waves) : null;
+  const vMax = winds.length ? Math.max(...winds) : null;
   const warn = list.filter((s) => s.warning_level === 'warning').length;
   const unknown = list.length > 0 && list.every((s) => s.warning_level === 'unknown');
-  const tiles = [
-    { label: '파고', value: pending ? '발표 전' : top(waves, (n) => formatForecastWave(n)) },
-    { label: '풍속', value: pending ? '발표 전' : top(winds, (n) => `${n}m/s`) },
-    { label: '물때', value: tide ?? '자료 없음' },
-    { label: future ? '특보(지금)' : '해상 특보', value: unknown ? '확인 불가' : warn ? `발효 ${warn}곳` : '발효 없음' },
+  const tiles: { key: TermKey; label: string; value: string; word: string | null }[] = [
+    {
+      key: 'wave',
+      label: '파고',
+      value: pending ? '발표 전' : wMax == null ? '자료 없음' : `최대 ${formatForecastWave(wMax)}`,
+      word: !pending && wMax != null ? seaState(wMax) : null,
+    },
+    {
+      key: 'wind',
+      label: '풍속',
+      value: pending ? '발표 전' : vMax == null ? '자료 없음' : `최대 ${vMax}m/s`,
+      word: !pending && vMax != null ? windName(vMax).name : null,
+    },
+    { key: 'tide', label: '물때', value: tide ?? '자료 없음', word: tideWord(tide) },
+    {
+      key: 'warning',
+      label: future ? '특보(지금)' : '해상 특보',
+      value: unknown ? '확인 불가' : warn ? `발효 ${warn}곳` : '발효 없음',
+      word: !unknown && warn ? '원문 확인' : null,
+    },
   ];
   return (
     <View style={styles.col}>
       <View style={styles.tiles}>
         {tiles.map((t) => (
-          <View key={t.label} style={[styles.tile, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+          <Pressable
+            key={t.key}
+            accessibilityRole="button"
+            accessibilityLabel={`${t.label} ${t.value}${t.word ? `, ${t.word}` : ''}, 뜻 보기`}
+            onPress={() => onInfo?.(t.key)}
+            style={({ pressed }) => [styles.tile, { backgroundColor: theme.backgroundElement, borderColor: theme.border }, pressed && styles.pressed]}>
             <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-              {t.label}
+              {t.label} ⓘ
             </ThemedText>
-            <ThemedText type="smallBold" numberOfLines={2} style={t.label.includes('특보') && warn ? { color: theme.danger } : undefined}>
+            <ThemedText type="smallBold" numberOfLines={1} adjustsFontSizeToFit style={t.key === 'warning' && warn ? { color: theme.danger } : undefined}>
               {t.value}
             </ThemedText>
-          </View>
+            {t.word ? (
+              <ThemedText type="small" themeColor="tint" numberOfLines={1} adjustsFontSizeToFit style={styles.word}>
+                {t.word}
+              </ThemedText>
+            ) : null}
+          </Pressable>
         ))}
       </View>
+      {onInfo ? (
+        <ThemedText type="small" themeColor="textSecondary">
+          칸을 누르면 파고·풍속·물때·특보가 무슨 뜻인지 볼 수 있어요
+        </ThemedText>
+      ) : null}
     </View>
   );
 }
@@ -445,4 +490,5 @@ const styles = StyleSheet.create({
   action: { flex: 1, minHeight: 52, borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   tiles: { flexDirection: 'row', gap: 6 },
   tile: { flex: 1, borderWidth: 1, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 8, gap: 2 },
+  word: { fontSize: 12, lineHeight: 16 },
 });

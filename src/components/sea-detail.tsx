@@ -10,6 +10,7 @@ import { AppIcon } from '@/components/app-icon';
 import { LEVEL_COLOR } from '@/components/compare-view';
 import { Card } from '@/components/screen';
 import { SpeciesImage } from '@/components/species';
+import { TermLinks } from '@/components/term-sheet';
 import { ThemedText } from '@/components/themed-text';
 import type { AppIconName } from '@/constants/icons';
 import { Brand, Layout } from '@/constants/theme';
@@ -115,6 +116,7 @@ export function MetricTable({ pc }: { pc: PlaceCompare }) {
           </View>
         );
       })}
+      <TermLinks items={[['wave', '파고란?'], ['wind', '풍속이란?'], ['water_temp', '수온이란?']]} />
     </Card>
   );
 }
@@ -233,6 +235,7 @@ export function DataBasis({ pc, initiallyOpen = false }: { pc: PlaceCompare; ini
             </ThemedText>
           ))
         : null}
+      <TermLinks items={[['tide', '물때·사리·조금이란?']]} />
     </Card>
   );
 }
@@ -312,6 +315,7 @@ export function FishingIndexCard({ pc }: { pc: PlaceCompare }) {
           : '이 지점 발표'}{' '}
         · 지수와 환경 범위 모두 기관 발표값이며 앱이 판정한 값이 아닙니다
       </ThemedText>
+      <TermLinks items={[['index', '공식 낚시지수란?'], ['tide', '물때란?']]} />
     </Card>
   );
 }

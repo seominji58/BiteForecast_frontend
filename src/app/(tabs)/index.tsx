@@ -11,6 +11,7 @@ import { OptionSheet } from '@/components/option-sheet';
 import { Card, SectionHeader, TabScreen } from '@/components/screen';
 import { SearchBar } from '@/components/search-bar';
 import { SpeciesImage, SpeciesRail } from '@/components/species';
+import { TermSheet } from '@/components/term-sheet';
 import { ThemedText } from '@/components/themed-text';
 import type { AppIconName } from '@/constants/icons';
 import { Brand, IconSize } from '@/constants/theme';
@@ -18,6 +19,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { dayLabel, dayList } from '@/lib/compare';
 import { freshnessLine } from '@/lib/criteria';
 import { useExplore } from '@/lib/explore';
+import type { TermKey } from '@/lib/glossary';
 import { matches, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
 import { type Region, REGIONS } from '@/lib/prefs';
 import { josa } from '@/lib/species';
@@ -45,6 +47,7 @@ export default function HomeScreen() {
   const x = useExplore(date, today);
   const [query, setQuery] = useState('');
   const [sheet, setSheet] = useState<'date' | 'region' | null>(null);
+  const [term, setTerm] = useState<TermKey | null>(null);
 
   const railSpecies = useMemo(() => x.allSpecies.filter((s) => SPECIES_IMAGES[s.code]), [x.allSpecies]);
   const results = query.trim() ? (x.places.data ?? []).filter((p) => matches(p, query)).slice(0, 5) : [];
@@ -172,7 +175,7 @@ export default function HomeScreen() {
       {/* 오늘의 낚시 정보 미리보기 */}
       <SectionHeader title={date === today ? '오늘의 낚시 정보 미리보기' : `${dateText} 낚시 정보 미리보기`} actionLabel="포인트 보기" onAction={points} />
       {x.summary.isSuccess ? (
-        <SeaPreview list={x.scoped} tide={x.tide} future={x.future} pending={x.pending} />
+        <SeaPreview list={x.scoped} tide={x.tide} future={x.future} pending={x.pending} onInfo={setTerm} />
       ) : (
         <ThemedText type="small" themeColor={x.summary.isError ? 'warning' : 'textSecondary'}>
           {x.summary.isError ? '해황 자료를 잠시 확인할 수 없어요.' : '바다 정보를 불러오는 중이에요…'}
@@ -191,6 +194,7 @@ export default function HomeScreen() {
         </ThemedText>
       ) : null}
 
+      <TermSheet term={term} onClose={() => setTerm(null)} />
       <OptionSheet
         open={sheet === 'date'}
         title="출조 날짜"
