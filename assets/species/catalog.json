@@ -255,6 +255,141 @@
         "dorsal and anal fins continuous around the tail",
         "pointed head with a large mouth"
       ]
+    },
+    {
+      "code": "greenling",
+      "name_ko": "노래미",
+      "index_name": null,
+      "species_code": "greenling",
+      "scientific": "Hexagrammos agrammus",
+      "english": "Spotty-bellied greenling",
+      "features": [
+        "elongated body, moderately compressed",
+        "yellowish to reddish-brown mottled with darker irregular blotches",
+        "single long dorsal fin with a shallow notch",
+        "small mouth, small head",
+        "rounded caudal fin"
+      ],
+      "in_index": false,
+      "view": "strict side view (lateral profile), head facing left"
+    },
+    {
+      "code": "horse_mackerel",
+      "name_ko": "전갱이",
+      "index_name": null,
+      "species_code": "horse_mackerel",
+      "scientific": "Trachurus japonicus",
+      "english": "Japanese jack mackerel",
+      "features": [
+        "spindle-shaped silvery body with blue-green back",
+        "row of bony scutes along the entire lateral line",
+        "small black spot on the upper edge of the gill cover",
+        "large eye",
+        "deeply forked tail"
+      ],
+      "in_index": false,
+      "view": "strict side view (lateral profile), head facing left"
+    },
+    {
+      "code": "halfbeak",
+      "name_ko": "학꽁치",
+      "index_name": null,
+      "species_code": "halfbeak",
+      "scientific": "Hyporhamphus sajori",
+      "english": "Japanese halfbeak",
+      "features": [
+        "very slender elongated silvery body",
+        "lower jaw extended into a long needle-like beak with a red tip, upper jaw short",
+        "blue-green back, silver lateral band",
+        "dorsal and anal fins set far back near the tail",
+        "forked tail"
+      ],
+      "in_index": false,
+      "view": "strict side view (lateral profile), head facing left"
+    },
+    {
+      "code": "mullet",
+      "name_ko": "숭어",
+      "index_name": null,
+      "species_code": "mullet",
+      "scientific": "Mugil cephalus",
+      "english": "Flathead grey mullet",
+      "features": [
+        "thick torpedo-shaped body, round in cross-section",
+        "short blunt broad flat-topped head with a small terminal mouth and thick lips",
+        "very small first dorsal fin of only four short spines, placed mid-back, widely separated from the small second dorsal fin",
+        "large cycloid scales, grey-olive back and silvery sides with several faint dark horizontal lines",
+        "moderately forked tail; looks plain, not like a bass"
+      ],
+      "in_index": false,
+      "view": "strict side view (lateral profile), head facing left"
+    },
+    {
+      "code": "goby",
+      "name_ko": "망둥어",
+      "index_name": null,
+      "species_code": "goby",
+      "scientific": "Acanthogobius flavimanus",
+      "english": "Yellowfin goby",
+      "features": [
+        "elongated cylindrical body tapering to the tail",
+        "large head with wide mouth and eyes set high",
+        "two separate dorsal fins",
+        "pelvic fins fused into a sucker disc",
+        "pale tan body with rows of dark blotches"
+      ],
+      "in_index": false,
+      "view": "strict side view (lateral profile), head facing left"
+    },
+    {
+      "code": "bigfin_squid",
+      "name_ko": "무늬오징어",
+      "index_name": null,
+      "species_code": "bigfin_squid",
+      "scientific": "Sepioteuthis lessoniana",
+      "english": "Bigfin reef squid",
+      "features": [
+        "oval mantle with wide fins running almost the full length of the mantle",
+        "translucent body with iridescent spots and stripes",
+        "eight arms and two longer tentacles",
+        "large eyes"
+      ],
+      "in_index": false,
+      "view": "top-down dorsal view, arms pointing left"
+    },
+    {
+      "code": "marbled_flounder",
+      "name_ko": "도다리",
+      "index_name": null,
+      "species_code": null,
+      "scientific": "Pseudopleuronectes yokohamae",
+      "english": "Marbled flounder",
+      "features": [
+        "flat oval flatfish",
+        "both eyes on the RIGHT side of the body (right-eyed, unlike olive flounder)",
+        "small mouth",
+        "brown upper side with scattered dark spots and pale flecks",
+        "rounded tail"
+      ],
+      "in_index": false,
+      "view": "top-down view of the eyed (right) side, head facing right"
+    },
+    {
+      "code": "red_drum",
+      "name_ko": "점성어",
+      "index_name": null,
+      "species_code": null,
+      "scientific": "Sciaenops ocellatus",
+      "english": "Red drum",
+      "features": [
+        "elongated robust body",
+        "coppery-bronze to reddish color, lighter belly",
+        "one distinct black eyespot at the base of the tail",
+        "downward-facing mouth, blunt snout",
+        "squarish tail"
+      ],
+      "in_index": false,
+      "view": "strict side view (lateral profile), head facing left"
     }
   ]
 }

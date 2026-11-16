@@ -568,5 +568,308 @@
     "asset_px": 384,
     "asset_kb": 205,
     "applied_at": "2026-11-11T10:49:12.838533+00:00"
+  },
+  "greenling": {
+    "code": "greenling",
+    "name_ko": "노래미",
+    "scientific": "Hexagrammos agrammus",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "c75da1c456f64778",
+    "usage": {
+      "input_tokens": 260,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 260
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1709
+    },
+    "created_at": "2026-11-16T09:51:12.997Z",
+    "review": {
+      "checklist": [
+        "elongated body, moderately compressed",
+        "yellowish to reddish-brown mottled with darker irregular blotches",
+        "single long dorsal fin with a shallow notch",
+        "small mouth, small head",
+        "rounded caudal fin"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/greenling.png",
+    "asset_px": 384,
+    "asset_kb": 92,
+    "applied_at": "2026-11-16T09:52:49.795634+00:00"
+  },
+  "horse_mackerel": {
+    "code": "horse_mackerel",
+    "name_ko": "전갱이",
+    "scientific": "Trachurus japonicus",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "3118c1969d672e26",
+    "usage": {
+      "input_tokens": 261,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 261
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1710
+    },
+    "created_at": "2026-11-16T09:51:21.594Z",
+    "review": {
+      "checklist": [
+        "spindle-shaped silvery body with blue-green back",
+        "row of bony scutes along the entire lateral line",
+        "small black spot on the upper edge of the gill cover",
+        "large eye",
+        "deeply forked tail"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/horse_mackerel.png",
+    "asset_px": 384,
+    "asset_kb": 72,
+    "applied_at": "2026-11-16T09:52:49.835267+00:00"
+  },
+  "halfbeak": {
+    "code": "halfbeak",
+    "name_ko": "학꽁치",
+    "scientific": "Hyporhamphus sajori",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "0876ebc8f53048ea",
+    "usage": {
+      "input_tokens": 270,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 270
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1719
+    },
+    "created_at": "2026-11-16T09:51:29.626Z",
+    "review": {
+      "checklist": [
+        "very slender elongated silvery body",
+        "lower jaw extended into a long needle-like beak with a red tip, upper jaw short",
+        "blue-green back, silver lateral band",
+        "dorsal and anal fins set far back near the tail",
+        "forked tail"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/halfbeak.png",
+    "asset_px": 384,
+    "asset_kb": 27,
+    "applied_at": "2026-11-16T09:52:49.812513+00:00"
+  },
+  "mullet": {
+    "code": "mullet",
+    "name_ko": "숭어",
+    "scientific": "Mugil cephalus",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "7450a5c0a675c8a9",
+    "usage": {
+      "input_tokens": 303,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 303
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1752
+    },
+    "created_at": "2026-11-16T09:52:41.339Z",
+    "review": {
+      "checklist": [
+        "thick torpedo-shaped body, round in cross-section",
+        "short blunt broad flat-topped head with a small terminal mouth and thick lips",
+        "very small first dorsal fin of only four short spines, placed mid-back, widely separated from the small second dorsal fin",
+        "large cycloid scales, grey-olive back and silvery sides with several faint dark horizontal lines",
+        "moderately forked tail; looks plain, not like a bass"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/mullet.png",
+    "asset_px": 384,
+    "asset_kb": 75,
+    "applied_at": "2026-11-16T09:52:49.888586+00:00"
+  },
+  "goby": {
+    "code": "goby",
+    "name_ko": "망둥어",
+    "scientific": "Acanthogobius flavimanus",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "58b550fd8939fcce",
+    "usage": {
+      "input_tokens": 264,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 264
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1713
+    },
+    "created_at": "2026-11-16T09:51:47.205Z",
+    "review": {
+      "checklist": [
+        "elongated cylindrical body tapering to the tail",
+        "large head with wide mouth and eyes set high",
+        "two separate dorsal fins",
+        "pelvic fins fused into a sucker disc",
+        "pale tan body with rows of dark blotches"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/goby.png",
+    "asset_px": 384,
+    "asset_kb": 95,
+    "applied_at": "2026-11-16T09:52:49.777276+00:00"
+  },
+  "bigfin_squid": {
+    "code": "bigfin_squid",
+    "name_ko": "무늬오징어",
+    "scientific": "Sepioteuthis lessoniana",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "713d8b5683bd6258",
+    "usage": {
+      "input_tokens": 253,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 253
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1702
+    },
+    "created_at": "2026-11-16T09:51:56.242Z",
+    "review": {
+      "checklist": [
+        "oval mantle with wide fins running almost the full length of the mantle",
+        "translucent body with iridescent spots and stripes",
+        "eight arms and two longer tentacles",
+        "large eyes"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/bigfin_squid.png",
+    "asset_px": 384,
+    "asset_kb": 116,
+    "applied_at": "2026-11-16T09:52:49.757184+00:00"
+  },
+  "marbled_flounder": {
+    "code": "marbled_flounder",
+    "name_ko": "도다리",
+    "scientific": "Pseudopleuronectes yokohamae",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "09bb84153372f215",
+    "usage": {
+      "input_tokens": 267,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 267
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1716
+    },
+    "created_at": "2026-11-16T09:52:03.684Z",
+    "review": {
+      "checklist": [
+        "flat oval flatfish",
+        "both eyes on the RIGHT side of the body (right-eyed, unlike olive flounder)",
+        "small mouth",
+        "brown upper side with scattered dark spots and pale flecks",
+        "rounded tail"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/marbled_flounder.png",
+    "asset_px": 384,
+    "asset_kb": 136,
+    "applied_at": "2026-11-16T09:52:49.865319+00:00"
+  },
+  "red_drum": {
+    "code": "red_drum",
+    "name_ko": "점성어",
+    "scientific": "Sciaenops ocellatus",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "16165a6c10751de3",
+    "usage": {
+      "input_tokens": 257,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 257
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1706
+    },
+    "created_at": "2026-11-16T09:52:13.611Z",
+    "review": {
+      "checklist": [
+        "elongated robust body",
+        "coppery-bronze to reddish color, lighter belly",
+        "one distinct black eyespot at the base of the tail",
+        "downward-facing mouth, blunt snout",
+        "squarish tail"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/red_drum.png",
+    "asset_px": 384,
+    "asset_kb": 95,
+    "applied_at": "2026-11-16T09:52:49.912006+00:00"
   }
 }

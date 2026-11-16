@@ -2,15 +2,23 @@
 
 /** 어종 코드 → 앱 에셋 (require 결과 = 에셋 번호) */
 export const SPECIES_IMAGES: Partial<Record<string, number>> = {
+  bigfin_squid: require('@/assets/species/bigfin_squid.png'),
   black_porgy: require('@/assets/species/black_porgy.png'),
   black_rockfish: require('@/assets/species/black_rockfish.png'),
   conger: require('@/assets/species/conger.png'),
   cuttlefish: require('@/assets/species/cuttlefish.png'),
   flatfish: require('@/assets/species/flatfish.png'),
+  goby: require('@/assets/species/goby.png'),
+  greenling: require('@/assets/species/greenling.png'),
   hairtail: require('@/assets/species/hairtail.png'),
+  halfbeak: require('@/assets/species/halfbeak.png'),
+  horse_mackerel: require('@/assets/species/horse_mackerel.png'),
   mackerel: require('@/assets/species/mackerel.png'),
+  marbled_flounder: require('@/assets/species/marbled_flounder.png'),
+  mullet: require('@/assets/species/mullet.png'),
   octopus: require('@/assets/species/octopus.png'),
   opaleye: require('@/assets/species/opaleye.png'),
+  red_drum: require('@/assets/species/red_drum.png'),
   red_rockfish: require('@/assets/species/red_rockfish.png'),
   red_seabream: require('@/assets/species/red_seabream.png'),
   rock_bream: require('@/assets/species/rock_bream.png'),

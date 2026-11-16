@@ -17,7 +17,7 @@ export type SpeciesItem = {
   speciesCode: string | null;
 };
 
-/** 공식 지수 8종 (제공 지점이 많은 순) → 추가 7종 → 기준표에만 있는 6종(이미지 없음) */
+/** 공식 지수 8종 (제공 지점이 많은 순) → 추가 어종 (모두 이미지 있음, 2026-11-16 8종 추가) */
 export const SPECIES: SpeciesItem[] = [
   { code: 'rockfish', name: '우럭', alias: '조피볼락', indexName: '우럭', speciesCode: 'rockfish' },
   { code: 'black_porgy', name: '감성돔', indexName: '감성돔', speciesCode: 'black_porgy' },
@@ -40,6 +40,9 @@ export const SPECIES: SpeciesItem[] = [
   { code: 'mullet', name: '숭어', indexName: null, speciesCode: 'mullet' },
   { code: 'goby', name: '망둥어', indexName: null, speciesCode: 'goby' },
   { code: 'bigfin_squid', name: '무늬오징어', indexName: null, speciesCode: 'bigfin_squid' },
+  // 2026-11-16: 낚시터 공공데이터에 많이 나오는 어종 (도다리 37곳·점성어 8곳), 기준표 0006
+  { code: 'marbled_flounder', name: '도다리', alias: '문치가자미', indexName: null, speciesCode: 'marbled_flounder' },
+  { code: 'red_drum', name: '점성어', indexName: null, speciesCode: 'red_drum' },
 ];
 
 const BY_CODE = new Map(SPECIES.map((s) => [s.code, s]));
