@@ -113,7 +113,7 @@ function NewPostScreenInner() {
         )}
 
         <Field label="제목" required>
-          <TextField value={title} onChangeText={setTitle} maxLength={60} placeholder="예: 동명항 우럭 입질 시작" />
+          <TextField value={title} onChangeText={setTitle} maxLength={60} placeholder={free ? '예: 다들 주말 잘 보내셨어요?' : '예: 동명항 우럭 입질 시작'} />
         </Field>
 
         <Field label="내용" required>
@@ -185,9 +185,10 @@ function NewPostScreenInner() {
         )}
 
         <ThemedText type="small" themeColor="textSecondary">
-          • 연락처·실명 등 개인정보는 적지 마세요.{'\n'}• 광고·욕설·허위 정보는 신고될 수 있으며, 신고가 누적되면 글이
-          숨겨집니다.{'\n'}• 낚시터 이름은 공개 낚시터 목록의 이름이에요. 낚시가 허용된 곳이라는 뜻은 아니니,
-          출입통제·금지 여부를 확인한 뒤 공유해 주세요.
+          • 연락처·실명 등 개인정보는 적지 마세요.{'\n'}• 광고·욕설·허위 정보는 신고될 수 있으며, 신고가 누적되면 글이 숨겨집니다.
+          {free
+            ? ''
+            : `\n• 낚시터 이름은 공개 낚시터 목록의 이름이에요. 낚시가 허용된 곳이라는 뜻은 아니니, 출입통제·금지 여부를 확인한 뒤 공유해 주세요.`}
         </ThemedText>
 
         {error ? <ThemedText themeColor="danger">{error}</ThemedText> : null}
