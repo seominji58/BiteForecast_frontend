@@ -344,7 +344,15 @@ export default function ExploreScreen() {
     const group = groups[0];
     const r = group[0];
     if (group.length === 1)
-      return { id: `p${r.place.id}`, lat: r.place.lat!, lon: r.place.lon!, tone: tone(r), label: r.place.name };
+      return {
+        id: `p${r.place.id}`,
+        lat: r.place.lat!,
+        lon: r.place.lon!,
+        tone: tone(r),
+        label: r.place.name,
+        // 고른 어종의 오늘 공식 지수가 좋음 이상이면 그 어종 그림 핀 (조황 아님 — 바다 조건)
+        fish: tone(r) === 'good' ? fishItem?.code : undefined,
+      };
     const warn = group.some((x) => x.s?.warning_level === 'warning');
     const caught = group.some((x) => catchById.has(x.place.id));
     const good = group.some((x) => goodGrade(x.place.id));
@@ -403,7 +411,7 @@ export default function ExploreScreen() {
                 : rows.length === 0
                   ? `${fish}: 이 지역엔 표시할 곳이 없어요`
                   : fishIsIndex
-                    ? `${fish} · 🟢 오늘 지수 좋음 ${rows.filter((r) => goodGrade(r.place.id)).length}곳 (바다 조건)`
+                    ? `${fish} · 🐟 오늘 지수 좋음 ${rows.filter((r) => goodGrade(r.place.id)).length}곳 (바다 조건)`
                     : `${fish} · 낚시터가 알린 대상 어종 ${rows.length}곳`,
             color: 'textSecondary' as const,
           }

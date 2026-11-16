@@ -14,6 +14,8 @@ export type MapMarker = {
   count?: number;
   /** 접근성·제목 */
   label?: string;
+  /** 어종 그림 핀 (어종 코드, 예: rockfish). 고른 어종 공식 지수 좋음 이상인 낚시터 하나짜리 핀에만 */
+  fish?: string;
 };
 
 export type MapRegion = { latitude: number; longitude: number; latitudeDelta: number; longitudeDelta: number };

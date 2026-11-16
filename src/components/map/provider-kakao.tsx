@@ -72,6 +72,17 @@ const GROUP: Record<MarkerTone, number> = {
   good: require('@/assets/map/group-good.png'),
 };
 const ME = require('@/assets/map/me.png');
+/** 어종 그림 핀 (공식 지수 8종, 초록 테두리) */
+const FISH: Record<string, number> = {
+  rockfish: require('@/assets/map/fish-rockfish.png'),
+  black_porgy: require('@/assets/map/fish-black_porgy.png'),
+  seabass: require('@/assets/map/fish-seabass.png'),
+  rock_bream: require('@/assets/map/fish-rock_bream.png'),
+  opaleye: require('@/assets/map/fish-opaleye.png'),
+  red_seabream: require('@/assets/map/fish-red_seabream.png'),
+  black_rockfish: require('@/assets/map/fish-black_rockfish.png'),
+  red_rockfish: require('@/assets/map/fish-red_rockfish.png'),
+};
 
 const LAYER = 'places';
 const ME_LAYER = 'me';
@@ -151,6 +162,10 @@ export const KakaoMap = forwardRef<AppMapHandle, AppMapProps>(function KakaoMap(
           },
         ],
       })),
+      ...Object.entries(FISH).map(([code, src]) => ({
+        id: `fish-${code}`,
+        levels: [{ level: 0, image: asset(src, 44), anchor: { x: 0.5, y: 0.5 } }],
+      })),
       {
         id: 'me',
         levels: [{ level: 0, image: asset(ME, 30), anchor: { x: 0.5, y: 0.5 } }],
@@ -159,11 +174,11 @@ export const KakaoMap = forwardRef<AppMapHandle, AppMapProps>(function KakaoMap(
     const labels = markers.map((m) => ({
       id: m.id,
       layerId: LAYER,
-      styleId: m.count && m.count > 1 ? `group-${m.tone}` : `dot-${m.tone}`,
+      styleId: m.count && m.count > 1 ? `group-${m.tone}` : m.fish && FISH[m.fish] ? `fish-${m.fish}` : `dot-${m.tone}`,
       coordinate: { latitude: m.lat, longitude: m.lon },
       text: m.count && m.count > 1 ? [{ value: String(m.count) }] : undefined,
       // 선택한 곳이 맨 위에 오게
-      rank: m.tone === 'selected' ? 1000 : m.tone === 'danger' ? 100 : m.tone === 'catch' ? 50 : 1,
+      rank: m.tone === 'selected' ? 1000 : m.tone === 'danger' ? 100 : m.fish ? 60 : m.tone === 'catch' ? 50 : 1,
       clickable: true,
     }));
     if (userLocation)
