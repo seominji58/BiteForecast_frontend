@@ -2,7 +2,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, useWindowDimensions, View } from 'react-native';
 
-import { useDateRange, usePlaces, usePlacesSummary } from '@/api/queries';
+import { useDateRange, useFishingIndex, usePlaces, usePlacesSummary } from '@/api/queries';
 import type { Place, PlaceSummary } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { Dropdown, type DropdownOption } from '@/components/dropdown';
@@ -30,6 +30,7 @@ import {
 import { type Coords, getCurrentCoords } from '@/lib/location';
 import { CoordNote, SameCoordSheet } from '@/components/coord-note';
 import { coordKey, distLabel, km, PLACE_IMAGE, PLACE_TYPE_LABEL, recommendable, sidoOf, usableForLocation } from '@/lib/place';
+import { SPECIES } from '@/lib/species';
 import { getRecent, RECENT_PLACES, useCriteria, useExploreRegion, useHomePlace } from '@/lib/prefs';
 
 const KOREA: MapRegion = { latitude: 36.0, longitude: 127.8, latitudeDelta: 6.5, longitudeDelta: 6.5 };
@@ -44,6 +45,8 @@ type Origin = { kind: 'gps' | 'home'; coords: Coords; label: string } | null;
 /** 지역 값 앞붙임: 해역 (예: 'sea:서해'). 시·도는 이름 그대로 */
 const SEA = 'sea:';
 const SEA_ORDER = ['서해', '남해', '동해', '제주'] as const;
+/** 지도 어종 칩: 국립해양조사원 바다낚시지수가 있는 어종만 (지수 없는 어종은 장소를 고를 근거가 없다) */
+const INDEX_SPECIES = SPECIES.filter((x) => x.indexName).map((x) => x.indexName!);
 
 /**
  * 낚시터 찾기 (사용자 결정 2026-11-05): 지도 + 거리순 목록 + 특보·해황 요약 → 상세 해황 / 비교.
@@ -60,6 +63,16 @@ export default function ExploreScreen() {
   const summary = usePlacesSummary(range.data?.today);
   const [homeId, , homeLoaded] = useHomePlace();
   const [criteria, setCriteria] = useCriteria();
+  // 어종 칩 (M2): 오늘 그 어종 지수를 발표한 지점 + 지점 가까운 낚시터만 지도·목록에 남긴다
+  const [fish, setFish] = useState<string | null>(null);
+  const fi = useFishingIndex(fish ? range.data?.today : undefined);
+  const fishPlaces = useMemo(() => {
+    if (!fish || !fi.data) return null;
+    const ids = new Set<number>();
+    for (const pt of fi.data.points)
+      if (pt.species.some((x) => x.species === fish)) for (const l of pt.places) ids.add(l.place_id);
+    return ids;
+  }, [fish, fi.data]);
 
   const [onlyMatching, setOnlyMatching] = useState(params.mode === 'criteria');
   // 같은 화면이 다른 진입점(조건으로 찾기 ↔ 지도)으로 다시 열리면 스위치를 진입점에 맞춘다
@@ -161,15 +174,19 @@ export default function ExploreScreen() {
       // 자료가 오래됐으면 「조건에 맞는 곳」을 고르지 않는다 (최신처럼 보이지 않게)
       // 「조건에 맞는 곳」은 추천이므로 좌표 불일치 의심 곳은 뺀다 (전체 보기에는 안내와 함께 남김)
       .filter((r) => !onlyMatching || (!stale && r.check.status === 'meets' && recommendable(r.place)))
-      .filter((r) => inRegion(r.place));
+      .filter((r) => inRegion(r.place))
+      .filter((r) => !fishPlaces || fishPlaces.has(r.place.id));
     // 현재 위치가 있으면 거리순, 없으면 지역 이름 → 낚시터 이름순 (임의 기준의 「가까운 순」 없음)
-    list.sort((a, b) =>
-      a.dist != null && b.dist != null
-        ? a.dist - b.dist
-        : a.place.region_name.localeCompare(b.place.region_name) || a.place.name.localeCompare(b.place.name),
+    // 동점(같은 좌표 등)은 지역 → 이름 → 낚시터 번호로 고정 (서버 응답 순서에 기대지 않음)
+    list.sort(
+      (a, b) =>
+        (a.dist != null && b.dist != null ? a.dist - b.dist : 0) ||
+        a.place.region_name.localeCompare(b.place.region_name) ||
+        a.place.name.localeCompare(b.place.name) ||
+        a.place.id - b.place.id,
     );
     return list;
-  }, [places.data, byId, origin, criteria, onlyMatching, stale, region, seaOf]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [places.data, byId, origin, criteria, onlyMatching, stale, region, seaOf, fishPlaces]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const regionName = region.startsWith(SEA) ? region.slice(SEA.length) : region;
   const orderLabel = gps.loading
@@ -210,6 +227,13 @@ export default function ExploreScreen() {
       .map((p) => ({ lat: p.lat!, lon: p.lon! }));
     if (pts.length) mapRef.current?.fitTo(pts);
   }, [region, mapReady, seaOf]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 어종을 고르면 그 어종 지점들이 한눈에 보이게 지도를 맞춘다
+  const fishKey = fishPlaces ? `${fish}|${region}|${rows.length}` : '';
+  useEffect(() => {
+    if (!fishKey || !mapReady || !rows.length) return;
+    mapRef.current?.fitTo(rows.map((r) => ({ lat: r.place.lat!, lon: r.place.lon! })));
+  }, [fishKey, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const tone = (r: (typeof rows)[number]): MapMarker['tone'] => {
     if (r.place.id === selectedId) return 'selected';
@@ -325,6 +349,22 @@ export default function ExploreScreen() {
         {gps.error ? (
           <ThemedText type="small" themeColor="warning">
             {gps.error}
+          </ThemedText>
+        ) : null}
+        {/* 어종 칩: 공식 바다낚시지수 어종만 */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.recentRow}>
+          <Chip label="전체 어종" selected={!fish} onPress={() => setFish(null)} />
+          {INDEX_SPECIES.map((name) => (
+            <Chip key={name} label={name} selected={fish === name} onPress={() => setFish(fish === name ? null : name)} />
+          ))}
+        </ScrollView>
+        {fish ? (
+          <ThemedText type="small" themeColor="textSecondary">
+            {fi.isLoading
+              ? `${fish} 지수 지점 불러오는 중…`
+              : fi.isError
+                ? '낚시지수를 불러오지 못했어요'
+                : `오늘 ${fish} 지수 지점·${fi.data?.max_km ?? 10}km 안 ${rows.length}곳 · 바다 조건 참고값`}
           </ThemedText>
         ) : null}
         {recentPlaces.length ? (

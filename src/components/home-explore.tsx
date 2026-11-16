@@ -44,7 +44,11 @@ export function sortGeneral(list: PlaceSummary[], byId: Map<number, Place>, dist
     const da = dist(a);
     const db = dist(b);
     if (da != null && db != null && da !== db) return da - db;
-    return linked(b) - linked(a) || byId.get(a.place_id)!.name.localeCompare(byId.get(b.place_id)!.name, 'ko');
+    return (
+      linked(b) - linked(a) ||
+      byId.get(a.place_id)!.name.localeCompare(byId.get(b.place_id)!.name, 'ko') ||
+      a.place_id - b.place_id
+    );
   });
 }
 

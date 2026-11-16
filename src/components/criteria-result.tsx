@@ -109,10 +109,13 @@ export function CriteriaResult({
     .filter((r) => recommendable(r.p))
     .map((r) => ({ ...r, d: origin ? km(origin, r.p) : null }))
     // 위치가 있으면 거리순, 없으면 지역·이름순 (임의 기준의 「가까운 순」 없음)
-    .sort((x, y) =>
-      x.d != null && y.d != null
-        ? x.d - y.d
-        : x.p.region_name.localeCompare(y.p.region_name) || x.p.name.localeCompare(y.p.name),
+    // 동점은 지역 → 이름 → 낚시터 번호로 고정
+    .sort(
+      (x, y) =>
+        (x.d != null && y.d != null ? x.d - y.d : 0) ||
+        x.p.region_name.localeCompare(y.p.region_name) ||
+        x.p.name.localeCompare(y.p.name) ||
+        x.p.id - y.p.id,
     )
     .slice(0, limit);
 
