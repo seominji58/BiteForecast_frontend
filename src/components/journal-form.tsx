@@ -6,7 +6,7 @@ import { AppIcon } from '@/components/app-icon';
 import { UiIcon } from '@/components/ui-icon';
 import { IconSize } from '@/constants/theme';
 import { DateTimeField } from '@/components/date-time-field';
-import { Button, Field, TextField } from '@/components/form';
+import { Button, Chip, Field, TextField } from '@/components/form';
 import { PhotoPicker, usePhotoUploads } from '@/components/photo-picker';
 import { PlaceField } from '@/components/place-field';
 import { Card } from '@/components/screen';
@@ -29,6 +29,7 @@ type Props = {
  * 낚시일지 작성/수정 폼 (재설계 v2 §8).
  * ① 장소·일시 ② 조과(어종 검색·마릿수·길이) ③ 사진 ④ 미끼·채비·메모(접힘)
  * 사진이 있으면 [저장] / [저장하고 인증 신청]. 포인트는 관리자 승인 후에만 생긴다.
+ * 「오늘은 못 잡았어요」를 고르면 마릿수 0 으로 저장하고 어종·길이 칸을 숨긴다 (꽝도 출조 기록, 서비스 개선 설계 R2)
  */
 export function JournalForm({ initial, submitLabel, submitting, serverError, onSubmit, defaultPlaceId, defaultFishedAt }: Props) {
   const [placeId, setPlaceId] = useState<number | null>(initial?.place_id ?? defaultPlaceId ?? null);
@@ -37,6 +38,7 @@ export function JournalForm({ initial, submitLabel, submitting, serverError, onS
     code: initial?.species_code ?? null,
     etc: initial?.species_etc ?? null,
   });
+  const [skunk, setSkunk] = useState(initial?.count === 0);
   const [count, setCount] = useState(initial?.count != null ? String(initial.count) : '');
   const [length, setLength] = useState(initial?.max_length_cm != null ? String(initial.max_length_cm) : '');
   const [bait, setBait] = useState(initial?.bait ?? '');
@@ -49,13 +51,17 @@ export function JournalForm({ initial, submitLabel, submitting, serverError, onS
   const status = initial?.verification.status ?? 'none';
   const canRequestAfterSave = status === 'none' || status === 'rejected';
   const hasPhoto = photos.photoIds.length > 0;
-  const hasSpecies = !!(species.code || species.etc);
+  const hasSpecies = !skunk && !!(species.code || species.etc);
 
   const submit = (requestVerification: boolean) => {
     if (photos.uploading) return setError('사진을 올리는 중이에요. 잠시 후 다시 눌러 주세요.');
     if (photos.failed) return setError('올리지 못한 사진이 있어요. 눌러서 다시 시도하거나 ✕로 빼 주세요.');
     if (requestVerification && !hasSpecies) return setError('인증 신청에는 어종이 필요해요.');
-    const result = buildInput({ placeId, fishedAt, species, count, length, bait, rig, memo });
+    const result = buildInput(
+      skunk
+        ? { placeId, fishedAt, species: { code: null, etc: null }, count: '0', length: '', bait, rig, memo }
+        : { placeId, fishedAt, species, count, length, bait, rig, memo },
+    );
     if (typeof result === 'string') return setError(result);
     setError(null);
     onSubmit({ ...result, photo_ids: photos.photoIds, request_verification: requestVerification });
@@ -73,33 +79,45 @@ export function JournalForm({ initial, submitLabel, submitting, serverError, onS
       </Section>
 
       <Section title="조과" icon={<AppIcon name="total-fish" size={IconSize.row} />}>
-        <Field label="어종">
-          <SpeciesField value={species} onChange={setSpecies} />
-        </Field>
-        <View style={styles.row}>
-          <View style={styles.flex}>
-            <Field label="마릿수">
-              <TextField value={count} onChangeText={setCount} keyboardType="number-pad" placeholder="0" maxLength={3} />
-            </Field>
-          </View>
-          <View style={styles.flex}>
-            <Field label="최대 길이 (cm)">
-              <TextField
-                value={length}
-                onChangeText={setLength}
-                keyboardType="decimal-pad"
-                placeholder="예: 32.5"
-                maxLength={5}
-              />
-            </Field>
-          </View>
+        <View style={styles.chips}>
+          <Chip label="잡았어요" selected={!skunk} onPress={() => setSkunk(false)} />
+          <Chip label="오늘은 못 잡았어요" selected={skunk} onPress={() => setSkunk(true)} />
         </View>
+        {skunk ? (
+          <ThemedText type="small" themeColor="textSecondary">
+            못 잡은 날도 출조 기록이에요. 그날 물때·바다 기록이 함께 남아 다음 출조 때 참고할 수 있어요.
+          </ThemedText>
+        ) : (
+          <>
+            <Field label="어종">
+              <SpeciesField value={species} onChange={setSpecies} />
+            </Field>
+            <View style={styles.row}>
+              <View style={styles.flex}>
+                <Field label="마릿수">
+                  <TextField value={count} onChangeText={setCount} keyboardType="number-pad" placeholder="0" maxLength={3} />
+                </Field>
+              </View>
+              <View style={styles.flex}>
+                <Field label="최대 길이 (cm)">
+                  <TextField
+                    value={length}
+                    onChangeText={setLength}
+                    keyboardType="decimal-pad"
+                    placeholder="예: 32.5"
+                    maxLength={5}
+                  />
+                </Field>
+              </View>
+            </View>
+          </>
+        )}
       </Section>
 
       <Section title="사진 (인증용, 최대 4장)" icon={<UiIcon name="photo" size={IconSize.row} />}>
         <PhotoPicker state={photos} />
         <ThemedText type="small" themeColor="textSecondary">
-          물고기와 계측(자·줄자)이 보이면 검토가 빨라요. 위치 정보는 지우고 저장하며, 사진은 나만 볼 수 있어요(인증 후
+          물고기와 계측(자·줄자)이 보이면 검토가 빨라요. 위치 정보는 지우고 저장하며, 사진은 나만 볼 수 있어요(커뮤니티에
           공유하면 공개).
         </ThemedText>
       </Section>
@@ -246,6 +264,7 @@ export function buildInput(r: Raw): JournalInput | string {
 }
 
 const styles = StyleSheet.create({
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   form: { gap: 12 },
   section: { gap: 10 },
   sectionHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },

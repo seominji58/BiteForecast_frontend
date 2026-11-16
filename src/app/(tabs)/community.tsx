@@ -2,7 +2,7 @@ import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { usePlaces, usePosts, useSpecies } from '@/api/queries';
+import { usePlaces, usePostPages, useSpecies } from '@/api/queries';
 import type { PostCategory } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { Dropdown, type DropdownOption } from '@/components/dropdown';
@@ -15,6 +15,8 @@ import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { CATEGORY } from '@/lib/community';
 import { sidoOf } from '@/lib/place';
+import { useExploreRegion, useHomeSpecies } from '@/lib/prefs';
+import { speciesByCode } from '@/lib/species';
 
 type Sort = 'popular' | 'latest';
 type CatFilter = PostCategory | 'all';
@@ -29,6 +31,7 @@ const FILTER_OPTIONS: DropdownOption<CatFilter>[] = [
 ];
 
 // 커뮤니티 (재설계 v2 §7): [카테고리 ▾] [최신 · 인기] 한 줄 + 글 목록 + 글쓰기
+// 처음 열면 홈에서 고른 어종·지도에서 고른 시·도를 필터 기본값으로 쓴다 (서비스 개선 설계 C3). 「필터 해제」로 전체 보기
 export default function CommunityScreen() {
   const theme = useTheme();
   // 홈 「시즌별 어종과 낚시 팁」 등에서 카테고리를 지정해 들어올 수 있다: /community?category=tip
@@ -40,13 +43,22 @@ export default function CommunityScreen() {
     if (paramCat && FILTER_OPTIONS.some((o) => o.value === paramCat)) setFilter(paramCat as CatFilter);
   }
   const [sort, setSort] = useState<Sort>('latest');
-  const [sido, setSido] = useState<string>('all');
-  const [speciesCode, setSpeciesCode] = useState<string>('all');
+  // null = 아직 직접 고르지 않음 → 관심 값(홈 어종·지도 시·도)을 따른다
+  const [sidoSel, setSido] = useState<string | null>(null);
+  const [speciesSel, setSpeciesCode] = useState<string | null>(null);
+  const [exploreRegion] = useExploreRegion();
+  const [homeSpeciesCode] = useHomeSpecies();
+  const homeSp = speciesByCode(homeSpeciesCode);
+  const interestSpecies = homeSp ? (homeSp.speciesCode ?? homeSp.name) : 'all';
+  const sido = sidoSel ?? exploreRegion;
+  const speciesCode = speciesSel ?? interestSpecies;
+  const byInterest = sidoSel == null && speciesSel == null && (sido !== 'all' || speciesCode !== 'all');
   const category = filter === 'all' ? null : filter;
-  const posts = usePosts(category, sort, {
+  const pages = usePostPages(category, sort, {
     sido: sido === 'all' ? null : sido,
     species: speciesCode === 'all' ? null : speciesCode,
   });
+  const posts = { ...pages, data: pages.data?.pages.flat() };
   const { signedIn } = useAuth();
   const places = usePlaces();
   const species = useSpecies();
@@ -55,18 +67,17 @@ export default function CommunityScreen() {
   const sidoOptions = useMemo<DropdownOption<string>[]>(() => {
     const counts = new Map<string, number>();
     for (const p of places.data ?? []) counts.set(sidoOf(p), (counts.get(sidoOf(p)) ?? 0) + 1);
-    return [
-      { value: 'all', label: '전체 지역' },
-      ...[...counts.entries()].sort((a, b) => b[1] - a[1]).map(([s]) => ({ value: s, label: s })),
-    ];
-  }, [places.data]);
-  const speciesOptions = useMemo<DropdownOption<string>[]>(
-    () => [
-      { value: 'all', label: '전체 어종' },
-      ...(species.data ?? []).map((sp) => ({ value: sp.code, label: sp.name_ko.replace(/\(.*\)/, '') })),
-    ],
-    [species.data],
-  );
+    const list = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([s]) => ({ value: s, label: s }));
+    if (sido !== 'all' && !counts.has(sido)) list.push({ value: sido, label: sido });
+    return [{ value: 'all', label: '전체 지역' }, ...list];
+  }, [places.data, sido]);
+  const speciesOptions = useMemo<DropdownOption<string>[]>(() => {
+    const list = (species.data ?? []).map((sp) => ({ value: sp.code, label: sp.name_ko.replace(/\(.*\)/, '') }));
+    // 홈 어종이 서버 어종 목록에 없으면 (직접 입력 어종) 이름으로 거른다
+    if (speciesCode !== 'all' && !list.some((o) => o.value === speciesCode))
+      list.push({ value: speciesCode, label: homeSp?.name ?? speciesCode });
+    return [{ value: 'all', label: '전체 어종' }, ...list];
+  }, [species.data, speciesCode, homeSp?.name]);
   const filtered = sido !== 'all' || speciesCode !== 'all';
 
   return (
@@ -79,8 +90,8 @@ export default function CommunityScreen() {
         </View>
         <View style={styles.toolbar}>
           <ThemedText type="small" themeColor="textSecondary" style={styles.flex}>
-            {posts.isSuccess ? `글 ${posts.data.length}개` : ''}
-            {filtered ? ' · 필터 적용 중' : ''}
+            {posts.isSuccess ? `글 ${posts.data!.length}${pages.hasNextPage ? '개 이상' : '개'}` : ''}
+            {byInterest ? ' · 관심 어종·지역' : filtered ? ' · 필터 적용 중' : ''}
           </ThemedText>
           {filtered ? (
             <Pressable
@@ -122,14 +133,16 @@ export default function CommunityScreen() {
         {posts.isPending && <Loading />}
         {posts.isError && <ErrorView message={posts.error.message} onRetry={() => posts.refetch()} />}
         {posts.isSuccess &&
-          (posts.data.length === 0 ? (
+          (posts.data!.length === 0 ? (
             filtered || category || sort === 'popular' ? (
               <EmptyView
                 message={
                   sort === 'popular'
                     ? '최근 30일 인기글이 없어요.'
-                    : filtered
-                      ? '조건에 맞는 글이 없어요. 지역·어종 필터를 바꾸거나 해제해 보세요.'
+                    : byInterest
+                      ? '관심 어종·지역의 글이 아직 없어요. 「필터 해제」로 전체 글을 볼 수 있어요.'
+                      : filtered
+                        ? '조건에 맞는 글이 없어요. 지역·어종 필터를 바꾸거나 해제해 보세요.'
                       : `${CATEGORY[category!].label} 글이 아직 없어요. 첫 글을 남겨 보세요.`
                 }
               />
@@ -137,7 +150,7 @@ export default function CommunityScreen() {
               <CommunityIntro onWrite={() => router.push(signedIn ? '/community/new' : '/login')} />
             )
           ) : (
-            posts.data.map((p) => (
+            posts.data!.map((p) => (
               <Link key={p.id} href={{ pathname: '/community/[id]', params: { id: String(p.id) } }} asChild>
                 <Pressable accessibilityRole="button" style={({ pressed }) => pressed && styles.pressed}>
                   <PostCard p={p} />
@@ -145,6 +158,14 @@ export default function CommunityScreen() {
               </Link>
             ))
           ))}
+        {pages.hasNextPage ? (
+          <Button
+            label={pages.isFetchingNextPage ? '불러오는 중…' : '글 더 보기'}
+            variant="secondary"
+            onPress={() => pages.fetchNextPage()}
+            disabled={pages.isFetchingNextPage}
+          />
+        ) : null}
         <View style={styles.fabSpace} />
       </TabScreen>
 

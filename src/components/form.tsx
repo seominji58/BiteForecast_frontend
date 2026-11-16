@@ -110,6 +110,8 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.one + 2,
+    minHeight: 40,
+    justifyContent: 'center',
   },
   button: {
     flexDirection: 'row',
@@ -117,6 +119,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
     paddingVertical: 11,
+    minHeight: 48,
     borderRadius: 10,
   },
 });

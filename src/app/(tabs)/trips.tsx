@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useDateRange, useTripOutlook, useTrips } from '@/api/queries';
@@ -14,7 +14,7 @@ import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { dayLabel } from '@/lib/compare';
-import { useCriteria } from '@/lib/prefs';
+import { read, useCriteria, write } from '@/lib/prefs';
 import { dday, outlookLine, periodLabel } from '@/lib/trip';
 import { useTripDraft } from '@/lib/trip-draft';
 
@@ -92,6 +92,7 @@ function TripList() {
     <>
       <Button label="새 출조계획" icon="trips" onPress={() => router.push('/trip/new')} />
       <Button label="초대 코드로 참여" variant="secondary" onPress={() => router.push('/trip/join')} />
+      <RecordPrompt trips={[...(past.data ?? []), ...(upcoming.data ?? [])]} today={today} />
       <SectionHeader title="다가오는 계획" />
       {upcoming.isPending ? (
         <Loading />
@@ -115,6 +116,65 @@ function TripList() {
         ? (past.data ?? []).map((t) => <TripCard key={t.id} t={t} today={today} />)
         : null}
     </>
+  );
+}
+
+const PROMPT_DISMISSED = 'biteforecast.record_prompt_dismissed';
+const PROMPT_DAYS = 7;
+
+function daysAgo(today: string, n: number): string {
+  const d = new Date(`${today}T00:00:00`);
+  d.setDate(d.getDate() - n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * 다녀온 계획 기록 유도 (서비스 개선 설계 T1, 알림 없이 화면 안에서만).
+ * 최근 7일 안에 시작한 계획 중 내 기록이 없는 가장 최근 것 하나. 닫으면 그 계획은 다시 묻지 않는다 (기기 저장)
+ */
+function RecordPrompt({ trips, today }: { trips: TripListItem[]; today: string }) {
+  const theme = useTheme();
+  const [dismissed, setDismissed] = useState<number[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    read(PROMPT_DISMISSED)
+      .then((x) => alive && setDismissed(x ? (JSON.parse(x) as number[]) : []))
+      .catch(() => alive && setDismissed([]));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  if (!today || dismissed == null) return null;
+  const since = daysAgo(today, PROMPT_DAYS);
+  const t = trips
+    .filter((x) => x.start_date <= today && x.end_date >= since && x.journal_count === 0 && !dismissed.includes(x.id))
+    .sort((a, b) => b.end_date.localeCompare(a.end_date))[0];
+  if (!t) return null;
+  const dismiss = () => {
+    const next = [t.id, ...dismissed].slice(0, 50);
+    setDismissed(next);
+    write(PROMPT_DISMISSED, JSON.stringify(next)).catch(() => undefined);
+  };
+  const when = t.end_date >= today ? '오늘' : t.end_date === daysAgo(today, 1) ? '어제' : dayLabel(t.end_date);
+  return (
+    <View style={[styles.card, { borderColor: theme.tint, backgroundColor: theme.tintSoft }]}>
+      <ThemedText type="smallBold">
+        {when} 다녀온 「{t.title}」 기록을 남길까요?
+      </ThemedText>
+      <ThemedText type="small" themeColor="textSecondary">
+        못 잡은 날도 기록해 두면 다음 출조 때 그날 바다를 다시 볼 수 있어요.
+      </ThemedText>
+      <View style={styles.promptActions}>
+        <View style={styles.flex}>
+          <Button label="기록 남기기" onPress={() => router.push({ pathname: '/trip/[id]', params: { id: String(t.id) } })} />
+        </View>
+        <Pressable accessibilityRole="button" onPress={dismiss} hitSlop={8} style={styles.promptClose}>
+          <ThemedText type="small" themeColor="textSecondary">
+            다음에
+          </ThemedText>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
@@ -165,6 +225,8 @@ function TripCard({ t, today }: { t: TripListItem; today: string }) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  promptActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  promptClose: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 },
   self: { alignSelf: 'stretch' },
   pressed: { opacity: 0.7 },
   intro: { alignItems: 'center', gap: 8 },

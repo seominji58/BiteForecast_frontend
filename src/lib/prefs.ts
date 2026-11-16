@@ -198,7 +198,7 @@ export function useHomeSpecies(): [string | null, (code: string | null) => void]
   return [v, update];
 }
 
-// --- 홈 지역 (홈 조건 상자·포인트 보기 화면이 같은 값을 본다) ---
+// --- 홈 지역 (홈 조건 상자·추천 낚시터 화면이 같은 값을 본다) ---
 export const REGIONS = ['내 주변', '전국', '서해', '남해', '동해', '제주'] as const;
 export type Region = (typeof REGIONS)[number];
 const HOME_REGION = 'biteforecast.home_region';

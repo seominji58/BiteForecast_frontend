@@ -1,5 +1,5 @@
 /**
- * 포인트 보기 (홈 「오늘의 낚시 정보 미리보기 › 포인트 보기」).
+ * 추천 낚시터 (홈 「오늘의 낚시 정보 미리보기 › 추천 낚시터」). 예전 이름 「포인트 보기」 — 활동 포인트와 헷갈려 바꿈.
  * 홈에서 고른 어종·지역·날짜 그대로. 앱이 순위 점수를 만들지 않는다.
  * - 공식 지수 어종: [공식 지수 지점] / [근처 일반 낚시터 · 참고]
  * - 어종 상관없음·공식 지수 없는 어종: 일반 낚시터 (가까운 순 또는 자료 연결 많은 곳 → 이름순)
@@ -42,7 +42,7 @@ export default function PointsScreen() {
   const indexed = !!x.species?.indexName;
   return (
     <StackScreen>
-      <Stack.Screen options={{ title: x.species ? `${x.species.name} 포인트` : '포인트 보기' }} />
+      <Stack.Screen options={{ title: x.species ? `${x.species.name} 추천 낚시터` : '추천 낚시터' }} />
       <View style={styles.head}>
         {x.species ? <SpeciesImage code={x.species.code} size={48} /> : null}
         <View style={styles.flex}>
