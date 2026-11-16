@@ -108,16 +108,12 @@ function DeleteAccount() {
       },
     ]);
   return (
-    <Card>
-      <ThemedText type="sectionTitle">계정</ThemedText>
-      <Pressable accessibilityRole="button" onPress={confirmDelete} style={styles.linkRow}>
-        <ThemedText themeColor="danger">회원 탈퇴</ThemedText>
-        <ThemedText themeColor="textSecondary">›</ThemedText>
-      </Pressable>
+    // 눈에 띄지 않게 맨 아래 작은 글씨 (경고는 누르면 뜨는 확인 창에)
+    <Pressable accessibilityRole="button" onPress={confirmDelete} hitSlop={8} style={styles.deleteLink}>
       <ThemedText type="small" themeColor="textSecondary">
-        탈퇴하면 기록·사진·글·포인트가 모두 지워지고 되돌릴 수 없어요.
+        회원 탈퇴
       </ThemedText>
-    </Card>
+    </Pressable>
   );
 }
 
@@ -157,6 +153,7 @@ const styles = StyleSheet.create({
   linkRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 44 },
   unblock: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 },
   flex: { flex: 1 },
+  deleteLink: { alignSelf: 'center', minHeight: 44, justifyContent: 'center', paddingHorizontal: 12 },
   row: { flexDirection: 'row', gap: Spacing.two, alignItems: 'flex-start' },
   status: { fontWeight: '700', width: 30 },
 });
