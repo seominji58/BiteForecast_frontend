@@ -1,12 +1,12 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
-import MapView, { Marker, type Region } from 'react-native-maps';
 
 import { useDateRange, usePlaces, usePlacesSummary } from '@/api/queries';
 import type { Place, PlaceSummary } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { Dropdown, type DropdownOption } from '@/components/dropdown';
+import { AppMap, type AppMapHandle, type MapMarker, type MapRegion } from '@/components/map/app-map';
 import { Button, Chip } from '@/components/form';
 import { Card, ErrorView } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
@@ -32,7 +32,7 @@ import { CoordNote, SameCoordSheet } from '@/components/coord-note';
 import { coordKey, distLabel, km, PLACE_IMAGE, PLACE_TYPE_LABEL, recommendable, sidoOf, usableForLocation } from '@/lib/place';
 import { getRecent, RECENT_PLACES, useCriteria, useExploreRegion, useHomePlace } from '@/lib/prefs';
 
-const KOREA: Region = { latitude: 36.0, longitude: 127.8, latitudeDelta: 6.5, longitudeDelta: 6.5 };
+const KOREA: MapRegion = { latitude: 36.0, longitude: 127.8, latitudeDelta: 6.5, longitudeDelta: 6.5 };
 const PAGE = 20;
 
 type Origin = { kind: 'gps' | 'home'; coords: Coords; label: string } | null;
@@ -72,14 +72,14 @@ export default function ExploreScreen() {
   });
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [shown, setShown] = useState(PAGE);
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<AppMapHandle>(null);
 
   const locate = async () => {
     setGps({ loading: true, coords: null, error: null });
     const r = await getCurrentCoords();
     if ('coords' in r) {
       setGps({ loading: false, coords: r.coords, error: null });
-      mapRef.current?.animateToRegion(
+      mapRef.current?.moveTo(
         { latitude: r.coords.lat, longitude: r.coords.lon, latitudeDelta: 0.8, longitudeDelta: 0.8 },
         400,
       );
@@ -189,27 +189,47 @@ export default function ExploreScreen() {
     const pts = rows
       .slice(0, 8)
       .filter((r) => r.place.lat != null && r.place.lon != null)
-      .map((r) => ({ latitude: r.place.lat!, longitude: r.place.lon! }));
-    if (origin) pts.push({ latitude: origin.coords.lat, longitude: origin.coords.lon });
-    if (pts.length)
-      mapRef.current?.fitToCoordinates(pts, { edgePadding: { top: 40, right: 40, bottom: 40, left: 40 }, animated: true });
+      .map((r) => ({ lat: r.place.lat!, lon: r.place.lon! }));
+    if (origin) pts.push({ lat: origin.coords.lat, lon: origin.coords.lon });
+    if (pts.length) mapRef.current?.fitTo(pts);
   }, [fitKey, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!mapReady || region === 'all' || origin) return;
     const pts = (places.data ?? [])
       .filter((p) => inRegion(p) && usableForLocation(p))
-      .map((p) => ({ latitude: p.lat!, longitude: p.lon! }));
-    if (pts.length) mapRef.current?.fitToCoordinates(pts, { edgePadding: { top: 40, right: 40, bottom: 40, left: 40 }, animated: true });
+      .map((p) => ({ lat: p.lat!, lon: p.lon! }));
+    if (pts.length) mapRef.current?.fitTo(pts);
   }, [region, mapReady, seaOf]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const pinColor = (r: (typeof rows)[number]) => {
-    if (r.s?.warning_level === 'warning') return theme.danger;
-    if (!stale && (onlyMatching || params.mode === 'criteria')) return r.check.status === 'meets' ? Brand.teal : '#9AA5B1';
-    return Brand.navy;
+  const tone = (r: (typeof rows)[number]): MapMarker['tone'] => {
+    if (r.place.id === selectedId) return 'selected';
+    if (r.s?.warning_level === 'warning') return 'danger';
+    if (!stale && (onlyMatching || params.mode === 'criteria')) return r.check.status === 'meets' ? 'teal' : 'gray';
+    return 'navy';
+  };
+  // 지도 마커: 낚시터 하나는 점, 같은 좌표 여러 곳은 숫자 원 (특보 발효 곳이 있으면 빨강)
+  const markers: MapMarker[] = pins.map((group) => {
+    const r = group[0];
+    if (group.length === 1)
+      return { id: `p${r.place.id}`, lat: r.place.lat!, lon: r.place.lon!, tone: tone(r), label: r.place.name };
+    const warn = group.some((x) => x.s?.warning_level === 'warning');
+    return {
+      id: `g${coordKey(r.place)}`,
+      lat: r.place.lat!,
+      lon: r.place.lon!,
+      tone: warn ? 'danger' : 'navy',
+      count: group.length,
+      label: `같은 좌표의 낚시터 ${group.length}곳`,
+    };
+  });
+  const pressMarker = (id: string) => {
+    if (id.startsWith('p')) return setSelectedId(Number(id.slice(1)));
+    const group = pins.find((g) => `g${coordKey(g[0].place)}` === id);
+    if (group) setSamePick(group.map((x) => x.place));
   };
 
-  const initialRegion: Region = origin
+  const initialRegion: MapRegion = origin
     ? { latitude: origin.coords.lat, longitude: origin.coords.lon, latitudeDelta: 0.8, longitudeDelta: 0.8 }
     : KOREA;
 
@@ -217,44 +237,15 @@ export default function ExploreScreen() {
     <ThemedView style={styles.flex}>
       <Stack.Screen options={{ title: params.mode === 'criteria' ? '조건으로 찾기' : '낚시터 찾기' }} />
       {homeLoaded ? (
-        <MapView
+        <AppMap
           ref={mapRef}
           style={styles.map}
           initialRegion={initialRegion}
-          showsUserLocation={!!gps.coords}
-          onMapReady={() => setMapReady(true)}>
-          {pins.map((group) => {
-            const r = group[0];
-            if (group.length === 1)
-              return (
-                <Marker
-                  key={r.place.id}
-                  coordinate={{ latitude: r.place.lat!, longitude: r.place.lon! }}
-                  pinColor={pinColor(r)}
-                  title={r.place.name}
-                  description={r.s ? WARNING_SHORT[r.s.warning_level].text : undefined}
-                  onPress={() => setSelectedId(r.place.id)}
-                />
-              );
-            // 같은 좌표 여러 곳: 묶음 핀 (특보 발효 곳이 있으면 빨강)
-            const warn = group.some((x) => x.s?.warning_level === 'warning');
-            return (
-              <Marker
-                key={`g${coordKey(r.place)}`}
-                coordinate={{ latitude: r.place.lat!, longitude: r.place.lon! }}
-                tracksViewChanges={false}
-                anchor={{ x: 0.5, y: 0.5 }}
-                accessibilityLabel={`같은 좌표의 낚시터 ${group.length}곳, 눌러서 목록 보기`}
-                onPress={() => setSamePick(group.map((x) => x.place))}>
-                <View style={[styles.groupPin, { backgroundColor: warn ? theme.danger : Brand.navy }]}>
-                  <ThemedText type="smallBold" style={styles.groupPinText}>
-                    {group.length}
-                  </ThemedText>
-                </View>
-              </Marker>
-            );
-          })}
-        </MapView>
+          markers={markers}
+          userLocation={gps.coords}
+          onMarkerPress={pressMarker}
+          onReady={() => setMapReady(true)}
+        />
       ) : (
         <View style={styles.map} />
       )}
@@ -377,7 +368,7 @@ export default function ExploreScreen() {
             onPress={() => {
               setSelectedId(r.place.id);
               if (r.place.lat != null && r.place.lon != null)
-                mapRef.current?.animateToRegion(
+                mapRef.current?.moveTo(
                   { latitude: r.place.lat, longitude: r.place.lon, latitudeDelta: 0.3, longitudeDelta: 0.3 },
                   300,
                 );
@@ -596,17 +587,6 @@ function SelectedCard({
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  groupPin: {
-    minWidth: 30,
-    height: 30,
-    paddingHorizontal: 6,
-    borderRadius: 15,
-    borderWidth: 2,
-    borderColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  groupPinText: { color: '#fff' },
   bold: { fontWeight: '700' },
   pressed: { opacity: 0.8 },
   map: { height: 300, width: '100%' },
