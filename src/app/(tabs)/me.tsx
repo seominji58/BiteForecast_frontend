@@ -6,8 +6,8 @@ import { api } from '@/api';
 import { useMyTitle, useRecordSummary } from '@/api/queries';
 import { AppIcon } from '@/components/app-icon';
 import { Button } from '@/components/form';
-import { FavoritesSection, MemberBenefits, RecentPlacesSection } from '@/components/me-extras';
-import { Card, Loading, SectionHeader, TabScreen } from '@/components/screen';
+import { FavoritesSection, RecentPlacesSection } from '@/components/me-extras';
+import { Card, Loading, TabScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import type { AppIconName } from '@/constants/icons';
 import { Brand, Spacing } from '@/constants/theme';
@@ -17,7 +17,7 @@ import { kakaoUnlink } from '@/lib/kakao';
 
 /**
  * 내정보 (기본 프로필, 2026-11-16)
- * - 로그인 전: 「로그인 / 회원가입」 하나 + 최근 본 낚시터 + 메뉴
+ * - 로그인 전: 「로그인 / 회원가입」 하나 + 최근 본 낚시터(가로 한 줄) + 설정
  * - 로그인 후: 프로필(닉네임·칭호·로그인 수단) → 요약 3칸 → 메뉴 → 즐겨찾기·최근 → 계정(로그아웃·탈퇴)
  * 칭호·포인트·인증 현황은 「칭호·포인트」 화면, 도감·최대어는 「내 낚시 요약」 화면에서 본다
  */
@@ -53,12 +53,9 @@ function Guest() {
       </View>
 
       <RecentPlacesSection />
-      <MemberBenefits />
 
       <Card style={styles.menu}>
-        <MenuRow icon="regulation" label="설정·정보" sub="데이터 출처, 이용 안내" href="/settings" />
-        <MenuRow icon="write" label="이용약관" href="/terms" />
-        <MenuRow icon="write" label="개인정보 처리방침" href="/privacy" last />
+        <MenuRow icon="regulation" label="설정·정보" sub="데이터 출처, 이용 안내, 약관" href="/settings" last />
       </Card>
     </>
   );
@@ -122,7 +119,7 @@ function SignedIn() {
       <Card style={styles.menu}>
         <MenuRow icon="total-fish" label="내 낚시 요약·도감" sub="첫 포획, 어종별 최대어" href="/my-records" />
         <MenuRow icon="medal" label="칭호·포인트" sub="사진 인증 현황, 포인트 내역" href="/my-points" />
-        <MenuRow icon="regulation" label="설정·정보" sub="차단한 사용자, 데이터 출처, 이용 안내" href="/settings" last />
+        <MenuRow icon="regulation" label="설정·정보" sub="차단한 사용자, 데이터 출처, 약관" href="/settings" last />
       </Card>
 
       <FavoritesSection />
@@ -204,11 +201,6 @@ function AccountSection() {
 
   return (
     <>
-      <SectionHeader title="계정" />
-      <Card style={styles.menu}>
-        <MenuRow icon="write" label="이용약관" href="/terms" />
-        <MenuRow icon="write" label="개인정보 처리방침" href="/privacy" last />
-      </Card>
       <Button label="로그아웃" variant="secondary" onPress={confirmSignOut} />
       <Pressable accessibilityRole="button" onPress={confirmDelete} hitSlop={8} style={styles.deleteLink}>
         <ThemedText type="small" themeColor="textSecondary">

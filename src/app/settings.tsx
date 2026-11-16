@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { router } from 'expo-router';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { API_URL } from '@/api';
@@ -52,6 +53,18 @@ export default function SettingsScreen() {
       </Card>
 
       <Card>
+        <ThemedText type="sectionTitle">약관</ThemedText>
+        <Pressable accessibilityRole="link" onPress={() => router.push('/terms')} style={styles.linkRow}>
+          <ThemedText>이용약관</ThemedText>
+          <ThemedText themeColor="textSecondary">›</ThemedText>
+        </Pressable>
+        <Pressable accessibilityRole="link" onPress={() => router.push('/privacy')} style={styles.linkRow}>
+          <ThemedText>개인정보 처리방침</ThemedText>
+          <ThemedText themeColor="textSecondary">›</ThemedText>
+        </Pressable>
+      </Card>
+
+      <Card>
         <ThemedText type="sectionTitle">앱 정보</ThemedText>
         <ThemedText themeColor="textSecondary">버전 {Constants.expoConfig?.version ?? '-'}</ThemedText>
         {__DEV__ && (
@@ -97,6 +110,7 @@ function BlockedUsers() {
 }
 
 const styles = StyleSheet.create({
+  linkRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 44 },
   unblock: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 },
   flex: { flex: 1 },
   row: { flexDirection: 'row', gap: Spacing.two, alignItems: 'flex-start' },

@@ -1,6 +1,6 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, useWindowDimensions, View } from 'react-native';
 
 import { useDateRange, usePlaces, usePlacesSummary } from '@/api/queries';
 import type { Place, PlaceSummary } from '@/api/types';
@@ -33,7 +33,9 @@ import { coordKey, distLabel, km, PLACE_IMAGE, PLACE_TYPE_LABEL, recommendable, 
 import { getRecent, RECENT_PLACES, useCriteria, useExploreRegion, useHomePlace } from '@/lib/prefs';
 
 const KOREA: MapRegion = { latitude: 36.0, longitude: 127.8, latitudeDelta: 6.5, longitudeDelta: 6.5 };
-const PAGE = 20;
+/** 목록은 처음에 5곳만 (지도에서 찾는 화면이라 긴 목록을 다 보여주지 않는다), 더 보기로 10곳씩 */
+const FIRST = 5;
+const PAGE = 10;
 /** 보이는 위도 폭을 몇 칸으로 나눠 묶을지 (지도 높이 300 기준 한 칸 약 35pt) */
 const CLUSTER_CELLS = 9;
 
@@ -73,7 +75,10 @@ export default function ExploreScreen() {
     error: null,
   });
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [shown, setShown] = useState(PAGE);
+  const [shown, setShown] = useState(FIRST);
+  // 지도를 화면의 절반 가까이로 (목록보다 지도가 주인공)
+  const { height: winH } = useWindowDimensions();
+  const mapH = Math.max(300, Math.round(winH * 0.48));
   const mapRef = useRef<AppMapHandle>(null);
   // 지금 지도에 보이는 범위 (마커 묶음 계산용, 이동·확대가 멈출 때 갱신)
   const [view, setView] = useState<MapRegion | null>(null);
@@ -285,7 +290,7 @@ export default function ExploreScreen() {
       {homeLoaded ? (
         <AppMap
           ref={mapRef}
-          style={styles.map}
+          style={[styles.map, { height: mapH }]}
           initialRegion={initialRegion}
           markers={markers}
           userLocation={gps.coords}
@@ -294,7 +299,7 @@ export default function ExploreScreen() {
           onReady={() => setMapReady(true)}
         />
       ) : (
-        <View style={styles.map} />
+        <View style={[styles.map, { height: mapH }]} />
       )}
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -323,11 +328,11 @@ export default function ExploreScreen() {
           </ThemedText>
         ) : null}
         {recentPlaces.length ? (
-          <View style={styles.recentRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.recentRow}>
             <ThemedText type="small" themeColor="textSecondary">
               최근 본 곳
             </ThemedText>
-            {recentPlaces.slice(0, 4).map((p) => (
+            {recentPlaces.slice(0, 6).map((p) => (
               <Chip
                 key={p.id}
                 label={p.name}
@@ -335,10 +340,10 @@ export default function ExploreScreen() {
                 onPress={() => router.push({ pathname: '/place/[id]', params: { id: String(p.id) } })}
               />
             ))}
-          </View>
+          </ScrollView>
         ) : null}
 
-        {/* 조건으로 찾기 */}
+        {/* 조건으로 찾기: 한 줄 (설명은 기준을 펼쳤을 때만) */}
         <Card>
           <View style={styles.between}>
             <ThemedText type="smallBold" style={styles.flex}>
@@ -354,17 +359,21 @@ export default function ExploreScreen() {
               </ThemedText>
             </ThemedText>
           </Pressable>
-          {editCriteria ? <CriteriaEditor c={criteria} onChange={setCriteria} /> : null}
-          <ThemedText type="small" themeColor="textSecondary">
-            앱이 좋고 나쁨을 판정하지 않아요. 오늘 남은 시간 예보 최대값이 내 기준 이하이고 특보가 발효 중이 아닌 곳을
-            보여드려요. 예보가 없으면 「자료 부족」이에요.
-          </ThemedText>
+          {editCriteria ? (
+            <>
+              <CriteriaEditor c={criteria} onChange={setCriteria} />
+              <ThemedText type="small" themeColor="textSecondary">
+                앱이 좋고 나쁨을 판정하지 않아요. 오늘 남은 시간 예보 최대값이 내 기준 이하이고 특보가 발효 중이 아닌 곳을
+                보여드려요. 예보가 없으면 「자료 부족」이에요.
+              </ThemedText>
+            </>
+          ) : null}
         </Card>
 
-        {summary.isSuccess ? (
-          <ThemedText type="small" themeColor={stale ? 'warning' : 'textSecondary'}>
-            {stale ? `⚠ ${summary.data.data_status.stale_reason} · ` : ''}
-            {freshnessLine(summary.data.data_status)}
+        {/* 자료가 오래됐을 때만 알림 (정상일 때 자료 시각은 아래 한 줄) */}
+        {summary.isSuccess && stale ? (
+          <ThemedText type="small" themeColor="warning" numberOfLines={2}>
+            ⚠ {summary.data.data_status.stale_reason}
           </ThemedText>
         ) : null}
         {summary.isError ? <ErrorView message={summary.error.message} onRetry={() => summary.refetch()} /> : null}
@@ -382,14 +391,14 @@ export default function ExploreScreen() {
           />
         ) : null}
 
-        <ThemedText type="sectionTitle">
-          {onlyMatching ? `조건에 맞는 곳 ${rows.length}` : `낚시터 ${rows.length}`}
-        </ThemedText>
-        {excluded ? (
-          <ThemedText type="small" themeColor="textSecondary">
-            좌표가 주소와 맞지 않는 {excluded}곳(위치 확인 필요)은 지도·거리순에서 뺐어요. 검색과 상세 화면에서는 볼 수 있어요.
+        <View style={styles.between}>
+          <ThemedText type="sectionTitle" style={styles.flex}>
+            {origin ? '가까운 낚시터' : onlyMatching ? '조건에 맞는 곳' : '낚시터'}
           </ThemedText>
-        ) : null}
+          <ThemedText type="small" themeColor="textSecondary">
+            {Math.min(shown, rows.length)} / {rows.length}곳{excluded ? ` · 위치 확인 필요 ${excluded}곳 제외` : ''}
+          </ThemedText>
+        </View>
         {summary.isPending || places.isPending ? <ActivityIndicator color={theme.tint} /> : null}
         {rows.length === 0 && summary.isSuccess ? (
           <Card>
@@ -423,11 +432,13 @@ export default function ExploreScreen() {
           />
         ))}
         {rows.length > shown ? (
-          <Button label={`더 보기 (${rows.length - shown}곳 남음)`} variant="secondary" onPress={() => setShown((n) => n + PAGE)} />
+          <Button label={`${Math.min(PAGE, rows.length - shown)}곳 더 보기`} variant="secondary" onPress={() => setShown((n) => n + PAGE)} />
         ) : null}
-        <ThemedText type="small" themeColor="textSecondary">
-          {summary.data?.disclaimer}
-        </ThemedText>
+        {summary.isSuccess ? (
+          <ThemedText type="small" themeColor="textSecondary">
+            {freshnessLine(summary.data.data_status)} · {summary.data.disclaimer}
+          </ThemedText>
+        ) : null}
       </ScrollView>
       <SameCoordSheet
         places={samePick}
@@ -639,7 +650,7 @@ const styles = StyleSheet.create({
   map: { height: 300, width: '100%' },
   content: { padding: Layout.screenPadding, gap: Layout.gap, paddingBottom: 48 },
   between: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  recentRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
+  recentRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingRight: 8 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   editor: { gap: 6 },
   row: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', borderWidth: 1, borderRadius: Layout.cardRadius, padding: 10 },
