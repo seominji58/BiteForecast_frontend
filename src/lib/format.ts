@@ -53,8 +53,19 @@ export function formatEnvKind(s: EnvSnapshot): string | null {
 }
 
 /** 저장/삭제 결과 안내 문구 (포인트 증감 + 칭호 변경) */
+/** 저장 직후 한 줄: 첫 포획·최대어 갱신 (내 기록과 비교, 인증 여부와 관계없음) */
+export function milestoneLine(res: JournalMutation): string | null {
+  const m = res.milestone;
+  if (!m) return null;
+  if (m.kind === 'first_catch')
+    return `🎉 ${m.species_name} 첫 포획!${m.length_cm != null ? ` (${m.length_cm}cm)` : ''} 내 도감에 추가됐어요.`;
+  return `🏆 ${m.species_name} 내 최대어 갱신! ${m.previous_cm}cm → ${m.length_cm}cm`;
+}
+
 export function pointResultMessage(res: JournalMutation): string {
   const lines: string[] = [];
+  const m = milestoneLine(res);
+  if (m) lines.push(m, '');
   const v = res.journal?.verification.status;
   if (v === 'pending') lines.push('인증 검토를 신청했어요. 관리자가 사진을 확인해 승인하면 포인트가 지급돼요.');
   else if (v === 'none') lines.push('개인 기록으로 저장했어요. 사진 인증을 받으면 포인트가 지급돼요.');

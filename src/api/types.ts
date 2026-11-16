@@ -132,6 +132,38 @@ export type JournalMutation = {
   total_points: number;
   title: MyTitle;
   title_changed: boolean;
+  /** 방금 저장으로 생긴 첫 포획·최대어 갱신 */
+  milestone?: Milestone | null;
+};
+
+export type Milestone = {
+  kind: 'first_catch' | 'personal_best';
+  species_name: string;
+  length_cm: number | null;
+  previous_cm: number | null;
+};
+
+/** 내 낚시 기록 요약 (기록 집계, 인증 여부와 관계없는 개인 기록) */
+export type SpeciesRecord = {
+  key: string;
+  species_code: string | null;
+  species_name: string;
+  first_at: string;
+  first_journal_id: number;
+  journal_count: number;
+  catch_count: number;
+  best_length_cm: number | null;
+  best_journal_id: number | null;
+  best_at: string | null;
+  best_verified: boolean;
+};
+export type RecordSummary = {
+  journal_count: number;
+  trip_days: number;
+  skunk_days: number;
+  first_trip: string | null;
+  last_trip: string | null;
+  species: SpeciesRecord[];
 };
 
 export type PointReason = 'JOURNAL_CREATED' | 'DETAIL_FILLED' | 'PHOTO_ATTACHED' | 'FIRST_PLACE' | 'PERSONAL_BEST';
@@ -384,6 +416,9 @@ export type PostCatch = {
   species_name: string | null;
   count: number | null;
   max_length_cm: number | null;
+  /** 작성자가 「채비 같이 보여주기」를 켠 경우만 */
+  bait?: string | null;
+  rig?: string | null;
 };
 export type PostDetail = PostSummary & {
   body: string;
@@ -404,7 +439,11 @@ export type PostInput = {
   photo_ids: number[];
   /** 내 기록 공유 (인증 완료면 「인증 조황」 배지) */
   journal_id?: number | null;
+  /** 기록 공유 글에 미끼·채비 함께 보여주기 (기본 true) */
+  show_tackle?: boolean;
 };
+
+export type BlockedUser = { user_id: number; nickname: string; created_at: string };
 
 export type ReportResult = { status: 'received' | 'already_reported'; hidden: boolean };
 

@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { Link, router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { useJournals } from '@/api/queries';
+import { useJournals, useRecordSummary } from '@/api/queries';
 import type { EnvSnapshot, Journal } from '@/api/types';
 import { usePhotoSource } from '@/api/upload';
 import { AppIcon } from '@/components/app-icon';
@@ -39,6 +39,7 @@ export default function RecordsScreen() {
   return (
     <TabScreen title="낚시 기록">
       <Button label="기록 작성하기" icon="write" onPress={() => router.push('/journal/new')} />
+      <SummaryCard />
 
       <SectionHeader title={`내 기록${journals.data ? ` (${journals.data.length})` : ''}`} />
       {journals.isPending && <Loading />}
@@ -50,6 +51,32 @@ export default function RecordsScreen() {
           journals.data.map((j) => <JournalRow key={j.id} journal={j} />)
         ))}
     </TabScreen>
+  );
+}
+
+/** 내 낚시 요약 한 줄 → 「내 낚시 요약」 화면 (기록이 있을 때만) */
+function SummaryCard() {
+  const theme = useTheme();
+  const s = useRecordSummary();
+  if (!s.isSuccess || s.data.journal_count === 0) return null;
+  const best = [...s.data.species]
+    .filter((x) => x.best_length_cm != null)
+    .sort((a, b) => b.best_length_cm! - a.best_length_cm!)[0];
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => router.push('/my-records')}
+      style={({ pressed }) => pressed && styles.pressed}>
+      <Card style={{ borderColor: theme.tint }}>
+        <ThemedText type="smallBold">
+          출조 {s.data.trip_days}일 · 잡은 어종 {s.data.species.length}종
+          {s.data.skunk_days ? ` · 못 잡은 날 ${s.data.skunk_days}일` : ''}
+        </ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">
+          {best ? `내 최대어 ${best.species_name} ${best.best_length_cm}cm · ` : ''}어종 도감·첫 포획 보기 ›
+        </ThemedText>
+      </Card>
+    </Pressable>
   );
 }
 
@@ -96,10 +123,18 @@ function JournalRow({ journal: j }: { journal: Journal }) {
               {j.place_name}
             </ThemedText>
             <ThemedText type="small" numberOfLines={1}>
-              <ThemedText type="small" themeColor="tint" style={styles.bold}>
-                {j.species_name ?? '어종 미기록'}
-              </ThemedText>
-              {catchText ? ` · ${catchText}` : ''}
+              {j.count === 0 && !j.species_name ? (
+                <ThemedText type="small" themeColor="textSecondary" style={styles.bold}>
+                  못 잡은 날
+                </ThemedText>
+              ) : (
+                <>
+                  <ThemedText type="small" themeColor="tint" style={styles.bold}>
+                    {j.species_name ?? '어종 미기록'}
+                  </ThemedText>
+                  {catchText ? ` · ${catchText}` : ''}
+                </>
+              )}
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
               당시 관측 파고 {envValue(j.env_snapshots, 'wave_height')} · 바람 {envValue(j.env_snapshots, 'wind_speed')}

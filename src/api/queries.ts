@@ -204,6 +204,30 @@ export function useSetLike(postId: number) {
   return useMutation({ mutationFn: (liked: boolean) => api.setLike(postId, liked), onSuccess: invalidate });
 }
 
+/** 내 낚시 기록 요약 (기록이 바뀌면 함께 갱신되도록 journals 키 아래) */
+export const useRecordSummary = () => {
+  const { signedIn } = useAuth();
+  return useQuery({ queryKey: ['journals', 'summary'], queryFn: api.recordSummary, enabled: signedIn });
+};
+
+export const useBlocks = () => {
+  const { signedIn } = useAuth();
+  return useQuery({ queryKey: ['community', 'blocks'], queryFn: api.blocks, enabled: signedIn });
+};
+
+export function useBlock() {
+  const invalidate = useInvalidateCommunity();
+  return useMutation({
+    mutationFn: (v: { type: 'post' | 'comment'; id: number }) => api.block(v.type, v.id),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUnblock() {
+  const invalidate = useInvalidateCommunity();
+  return useMutation({ mutationFn: (userId: number) => api.unblock(userId), onSuccess: invalidate });
+}
+
 export function useReport() {
   const invalidate = useInvalidateCommunity();
   return useMutation({
