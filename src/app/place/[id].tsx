@@ -110,7 +110,7 @@ export default function PlaceDetailScreen() {
             </>
           ) : null}
 
-          <DataBasis pc={pc} initiallyOpen />
+          <DataBasis pc={pc} />
 
           <Button
             label="다른 곳과 비교"
