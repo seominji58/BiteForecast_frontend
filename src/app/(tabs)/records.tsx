@@ -63,9 +63,13 @@ function JournalRow({ journal: j }: { journal: Journal }) {
   const source = usePhotoSource();
   const thumb = j.photos[0] ? source(j.photos[0]) : null;
   const v = VERIFY_LABEL[j.verification.status];
-  const catchText = [j.count != null ? `${j.count}마리` : null, j.max_length_cm != null ? `${j.max_length_cm}cm` : null]
-    .filter(Boolean)
-    .join(' · ');
+  // 마릿수 0 = 「못 잡은 날」 기록 (꽝도 출조 기록으로 보여준다)
+  const catchText =
+    j.count === 0
+      ? '못 잡은 날'
+      : [j.count != null ? `${j.count}마리` : null, j.max_length_cm != null ? `${j.max_length_cm}cm` : null]
+          .filter(Boolean)
+          .join(' · ');
 
   return (
     <Link href={{ pathname: '/journal/[id]', params: { id: String(j.id) } }} asChild>

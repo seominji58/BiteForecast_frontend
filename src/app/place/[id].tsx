@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useConditions, useDateRange, useFavorites, usePlaces, useSetFavorite } from '@/api/queries';
 import { AddToTripButton } from '@/components/add-to-trip';
+import { CatchStrip } from '@/components/catch-strip';
 import { CoordNote } from '@/components/coord-note';
 import { AppIcon } from '@/components/app-icon';
 import { Button } from '@/components/form';
@@ -89,6 +90,13 @@ export default function PlaceDetailScreen() {
 
           <SectionHeader title="바다낚시지수 (국립해양조사원)" />
           <FishingIndexCard pc={pc} />
+
+          {/* 예보·지수와 구분: 이용자가 낚시터 이름까지 공개한 조황만 (없으면 칸을 숨김) */}
+          <CatchStrip
+            title="이 낚시터 이용자 조황"
+            filter={{ placeId }}
+            note="이용자가 올린 조황이에요. 예보가 아니고, 낚시가 허용된 곳이라는 뜻도 아니에요."
+          />
 
           {/* 위치 확인 필요·좌표 불일치 의심이면 거리 기준 목록을 내지 않는다 (시뮬레이터 검증 2026-11-10) */}
           {place && places.data && !place.location_suspect && !place.coord?.recommend_hold ? (

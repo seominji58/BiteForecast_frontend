@@ -101,29 +101,6 @@ export function SpeciesRail({
   );
 }
 
-/** 선택한 어종 띠 (홈 결과 위) */
-export function SpeciesStrip({ item, line, onClear }: { item: SpeciesItem; line: string; onClear: () => void }) {
-  const theme = useTheme();
-  return (
-    <View style={[styles.strip, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
-      <SpeciesImage code={item.code} size={56} label={item.name} />
-      <View style={styles.flex}>
-        <ThemedText type="smallBold">
-          {item.name}
-          {item.alias ? <ThemedText type="small" themeColor="textSecondary">{` · ${item.alias}`}</ThemedText> : null}
-        </ThemedText>
-        <ThemedText type="small" themeColor={item.indexName ? 'tint' : 'textSecondary'} numberOfLines={2}>
-          {line}
-        </ThemedText>
-      </View>
-      <Pressable accessibilityRole="button" accessibilityLabel="어종 선택 해제" onPress={onClear} hitSlop={10}>
-        <ThemedText type="small" themeColor="textSecondary">
-          해제
-        </ThemedText>
-      </Pressable>
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
@@ -137,5 +114,4 @@ const styles = StyleSheet.create({
   name: { paddingHorizontal: 6 },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 6 },
   pageDot: { width: 7, height: 7, borderRadius: 4 },
-  strip: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 14, padding: 10 },
 });

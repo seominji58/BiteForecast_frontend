@@ -345,8 +345,10 @@ export type DataSource = { agency: string; dataset: string; kind: DataKind; conn
 // --- 커뮤니티 ---
 
 export type PostCategory = 'catch' | 'question' | 'tip';
-/** 글 목록 거르기: 시·도(예: 제주), 어종(코드 또는 직접 입력 이름) */
-export type PostFilter = { sido?: string | null; species?: string | null };
+/** 글 목록 거르기: 시·도(예: 제주), 어종(코드 또는 직접 입력 이름), 낚시터(이름까지 공개한 글만) */
+export type PostFilter = { sido?: string | null; species?: string | null; placeId?: number | null };
+/** 글 위치 공개 범위: 낚시터 이름까지 / 지역만 / 숨김 */
+export type LocationVisibility = 'place' | 'region' | 'hidden';
 export type Author = { nickname: string; title: string };
 
 export type PostSummary = {
@@ -365,12 +367,14 @@ export type PostSummary = {
   created_at: string;
   /** 인증 완료 기록을 공유한 글 (「인증 조황」) */
   verified: boolean;
+  /** 위치 공개 범위 — place 가 아니면 place_name·place_id 가 비고, hidden 이면 region_name 도 빈다 */
+  location_visibility: LocationVisibility;
   photo_count: number;
   thumb: Photo | null;
   place_id: number | null;
   /** 예: 「제주 제주시」 */
   region_name: string | null;
-  /** 인증 조황 글의 조과 (일반 글은 null) */
+  /** 기록 공유 글의 조과 (일반 글은 null) */
   catch: PostCatch | null;
 };
 
@@ -392,10 +396,13 @@ export type PostInput = {
   title: string;
   body: string;
   place_id: number | null;
+  /** 낚시터 없이 지역만 고를 때 */
+  region_id?: number | null;
+  location_visibility: LocationVisibility;
   species_code: string | null;
   species_etc: string | null;
   photo_ids: number[];
-  /** 인증 완료된 내 기록 공유 */
+  /** 내 기록 공유 (인증 완료면 「인증 조황」 배지) */
   journal_id?: number | null;
 };
 

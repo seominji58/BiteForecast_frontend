@@ -26,7 +26,7 @@ export default function TabLayout() {
         tabBarActiveTintColor: Brand.orange,
         tabBarInactiveTintColor: Brand.tabInactive,
         tabBarStyle: { backgroundColor: Brand.navyDeep, borderTopWidth: 0, elevation: 0 },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: 13, fontWeight: '600' },
       }}>
       <Tabs.Screen name="index" options={{ title: '홈', tabBarIcon: icon('home') }} />
       <Tabs.Screen name="trips" options={{ title: '출조계획', tabBarIcon: icon('trips') }} />

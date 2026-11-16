@@ -71,11 +71,19 @@ export const api = {
   compare: (placeA: number, placeB: number, date: string) =>
     request<CompareResult>(`/compare?place_a=${placeA}&place_b=${placeB}&date=${date}`),
 
-  posts: (category: PostCategory | null, sort: 'latest' | 'popular', filter: PostFilter = {}) => {
+  posts: (
+    category: PostCategory | null,
+    sort: 'latest' | 'popular',
+    filter: PostFilter = {},
+    page: { limit?: number; beforeId?: number } = {},
+  ) => {
     const qs = new URLSearchParams({ sort });
     if (category) qs.set('category', category);
     if (filter.sido) qs.set('sido', filter.sido);
     if (filter.species) qs.set('species', filter.species);
+    if (filter.placeId) qs.set('place_id', String(filter.placeId));
+    if (page.limit) qs.set('limit', String(page.limit));
+    if (page.beforeId) qs.set('before_id', String(page.beforeId));
     return request<PostSummary[]>(`/community/posts?${qs.toString()}`);
   },
   favorites: () => request<Place[]>('/me/favorites'),

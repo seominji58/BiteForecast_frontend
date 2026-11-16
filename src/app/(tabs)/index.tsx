@@ -9,6 +9,7 @@ import { AppIcon } from '@/components/app-icon';
 import { HomeActions, SeaPreview } from '@/components/home-explore';
 import { OptionSheet } from '@/components/option-sheet';
 import { Card, SectionHeader, TabScreen } from '@/components/screen';
+import { CatchStrip } from '@/components/catch-strip';
 import { SearchBar } from '@/components/search-bar';
 import { SpeciesImage, SpeciesRail } from '@/components/species';
 import { TermSheet } from '@/components/term-sheet';
@@ -37,7 +38,7 @@ function homeBackgroundSource(hour = new Date().getHours()) {
 /**
  * 홈 (2026-11-11, 사용자 레퍼런스 「오늘은 어떤 낚시를 떠나세요?」 구조 그대로)
  * 바다 배경·검색·날짜 → 어종 카드 → [출조 날짜 | 지역] → [지도에서 찾기] [출조계획] → 오늘의 낚시 정보 4칸.
- * 포인트 목록은 「포인트 보기」 화면에서 (홈에 목록을 나열하지 않는다).
+ * 낚시터 목록은 「추천 낚시터」 화면에서 (홈에 목록을 나열하지 않는다). 맨 아래 「최근 이용자 조황」은 글이 있을 때만.
  */
 export default function HomeScreen() {
   const range = useDateRange();
@@ -73,7 +74,7 @@ export default function HomeScreen() {
   const refresh = () =>
     Promise.all(['places-summary', 'fishing-index', 'conditions', 'meta'].map((k) => qc.invalidateQueries({ queryKey: [k] })));
 
-  // 미리보기 아래 한 줄: 고른 어종의 공식 지수 제공 여부 (등급은 포인트 보기에서)
+  // 미리보기 아래 한 줄: 고른 어종의 공식 지수 제공 여부 (등급은 추천 낚시터에서)
   const n = x.species?.indexName ? x.indexCount(x.species.indexName) : null;
   const speciesLine = !x.species
     ? null
@@ -90,12 +91,12 @@ export default function HomeScreen() {
         <View pointerEvents="none" style={styles.heroShade} />
         <View style={styles.heroCopy}>
           <Text style={styles.heroTitle}>오늘은 어떤 낚시를 떠나세요?</Text>
-          <Text style={styles.heroSubtitle}>원하는 어종과 지역을 선택하고{'\n'}오늘의 낚시 조건을 확인해 보세요.</Text>
+          <Text style={styles.heroSubtitle}>어종과 지역을 고르고 바다 조건을 확인해 보세요.</Text>
         </View>
         <SearchBar value={query} onChangeText={setQuery} onClear={() => setQuery('')} placeholder="어종·지역·낚시터 검색" />
         <View style={styles.heroActions}>
+          {/* 지도는 아래 「지도에서 찾기」 버튼 하나로 (중복 정리) */}
           <HeroButton icon="find-gps" label="내 주변" active={x.near} onPress={x.locate} />
-          <HeroButton icon="find-map" label="지도 탐색" onPress={() => router.push('/explore')} />
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateRow}>
           {dates.map((d) => {
@@ -173,7 +174,7 @@ export default function HomeScreen() {
       <HomeActions onMap={() => router.push('/explore')} onPlan={plan} />
 
       {/* 오늘의 낚시 정보 미리보기 */}
-      <SectionHeader title={date === today ? '오늘의 낚시 정보 미리보기' : `${dateText} 낚시 정보 미리보기`} actionLabel="포인트 보기" onAction={points} />
+      <SectionHeader title={date === today ? '오늘의 낚시 정보 미리보기' : `${dateText} 낚시 정보 미리보기`} actionLabel="추천 낚시터" onAction={points} />
       {x.near && (x.gps.loading || x.gps.error) ? (
         // 위치를 기다리는 동안 「자료 없음」으로 보이지 않게
         <ThemedText type="small" themeColor={x.gps.error ? 'warning' : 'textSecondary'}>
@@ -198,6 +199,12 @@ export default function HomeScreen() {
           {x.scopeName} 기준 · {freshnessLine(x.summary.data.data_status)}
         </ThemedText>
       ) : null}
+
+      {/* 이용자 조황: 고른 어종의 최근 글 (예보와 구분, 글이 없으면 숨김) */}
+      <CatchStrip
+        title={x.species ? `최근 ${x.species.name} 이용자 조황` : '최근 이용자 조황'}
+        filter={{ species: x.species ? (x.species.speciesCode ?? x.species.name) : null }}
+      />
 
       <TermSheet term={term} onClose={() => setTerm(null)} />
       <OptionSheet

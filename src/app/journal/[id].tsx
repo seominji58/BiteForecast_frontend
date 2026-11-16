@@ -72,7 +72,7 @@ function VerificationCard({ journal: j }: { journal: Journal }) {
   const run = (request: boolean) =>
     verify.mutate(request, {
       onSuccess: () =>
-        Alert.alert(request ? '인증을 신청했어요' : '신청을 취소했어요', request ? '관리자가 확인하면 알려드려요.' : ''),
+        Alert.alert(request ? '인증을 신청했어요' : '신청을 취소했어요', request ? '관리자가 확인하면 이 기록 화면에 결과가 나와요.' : ''),
       onError: (e) => Alert.alert('처리하지 못했습니다', e.message),
     });
 
@@ -111,7 +111,7 @@ function VerificationCard({ journal: j }: { journal: Journal }) {
       {v.status === 'pending' ? (
         <Button label="신청 취소" variant="secondary" onPress={() => run(false)} disabled={verify.isPending} />
       ) : null}
-      {v.status === 'approved' ? (
+      {v.status !== 'rejected' ? (
         j.shared_post_id ? (
           <Button
             label="공유한 글 보기"
@@ -120,7 +120,7 @@ function VerificationCard({ journal: j }: { journal: Journal }) {
           />
         ) : (
           <Button
-            label="커뮤니티에 인증 조황으로 공유"
+            label={v.status === 'approved' ? '커뮤니티에 인증 조황으로 공유' : '커뮤니티에 공유'}
             variant="secondary"
             onPress={() => router.push({ pathname: '/community/new', params: { journal: String(j.id) } })}
           />

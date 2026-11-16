@@ -4,11 +4,12 @@ import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { useCreatePost, useJournal } from '@/api/queries';
-import type { PostCategory } from '@/api/types';
+import type { LocationVisibility, PostCategory } from '@/api/types';
 import { usePhotoSource } from '@/api/upload';
 import { Dropdown } from '@/components/dropdown';
 import { Button, Field, TextField } from '@/components/form';
 import { PhotoPicker, usePhotoUploads } from '@/components/photo-picker';
+import { LocationVisibilityField } from '@/components/location-visibility';
 import { PlaceField } from '@/components/place-field';
 import { AuthGate } from '@/components/login-required';
 import { Card, ErrorView, Loading, StackScreen } from '@/components/screen';
@@ -24,7 +25,8 @@ const CATEGORY_OPTIONS = (Object.keys(CATEGORY) as PostCategory[]).map((k) => ({
 }));
 
 // 커뮤니티 글쓰기 (재설계 v2 §7): 카테고리 드롭다운 · 제목 · 본문 · 사진 · 장소·어종 검색
-// ?journal=ID 로 열면 인증 완료된 내 기록 공유 (장소·어종·사진은 기록 것을 그대로 사용)
+// ?journal=ID 로 열면 내 기록 공유 (장소·어종·사진은 기록 것을 그대로 사용, 인증 완료면 「인증 조황」 배지)
+// 위치 공개 범위는 기본 「지역만」 (서비스 개선 설계 C2)
 function NewPostScreenInner() {
   const journalId = Number(useLocalSearchParams<{ journal?: string }>().journal);
   const sharing = Number.isFinite(journalId);
@@ -37,6 +39,8 @@ function NewPostScreenInner() {
   const [body, setBody] = useState('');
   const [placeId, setPlaceId] = useState<number | null>(null);
   const [species, setSpecies] = useState<SpeciesValue>(NO_SPECIES);
+  const [visibility, setVisibility] = useState<LocationVisibility>('region');
+  const [regionId, setRegionId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const submit = () => {
@@ -56,12 +60,15 @@ function NewPostScreenInner() {
             species_etc: null,
             photo_ids: [],
             journal_id: journalId,
+            location_visibility: visibility,
           }
         : {
             category,
             title: title.trim(),
             body: body.trim(),
             place_id: placeId,
+            region_id: placeId == null && visibility === 'region' ? regionId : null,
+            location_visibility: visibility,
             species_code: species.code,
             species_etc: species.etc,
             photo_ids: photos.photoIds,
@@ -90,7 +97,7 @@ function NewPostScreenInner() {
 
   return (
     <StackScreen>
-      <Stack.Screen options={{ title: sharing ? '인증 기록 공유' : '글쓰기' }} />
+      <Stack.Screen options={{ title: sharing ? '기록 공유' : '글쓰기' }} />
       <View style={styles.form}>
         {sharing && journal.data ? (
           <SharedJournal j={journal.data} />
@@ -127,7 +134,13 @@ function NewPostScreenInner() {
             <Field label="장소 (선택)">
               <PlaceField value={placeId} onChange={setPlaceId} placeholder="어느 낚시터 이야기인가요?" />
               {placeId != null ? (
-                <Pressable accessibilityRole="button" onPress={() => setPlaceId(null)} hitSlop={8}>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => {
+                    setPlaceId(null);
+                    if (visibility === 'place') setVisibility('region');
+                  }}
+                  hitSlop={8}>
                   <ThemedText type="small" themeColor="textSecondary">
                     장소 태그 빼기
                   </ThemedText>
@@ -141,9 +154,17 @@ function NewPostScreenInner() {
           </>
         ) : null}
 
+        <LocationVisibilityField
+          value={visibility}
+          onChange={setVisibility}
+          hasPlace={sharing || placeId != null}
+          region={sharing ? undefined : { id: regionId, onChange: setRegionId }}
+        />
+
         <ThemedText type="small" themeColor="textSecondary">
           • 연락처·실명 등 개인정보는 적지 마세요.{'\n'}• 광고·욕설·허위 정보는 신고될 수 있으며, 신고가 누적되면 글이
-          숨겨집니다.{'\n'}• 정확한 포인트 좌표 공유는 낚시 금지구역·안전 문제를 확인한 뒤 해주세요.
+          숨겨집니다.{'\n'}• 낚시터 이름은 공개 낚시터 목록의 이름이에요. 낚시가 허용된 곳이라는 뜻은 아니니, 출입통제·금지 여부를
+          확인한 뒤 공유해 주세요.
         </ThemedText>
 
         {error ? <ThemedText themeColor="danger">{error}</ThemedText> : null}
@@ -161,8 +182,10 @@ function SharedJournal({ j }: { j: NonNullable<ReturnType<typeof useJournal>['da
   const source = usePhotoSource();
   return (
     <Card>
-      <ThemedText type="smallBold" themeColor="success">
-        ✓ 인증 완료 기록 · 조황공유로 올라가요
+      <ThemedText type="smallBold" themeColor={j.verification.status === 'approved' ? 'success' : 'textSecondary'}>
+        {j.verification.status === 'approved'
+          ? '✓ 인증 완료 기록 · 「인증 조황」 배지와 함께 올라가요'
+          : '내 기록 · 조황공유로 올라가요 (인증을 받으면 배지가 붙어요)'}
       </ThemedText>
       <ThemedText type="smallBold">
         {j.place_name} · {j.species_name ?? '어종 미기록'}

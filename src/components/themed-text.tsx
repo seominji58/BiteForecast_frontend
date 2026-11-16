@@ -18,26 +18,38 @@ export type ThemedTextProps = TextProps & {
   themeColor?: ThemeColor;
 };
 
+/**
+ * 글씨 기준 (서비스 개선 설계 U1, 2026-11-16): 작은 글씨 14 · 본문 16 · 섹션 제목 18.
+ * 시스템 글씨 크기 설정을 따르되 1.4배까지만 키워 레이아웃이 깨지지 않게 한다
+ */
+export const MAX_FONT_SCALE = 1.4;
+
 export function ThemedText({ style, type = 'default', themeColor, ...rest }: ThemedTextProps) {
   const theme = useTheme();
 
-  return <Text style={[{ color: theme[themeColor ?? 'text'] }, styles[type], style]} {...rest} />;
+  return (
+    <Text
+      maxFontSizeMultiplier={MAX_FONT_SCALE}
+      style={[{ color: theme[themeColor ?? 'text'] }, styles[type], style]}
+      {...rest}
+    />
+  );
 }
 
 const styles = StyleSheet.create({
   small: {
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 14,
+    lineHeight: 20,
     fontWeight: 500,
   },
   smallBold: {
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 14,
+    lineHeight: 20,
     fontWeight: 700,
   },
   default: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 16,
+    lineHeight: 23,
     fontWeight: 500,
   },
   title: {
@@ -51,8 +63,8 @@ const styles = StyleSheet.create({
     fontWeight: 600,
   },
   sectionTitle: {
-    fontSize: 15,
-    lineHeight: 21,
+    fontSize: 18,
+    lineHeight: 25,
     fontWeight: 800,
     letterSpacing: -0.3,
   },

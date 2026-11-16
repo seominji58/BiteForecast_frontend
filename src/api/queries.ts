@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api } from '@/api';
 import type { JournalInput, PostCategory, PostFilter, PostInput, Trip } from '@/api/types';
@@ -128,10 +128,32 @@ export function useVerification(id: number) {
 
 // --- 커뮤니티 ---
 
-export const usePosts = (category: PostCategory | null, sort: 'latest' | 'popular', filter: PostFilter = {}) =>
+const postKey = (category: PostCategory | null, sort: string, filter: PostFilter) =>
+  ['community', 'posts', category, sort, filter.sido ?? null, filter.species ?? null, filter.placeId ?? null] as const;
+
+/** 글 목록 한 번 (홈·상세 등 미리보기용, limit 건) */
+export const usePosts = (
+  category: PostCategory | null,
+  sort: 'latest' | 'popular',
+  filter: PostFilter = {},
+  limit?: number,
+) =>
   useQuery({
-    queryKey: ['community', 'posts', category, sort, filter.sido ?? null, filter.species ?? null],
-    queryFn: () => api.posts(category, sort, filter),
+    queryKey: [...postKey(category, sort, filter), limit ?? null],
+    queryFn: () => api.posts(category, sort, filter, { limit }),
+  });
+
+export const POST_PAGE = 20;
+
+/** 커뮤니티 탭 목록: 최신순은 「더 보기」로 이어서 받는다 (인기순은 30일 안 상위 한 번) */
+export const usePostPages = (category: PostCategory | null, sort: 'latest' | 'popular', filter: PostFilter = {}) =>
+  useInfiniteQuery({
+    queryKey: [...postKey(category, sort, filter), 'pages'],
+    initialPageParam: undefined as number | undefined,
+    queryFn: ({ pageParam }) =>
+      api.posts(category, sort, filter, { limit: sort === 'latest' ? POST_PAGE : 50, beforeId: pageParam }),
+    getNextPageParam: (last) =>
+      sort === 'latest' && last.length === POST_PAGE ? last[last.length - 1].id : undefined,
   });
 
 /** 즐겨찾기 낚시터 (로그인했을 때만) */
