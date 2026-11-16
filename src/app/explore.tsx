@@ -302,7 +302,27 @@ export default function ExploreScreen() {
       const key = `${Math.floor(p.lat! / cell)}_${Math.floor(p.lon! / cell)}`;
       cells.set(key, [...(cells.get(key) ?? []), g]);
     }
-    return [...[...cells.entries()].map(([key, groups]) => ({ key, groups })), ...alone.map((g) => ({ key: '', groups: [g] }))];
+    // 격자 경계 양쪽에 걸린 묶음은 화면에서 붙어 보인다 → 중심이 한 칸보다 가까우면 한 번 더 합친다
+    const center = (gs: (typeof pins)[number][]) => ({
+      lat: gs.reduce((a, g) => a + g[0].place.lat!, 0) / gs.length,
+      lon: gs.reduce((a, g) => a + g[0].place.lon!, 0) / gs.length,
+    });
+    let merged = [...cells.entries()].map(([key, groups]) => ({ key, groups }));
+    for (let changed = true; changed; ) {
+      changed = false;
+      outer: for (let i = 0; i < merged.length; i++)
+        for (let j = i + 1; j < merged.length; j++) {
+          const a = center(merged[i].groups);
+          const b = center(merged[j].groups);
+          if (Math.hypot(a.lat - b.lat, a.lon - b.lon) < cell * 0.9) {
+            merged[i] = { key: merged[i].key, groups: [...merged[i].groups, ...merged[j].groups] };
+            merged = merged.filter((_, k) => k !== j);
+            changed = true;
+            break outer;
+          }
+        }
+    }
+    return [...merged, ...alone.map((g) => ({ key: '', groups: [g] }))];
   }, [pins, view?.latitudeDelta, selectedId]);
 
   // 지도 마커: 낚시터 하나는 점, 같은 좌표 여러 곳·가까운 곳 묶음은 숫자 원 (특보 발효 곳이 있으면 빨강)
@@ -337,8 +357,18 @@ export default function ExploreScreen() {
       label: `같은 좌표의 낚시터 ${group.length}곳`,
     };
   });
+  // 핀을 고르면 지금 확대 그대로 그 핀을 지도 가운데로 (가장자리·아래 카드에 가리지 않게)
+  const focusPlace = (p: Place) => {
+    if (p.lat == null || p.lon == null) return;
+    const d = view?.latitudeDelta ?? 1;
+    mapRef.current?.moveTo({ latitude: p.lat, longitude: p.lon, latitudeDelta: d, longitudeDelta: d }, 300);
+  };
   const pressMarker = (id: string) => {
-    if (id.startsWith('p')) return setSelectedId(Number(id.slice(1)));
+    if (id.startsWith('p')) {
+      const r = rows.find((x) => x.place.id === Number(id.slice(1)));
+      if (r) focusPlace(r.place);
+      return setSelectedId(Number(id.slice(1)));
+    }
     if (id.startsWith('c')) {
       const c = clusters.find((x) => `c${x.key}` === id);
       if (!c) return;
@@ -536,6 +566,7 @@ export default function ExploreScreen() {
         onClose={() => setSamePick(null)}
         onPick={(p) => {
           setSamePick(null);
+          focusPlace(p);
           setSelectedId(p.id);
         }}
       />
