@@ -34,6 +34,8 @@ import { getRecent, RECENT_PLACES, useCriteria, useExploreRegion, useHomePlace }
 
 const KOREA: MapRegion = { latitude: 36.0, longitude: 127.8, latitudeDelta: 6.5, longitudeDelta: 6.5 };
 const PAGE = 20;
+/** 보이는 위도 폭을 몇 칸으로 나눠 묶을지 (지도 높이 300 기준 한 칸 약 35pt) */
+const CLUSTER_CELLS = 9;
 
 type Origin = { kind: 'gps' | 'home'; coords: Coords; label: string } | null;
 
@@ -73,6 +75,8 @@ export default function ExploreScreen() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [shown, setShown] = useState(PAGE);
   const mapRef = useRef<AppMapHandle>(null);
+  // 지금 지도에 보이는 범위 (마커 묶음 계산용, 이동·확대가 멈출 때 갱신)
+  const [view, setView] = useState<MapRegion | null>(null);
 
   const locate = async () => {
     setGps({ loading: true, coords: null, error: null });
@@ -208,8 +212,39 @@ export default function ExploreScreen() {
     if (!stale && (onlyMatching || params.mode === 'criteria')) return r.check.status === 'meets' ? 'teal' : 'gray';
     return 'navy';
   };
-  // 지도 마커: 낚시터 하나는 점, 같은 좌표 여러 곳은 숫자 원 (특보 발효 곳이 있으면 빨강)
-  const markers: MapMarker[] = pins.map((group) => {
+  // 지도 마커 묶기: 지금 보이는 범위를 격자로 나눠, 화면에서 가까운 낚시터끼리 숫자 원 하나로 묶는다.
+  // 확대할수록 격자가 작아져 갈라진다. 선택한 낚시터는 묶지 않고 따로 보인다.
+  const clusters = useMemo(() => {
+    const cell = (view?.latitudeDelta ?? KOREA.latitudeDelta) / CLUSTER_CELLS;
+    const cells = new Map<string, (typeof pins)[number][]>();
+    const alone: (typeof pins)[number][] = [];
+    for (const g of pins) {
+      const p = g[0].place;
+      if (g.some((r) => r.place.id === selectedId)) {
+        alone.push(g);
+        continue;
+      }
+      const key = `${Math.floor(p.lat! / cell)}_${Math.floor(p.lon! / cell)}`;
+      cells.set(key, [...(cells.get(key) ?? []), g]);
+    }
+    return [...[...cells.entries()].map(([key, groups]) => ({ key, groups })), ...alone.map((g) => ({ key: '', groups: [g] }))];
+  }, [pins, view?.latitudeDelta, selectedId]);
+
+  // 지도 마커: 낚시터 하나는 점, 같은 좌표 여러 곳·가까운 곳 묶음은 숫자 원 (특보 발효 곳이 있으면 빨강)
+  const markers: MapMarker[] = clusters.map(({ key, groups }) => {
+    if (groups.length > 1) {
+      const all = groups.flat();
+      const warn = all.some((x) => x.s?.warning_level === 'warning');
+      return {
+        id: `c${key}`,
+        lat: groups.reduce((a, g) => a + g[0].place.lat!, 0) / groups.length,
+        lon: groups.reduce((a, g) => a + g[0].place.lon!, 0) / groups.length,
+        tone: warn ? 'danger' : 'navy',
+        count: all.length,
+        label: `가까운 낚시터 ${all.length}곳, 눌러서 확대`,
+      };
+    }
+    const group = groups[0];
     const r = group[0];
     if (group.length === 1)
       return { id: `p${r.place.id}`, lat: r.place.lat!, lon: r.place.lon!, tone: tone(r), label: r.place.name };
@@ -225,6 +260,17 @@ export default function ExploreScreen() {
   });
   const pressMarker = (id: string) => {
     if (id.startsWith('p')) return setSelectedId(Number(id.slice(1)));
+    if (id.startsWith('c')) {
+      const c = clusters.find((x) => `c${x.key}` === id);
+      if (!c) return;
+      const all = c.groups.flat();
+      const lats = all.map((r) => r.place.lat!);
+      const lons = all.map((r) => r.place.lon!);
+      // 아주 가까이 모인 곳(약 2km)은 더 확대해도 갈라지지 않으니 목록으로 펼친다
+      if (Math.max(...lats) - Math.min(...lats) < 0.02 && Math.max(...lons) - Math.min(...lons) < 0.02)
+        return setSamePick(all.map((r) => r.place));
+      return mapRef.current?.fitTo(all.map((r) => ({ lat: r.place.lat!, lon: r.place.lon! })));
+    }
     const group = pins.find((g) => `g${coordKey(g[0].place)}` === id);
     if (group) setSamePick(group.map((x) => x.place));
   };
@@ -244,6 +290,7 @@ export default function ExploreScreen() {
           markers={markers}
           userLocation={gps.coords}
           onMarkerPress={pressMarker}
+          onCameraIdle={setView}
           onReady={() => setMapReady(true)}
         />
       ) : (

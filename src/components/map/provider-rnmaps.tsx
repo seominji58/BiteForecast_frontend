@@ -14,7 +14,7 @@ export const TONE_COLOR: Record<MarkerTone, string> = {
 };
 
 export const RnMapsMap = forwardRef<AppMapHandle, AppMapProps>(function RnMapsMap(
-  { initialRegion, markers, userLocation, onMarkerPress, onReady, style },
+  { initialRegion, markers, userLocation, onMarkerPress, onReady, onCameraIdle, style },
   ref,
 ) {
   const map = useRef<MapView>(null);
@@ -27,7 +27,13 @@ export const RnMapsMap = forwardRef<AppMapHandle, AppMapProps>(function RnMapsMa
       ),
   }));
   return (
-    <MapView ref={map} style={style} initialRegion={initialRegion} showsUserLocation={!!userLocation} onMapReady={onReady}>
+    <MapView
+      ref={map}
+      style={style}
+      initialRegion={initialRegion}
+      showsUserLocation={!!userLocation}
+      onMapReady={onReady}
+      onRegionChangeComplete={(r) => onCameraIdle?.(r)}>
       {markers.map((m) =>
         m.count && m.count > 1 ? (
           <Marker

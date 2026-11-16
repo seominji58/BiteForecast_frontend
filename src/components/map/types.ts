@@ -32,5 +32,7 @@ export type AppMapProps = {
   userLocation?: LatLon | null;
   onMarkerPress?: (id: string) => void;
   onReady?: () => void;
+  /** 이동·확대가 멈췄을 때 보이는 범위 (마커 묶음 계산용) */
+  onCameraIdle?: (region: MapRegion) => void;
   style?: import('react-native').StyleProp<import('react-native').ViewStyle>;
 };
