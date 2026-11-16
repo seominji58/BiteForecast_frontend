@@ -18,7 +18,7 @@ import { useAuth } from '@/lib/auth';
 import { CATEGORY } from '@/lib/community';
 import { formatDateTime } from '@/lib/format';
 
-// 커뮤니티 글 상세: 본문, 좋아요, 댓글, 신고, 내 글 삭제
+// 커뮤니티 글 상세: 본문, 좋아요, 댓글, 신고, 내 글 수정·삭제
 export default function PostScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const postId = Number(id);
@@ -85,11 +85,21 @@ export default function PostScreen() {
           createdAt={p.created_at}
           right={
             p.mine ? (
-              <Pressable accessibilityRole="button" hitSlop={8} onPress={confirmDeletePost}>
-                <ThemedText type="small" themeColor="danger">
-                  삭제
-                </ThemedText>
-              </Pressable>
+              <View style={styles.mineActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  hitSlop={8}
+                  onPress={() => router.push({ pathname: '/community/edit', params: { id: String(p.id) } })}>
+                  <ThemedText type="small" themeColor="tint">
+                    수정
+                  </ThemedText>
+                </Pressable>
+                <Pressable accessibilityRole="button" hitSlop={8} onPress={confirmDeletePost}>
+                  <ThemedText type="small" themeColor="danger">
+                    삭제
+                  </ThemedText>
+                </Pressable>
+              </View>
             ) : (
               <Pressable
                 accessibilityRole="button"
@@ -210,6 +220,7 @@ export default function PostScreen() {
 }
 
 const styles = StyleSheet.create({
+  mineActions: { flexDirection: 'row', gap: 14 },
   bold: { fontWeight: '700' },
   dim: { opacity: 0.45 },
   body: { marginVertical: Spacing.two },

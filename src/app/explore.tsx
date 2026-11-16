@@ -2,8 +2,8 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Keyboard, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { useDateRange, useFishingIndex, usePlaces, usePlacesSummary, useSpecies } from '@/api/queries';
-import type { Place, PlaceSummary } from '@/api/types';
+import { useCatchSummary, useDateRange, useFishingIndex, usePlaces, usePlacesSummary, useSpecies } from '@/api/queries';
+import type { CatchSummary, Place, PlaceSummary } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { Dropdown, type DropdownOption } from '@/components/dropdown';
 import { AppMap, type AppMapHandle, type MapMarker, type MapRegion } from '@/components/map/app-map';
@@ -67,8 +67,15 @@ export default function ExploreScreen() {
   const fishItem = allSpecies.find((x) => x.name === fish) ?? null;
   const fishIsIndex = !!fish && INDEX_SPECIES.includes(fish);
   const fi = useFishingIndex(fishIsIndex ? range.data?.today : undefined);
+  // 최근 14일 이용자 조황 (낚시터 이름까지 공개한 조황 글만) — 핀 강조·어종 칩 첫째 근거·핀 카드
+  const catches = useCatchSummary(14);
+  const catchById = useMemo(() => new Map((catches.data ?? []).map((c) => [c.place_id, c])), [catches.data]);
   const fishMatch = useMemo(() => {
     if (!fish) return null;
+    const names0 = [fish, fishItem?.alias].filter((x): x is string => !!x);
+    const user = new Set(
+      (catches.data ?? []).filter((c) => c.species.some((n) => names0.some((x) => n.includes(x)))).map((c) => c.place_id),
+    );
     const index = new Set<number>();
     if (fishIsIndex && fi.data)
       for (const pt of fi.data.points)
@@ -77,8 +84,8 @@ export default function ExploreScreen() {
     const info = new Set(
       (places.data ?? []).filter((p) => p.info_species && names.some((n) => p.info_species!.includes(n))).map((p) => p.id),
     );
-    return { index, info, all: new Set([...index, ...info]) };
-  }, [fish, fishIsIndex, fishItem, fi.data, places.data]);
+    return { user, index, info, all: new Set([...user, ...index, ...info]) };
+  }, [fish, fishIsIndex, fishItem, fi.data, places.data, catches.data]);
   const fishPlaces = fishMatch?.all ?? null;
 
   const [onlyMatching, setOnlyMatching] = useState(params.mode === 'criteria');
@@ -243,7 +250,7 @@ export default function ExploreScreen() {
     if (r.place.id === selectedId) return 'selected';
     if (r.s?.warning_level === 'warning') return 'danger';
     if (!stale && (onlyMatching || params.mode === 'criteria')) return r.check.status === 'meets' ? 'teal' : 'gray';
-    return 'navy';
+    return catchById.has(r.place.id) ? 'catch' : 'navy';
   };
   // 지도 마커 묶기: 지금 보이는 범위를 격자로 나눠, 화면에서 가까운 낚시터끼리 숫자 원 하나로 묶는다.
   // 확대할수록 격자가 작아져 갈라진다. 선택한 낚시터는 묶지 않고 따로 보인다.
@@ -268,11 +275,12 @@ export default function ExploreScreen() {
     if (groups.length > 1) {
       const all = groups.flat();
       const warn = all.some((x) => x.s?.warning_level === 'warning');
+      const caught = all.some((x) => catchById.has(x.place.id));
       return {
         id: `c${key}`,
         lat: groups.reduce((a, g) => a + g[0].place.lat!, 0) / groups.length,
         lon: groups.reduce((a, g) => a + g[0].place.lon!, 0) / groups.length,
-        tone: warn ? 'danger' : 'navy',
+        tone: warn ? 'danger' : caught ? 'catch' : 'navy',
         count: all.length,
         label: `가까운 낚시터 ${all.length}곳, 눌러서 확대`,
       };
@@ -282,11 +290,12 @@ export default function ExploreScreen() {
     if (group.length === 1)
       return { id: `p${r.place.id}`, lat: r.place.lat!, lon: r.place.lon!, tone: tone(r), label: r.place.name };
     const warn = group.some((x) => x.s?.warning_level === 'warning');
+    const caught = group.some((x) => catchById.has(x.place.id));
     return {
       id: `g${coordKey(r.place)}`,
       lat: r.place.lat!,
       lon: r.place.lon!,
-      tone: warn ? 'danger' : 'navy',
+      tone: warn ? 'danger' : caught ? 'catch' : 'navy',
       count: group.length,
       label: `같은 좌표의 낚시터 ${group.length}곳`,
     };
@@ -327,11 +336,12 @@ export default function ExploreScreen() {
                 : rows.length === 0
                   ? `${fish}: ${fishIsIndex ? '이 지역에 지수 지점·안내한 낚시터가 없어요' : '공식 지수가 없고, 이 지역에 이 어종을 안내한 낚시터도 없어요'}`
                   : `${fish} ${rows.length}곳 · ${[
-                      fishMatch.index.size ? '공식 낚시지수 지점 근처' : null,
+                      fishMatch.user.size ? `이용자 조황 ${fishMatch.user.size}` : null,
+                      fishMatch.index.size ? '공식 지수 지점 근처' : null,
                       fishMatch.info.size ? '낚시터가 알린 대상 어종' : null,
                     ]
                       .filter(Boolean)
-                      .join(' + ')} 기준 (조황 아님)`,
+                      .join(' · ')}`,
             color: 'textSecondary' as const,
           }
         : onlyMatching && summary.isSuccess && rows.length === 0
@@ -432,6 +442,7 @@ export default function ExploreScreen() {
             s={selected.s}
             dist={selected.dist}
             check={checkOf(selected)}
+            caught={catchById.get(selected.place.id) ?? null}
             homeId={homeId}
             pick={params.pick === 'compare' ? { a: params.a ? Number(params.a) : null } : null}
             onClose={() => setSelectedId(null)}
@@ -542,6 +553,7 @@ function SelectedCard({
   s,
   dist,
   check,
+  caught,
   homeId,
   pick,
   onClose,
@@ -550,6 +562,8 @@ function SelectedCard({
   s: PlaceSummary | undefined;
   dist: number | null;
   check: ReturnType<typeof checkPlace> | null;
+  /** 최근 이용자 조황 요약 (없으면 null) */
+  caught: CatchSummary | null;
   homeId: number | null;
   /** 비교 화면에서 고르러 온 경우: 이미 고른 A (없으면 이 곳이 A) */
   pick: { a: number | null } | null;
@@ -580,6 +594,18 @@ function SelectedCard({
         {distLabel(dist, place) ? ` · ${distLabel(dist, place)}` : ''}
       </ThemedText>
       <CoordNote place={place} compact />
+      {/* 이용자 조황을 먼저 (예보가 아니라 실제로 올라온 글) */}
+      {caught ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push({ pathname: '/place/[id]', params: { id: String(place.id) } })}
+          style={styles.caught}>
+          <ThemedText type="smallBold" style={styles.caughtText} numberOfLines={1}>
+            최근 조황 {caught.posts}건{caught.species.length ? ` · ${caught.species.join('·')}` : ''}
+            {caught.best_cm != null ? ` · 최대 ${caught.best_cm}cm` : ''} · {daysAgo(caught.last_at)} ›
+          </ThemedText>
+        </Pressable>
+      ) : null}
       {w ? (
         <ThemedText type="smallBold" themeColor={w.color}>
           {w.text}
@@ -627,7 +653,15 @@ function SelectedCard({
   );
 }
 
+/** 「오늘」 「3일 전」 */
+function daysAgo(iso: string): string {
+  const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  return d <= 0 ? '오늘' : `${d}일 전`;
+}
+
 const styles = StyleSheet.create({
+  caught: { backgroundColor: 'rgba(242,140,40,0.12)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
+  caughtText: { color: '#B8641A' },
   flex: { flex: 1 },
   bold: { fontWeight: '700' },
   pressed: { opacity: 0.8 },

@@ -63,6 +63,7 @@ export default function RootLayout() {
           <Stack.Screen name="info/safety" options={{ title: '금어기·출조 안전 정보' }} />
           <Stack.Screen name="community/new" options={{ title: '글쓰기' }} />
           <Stack.Screen name="community/[id]" options={{ title: '커뮤니티' }} />
+          <Stack.Screen name="community/edit" options={{ title: '글 고치기' }} />
         </Stack>
       </ThemeProvider>
       </AuthProvider>

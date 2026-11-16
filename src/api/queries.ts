@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api } from '@/api';
-import type { JournalInput, PostCategory, PostFilter, PostInput, Trip } from '@/api/types';
+import type { JournalInput, PostCategory, PostEdit, PostFilter, PostInput, Trip } from '@/api/types';
 import { useAuth } from '@/lib/auth';
 
 // 화면에서 쓰는 조회/변경 훅. queryKey 는 캐시 무효화 기준이 되므로 여기서만 정의한다.
@@ -183,6 +183,15 @@ export function useCreatePost() {
   const invalidate = useInvalidateCommunity();
   return useMutation({ mutationFn: (input: PostInput) => api.createPost(input), onSuccess: invalidate });
 }
+
+export function useUpdatePost(id: number) {
+  const invalidate = useInvalidateCommunity();
+  return useMutation({ mutationFn: (input: PostEdit) => api.updatePost(id, input), onSuccess: invalidate });
+}
+
+/** 낚시터별 최근 이용자 조황 (지도 핀·어종 칩·낚시터 카드). 글이 바뀌면 커뮤니티와 함께 갱신 */
+export const useCatchSummary = (days = 14) =>
+  useQuery({ queryKey: ['community', 'catch-summary', days], queryFn: () => api.catchSummary(days), staleTime: 5 * 60_000 });
 
 export function useDeletePost() {
   const invalidate = useInvalidateCommunity();

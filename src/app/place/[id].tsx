@@ -1,5 +1,5 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useConditions, useDateRange, useFavorites, usePlaces, useSetFavorite } from '@/api/queries';
@@ -32,6 +32,7 @@ export default function PlaceDetailScreen() {
   const today = range.data?.today;
   const cond = useConditions(place ? placeId : null, today);
   const pc = cond.data?.place;
+  const [more, setMore] = useState(false);
 
   return (
     <StackScreen>
@@ -62,6 +63,11 @@ export default function PlaceDetailScreen() {
             {cond.data ? ` · ${timeLabel(cond.data.generated_at)} 갱신` : ''}
           </ThemedText>
           {today ? <AddToTripButton placeId={place.id} placeName={place.name} date={today} /> : null}
+          <Button
+            label="여기서 기록 남기기"
+            variant="secondary"
+            onPress={() => router.push({ pathname: '/journal/new', params: { place: String(place.id) } })}
+          />
           {place.id !== homeId ? (
             <Button
               label="이 낚시터를 기준으로 설정"
@@ -77,26 +83,40 @@ export default function PlaceDetailScreen() {
 
       {pc ? (
         <>
-          <MarineWarningBanner w={pc.warning} />
-
-          <SectionHeader title="지금 바다" />
-          <MetricTable pc={pc} />
-
-          <SectionHeader title="출조 시간 날씨" />
-          <WeatherForecastCard pc={pc} />
-
-          <SectionHeader title="물때 (오늘)" />
-          <TideCard pc={pc} />
-
-          <SectionHeader title="바다낚시지수 (국립해양조사원)" />
-          <FishingIndexCard pc={pc} />
-
-          {/* 예보·지수와 구분: 이용자가 낚시터 이름까지 공개한 조황만 (없으면 칸을 숨김) */}
+          {/* ① 이용자 조황을 맨 위에 (서비스 개선 v2 P-A). 예보·지수와 제목·문구로 구분, 없으면 칸을 숨김 */}
           <CatchStrip
             title="이 낚시터 이용자 조황"
             filter={{ placeId }}
             note="이용자가 올린 조황이에요. 예보가 아니고, 낚시가 허용된 곳이라는 뜻도 아니에요."
           />
+
+          {/* ② 가도 될까: 특보 + 지금 바다 */}
+          <MarineWarningBanner w={pc.warning} />
+          <SectionHeader title="지금 바다" />
+          <MetricTable pc={pc} />
+
+          {/* ③ 자세히: 날씨·물때·지수는 펼쳐서 */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: more }}
+            onPress={() => setMore((v) => !v)}
+            style={styles.moreBtn}>
+            <ThemedText type="smallBold" themeColor="tint">
+              {more ? '날씨·물때·낚시지수 접기 ▴' : '날씨·물때·낚시지수 자세히 ▾'}
+            </ThemedText>
+          </Pressable>
+          {more ? (
+            <>
+              <SectionHeader title="출조 시간 날씨" />
+              <WeatherForecastCard pc={pc} />
+
+              <SectionHeader title="물때 (오늘)" />
+              <TideCard pc={pc} />
+
+              <SectionHeader title="바다낚시지수 (국립해양조사원)" />
+              <FishingIndexCard pc={pc} />
+            </>
+          ) : null}
 
           {/* 위치 확인 필요·좌표 불일치 의심이면 거리 기준 목록을 내지 않는다 (시뮬레이터 검증 2026-11-10) */}
           {place && places.data && !place.location_suspect && !place.coord?.recommend_hold ? (
@@ -147,6 +167,7 @@ function FavoriteStar({ placeId }: { placeId: number }) {
 
 const styles = StyleSheet.create({
   star: { fontSize: 26, lineHeight: 30 },
+  moreBtn: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
   flex: { flex: 1 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
 });

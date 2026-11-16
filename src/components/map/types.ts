@@ -2,7 +2,8 @@
  * 지도 공통 부품 타입 (소셜 로그인·지도 SDK 설계 §2). 화면은 지도 라이브러리를 몰라도 되게 이 모양만 쓴다.
  * 좌표 범위는 「위도·경도 폭(delta)」으로 받고, 카카오맵(줌 레벨)으로는 부품 안에서 바꾼다.
  */
-export type MarkerTone = 'navy' | 'teal' | 'gray' | 'danger' | 'selected';
+/** catch: 최근 이용자 조황이 있는 낚시터 (남색 + 주황 테두리) */
+export type MarkerTone = 'navy' | 'teal' | 'gray' | 'danger' | 'selected' | 'catch';
 
 export type MapMarker = {
   id: string;

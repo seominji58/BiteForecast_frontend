@@ -378,7 +378,7 @@ export type DataSource = { agency: string; dataset: string; kind: DataKind; conn
 
 // --- 커뮤니티 ---
 
-export type PostCategory = 'catch' | 'question' | 'tip';
+export type PostCategory = 'catch' | 'question' | 'tip' | 'free';
 /** 글 목록 거르기: 시·도(예: 제주), 어종(코드 또는 직접 입력 이름), 낚시터(이름까지 공개한 글만) */
 export type PostFilter = { sido?: string | null; species?: string | null; placeId?: number | null };
 /** 글 위치 공개 범위: 낚시터 이름까지 / 지역만 / 숨김 */
@@ -443,6 +443,23 @@ export type PostInput = {
   journal_id?: number | null;
   /** 기록 공유 글에 미끼·채비 함께 보여주기 (기본 true) */
   show_tackle?: boolean;
+};
+
+/** 내 글 고치기 (보낸 칸만 바뀜) */
+export type PostEdit = {
+  category?: PostCategory;
+  title?: string;
+  body?: string;
+  location_visibility?: LocationVisibility;
+};
+
+/** 낚시터별 최근 이용자 조황 (낚시터 이름까지 공개한 조황 글만, 예보 아님) */
+export type CatchSummary = {
+  place_id: number;
+  posts: number;
+  species: string[];
+  best_cm: number | null;
+  last_at: string;
 };
 
 export type BlockedUser = { user_id: number; nickname: string; created_at: string };

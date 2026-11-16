@@ -44,6 +44,9 @@ function NewPostScreenInner() {
   const [showTackle, setShowTackle] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // 자유게시판: 낚시 말고도 아무 이야기 — 장소·어종·위치 공개 칸을 숨기고 위치는 숨김으로 보낸다
+  const free = !sharing && category === 'free';
+
   const submit = () => {
     if (title.trim().length < 2) return setError('제목을 2자 이상 입력해 주세요.');
     if (!body.trim()) return setError('내용을 입력해 주세요.');
@@ -68,11 +71,11 @@ function NewPostScreenInner() {
             category,
             title: title.trim(),
             body: body.trim(),
-            place_id: placeId,
-            region_id: placeId == null && visibility === 'region' ? regionId : null,
-            location_visibility: visibility,
-            species_code: species.code,
-            species_etc: species.etc,
+            place_id: free ? null : placeId,
+            region_id: !free && placeId == null && visibility === 'region' ? regionId : null,
+            location_visibility: free ? 'hidden' : visibility,
+            species_code: free ? null : species.code,
+            species_etc: free ? null : species.etc,
             photo_ids: photos.photoIds,
           },
       {
@@ -119,7 +122,7 @@ function NewPostScreenInner() {
             onChangeText={setBody}
             multiline
             maxLength={2000}
-            placeholder="조황, 채비, 질문 등을 자유롭게 적어주세요."
+            placeholder={free ? '낚시 말고도 아무 이야기나 괜찮아요.' : '조황, 채비, 질문 등을 자유롭게 적어주세요.'}
             style={styles.body}
           />
         </Field>
@@ -133,26 +136,30 @@ function NewPostScreenInner() {
               </ThemedText>
             </Field>
 
-            <Field label="장소 (선택)">
-              <PlaceField value={placeId} onChange={setPlaceId} placeholder="어느 낚시터 이야기인가요?" />
-              {placeId != null ? (
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => {
-                    setPlaceId(null);
-                    if (visibility === 'place') setVisibility('region');
-                  }}
-                  hitSlop={8}>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    장소 태그 빼기
-                  </ThemedText>
-                </Pressable>
-              ) : null}
-            </Field>
+            {free ? null : (
+              <>
+                <Field label="장소 (선택)">
+                  <PlaceField value={placeId} onChange={setPlaceId} placeholder="어느 낚시터 이야기인가요?" />
+                  {placeId != null ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => {
+                        setPlaceId(null);
+                        if (visibility === 'place') setVisibility('region');
+                      }}
+                      hitSlop={8}>
+                      <ThemedText type="small" themeColor="textSecondary">
+                        장소 태그 빼기
+                      </ThemedText>
+                    </Pressable>
+                  ) : null}
+                </Field>
 
-            <Field label="어종 (선택)">
-              <SpeciesField value={species} onChange={setSpecies} />
-            </Field>
+                <Field label="어종 (선택)">
+                  <SpeciesField value={species} onChange={setSpecies} />
+                </Field>
+              </>
+            )}
           </>
         ) : null}
 
@@ -168,17 +175,19 @@ function NewPostScreenInner() {
           </View>
         ) : null}
 
-        <LocationVisibilityField
-          value={visibility}
-          onChange={setVisibility}
-          hasPlace={sharing || placeId != null}
-          region={sharing ? undefined : { id: regionId, onChange: setRegionId }}
-        />
+        {free ? null : (
+          <LocationVisibilityField
+            value={visibility}
+            onChange={setVisibility}
+            hasPlace={sharing || placeId != null}
+            region={sharing ? undefined : { id: regionId, onChange: setRegionId }}
+          />
+        )}
 
         <ThemedText type="small" themeColor="textSecondary">
           • 연락처·실명 등 개인정보는 적지 마세요.{'\n'}• 광고·욕설·허위 정보는 신고될 수 있으며, 신고가 누적되면 글이
-          숨겨집니다.{'\n'}• 낚시터 이름은 공개 낚시터 목록의 이름이에요. 낚시가 허용된 곳이라는 뜻은 아니니, 출입통제·금지 여부를
-          확인한 뒤 공유해 주세요.
+          숨겨집니다.{'\n'}• 낚시터 이름은 공개 낚시터 목록의 이름이에요. 낚시가 허용된 곳이라는 뜻은 아니니,
+          출입통제·금지 여부를 확인한 뒤 공유해 주세요.
         </ThemedText>
 
         {error ? <ThemedText themeColor="danger">{error}</ThemedText> : null}

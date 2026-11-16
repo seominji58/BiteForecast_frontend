@@ -9,6 +9,7 @@ import type {
   CompareResult,
   DataSource,
   DateRange,
+  CatchSummary,
   FishingIndexDay,
   GoogleSignupNeeded,
   Health,
@@ -25,6 +26,7 @@ import type {
   PostCategory,
   PostDetail,
   PostFilter,
+  PostEdit,
   PostInput,
   PostSummary,
   RecordSummary,
@@ -122,6 +124,9 @@ export const api = {
     request<void>(`/me/favorites/${placeId}`, { method: on ? 'PUT' : 'DELETE' }),
   post: (id: number) => request<PostDetail>(`/community/posts/${id}`, { auth: true }),
   createPost: (input: PostInput) => request<PostDetail>('/community/posts', { method: 'POST', body: input, auth: true }),
+  updatePost: (id: number, input: PostEdit) =>
+    request<PostDetail>(`/community/posts/${id}`, { method: 'PATCH', body: input, auth: true }),
+  catchSummary: (days = 14) => request<CatchSummary[]>(`/community/catch-summary?days=${days}`, { auth: true }),
   deletePost: (id: number) => request<void>(`/community/posts/${id}`, { method: 'DELETE', auth: true }),
   addComment: (postId: number, body: string) =>
     request<PostDetail>(`/community/posts/${postId}/comments`, { method: 'POST', body: { body }, auth: true }),
