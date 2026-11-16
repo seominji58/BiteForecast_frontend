@@ -37,14 +37,19 @@ const PAGE = 20;
 
 type Origin = { kind: 'gps' | 'home'; coords: Coords; label: string } | null;
 
+/** 지역 값 앞붙임: 해역 (예: 'sea:서해'). 시·도는 이름 그대로 */
+const SEA = 'sea:';
+const SEA_ORDER = ['서해', '남해', '동해', '제주'] as const;
+
 /**
  * 낚시터 찾기 (사용자 결정 2026-11-05): 지도 + 거리순 목록 + 특보·해황 요약 → 상세 해황 / 비교.
  * - near=1: 들어오자마자 현재 위치(앱 사용 중 권한, 기기 안에서만 사용)
  * - mode=criteria: 「조건으로 찾기」 — 사용자가 정한 파고·풍속 상한 + 특보 + 공식 지수로 거른다 (앱 판정 없음)
+ * - region: 홈에서 고른 지역을 이어받는다. 해역은 'sea:서해' 처럼, 시·도는 이름 그대로 (지역 기준 통일, 서비스 개선 설계 H1)
  */
 export default function ExploreScreen() {
   // pick=compare: 비교 화면에서 「지도에서 고르기」로 들어옴 (a = 이미 고른 A)
-  const params = useLocalSearchParams<{ near?: string; mode?: string; pick?: string; a?: string }>();
+  const params = useLocalSearchParams<{ near?: string; mode?: string; pick?: string; a?: string; region?: string }>();
   const theme = useTheme();
   const places = usePlaces();
   const range = useDateRange();
@@ -95,16 +100,37 @@ export default function ExploreScreen() {
     () => (gps.coords ? { kind: 'gps', coords: gps.coords, label: '현재 위치' } : null),
     [gps.coords],
   );
-  // 지역(시·도)을 고르면 그 지역 안에서 탐색
+  // 지역: 해역(서해·남해·동해·제주) 또는 시·도. 홈에서 넘어온 지역이 있으면 그것으로 시작
   const [region, setRegion] = useExploreRegion();
+  const [lastRegionParam, setLastRegionParam] = useState<string | undefined>(undefined);
+  if (params.region && params.region !== lastRegionParam) {
+    setLastRegionParam(params.region);
+    setRegion(params.region);
+  }
+  const seaOf = useMemo(
+    () => new Map((summary.data?.places ?? []).map((s) => [s.place_id, s.sea_group])),
+    [summary.data],
+  );
+  const inRegion = (p: Place) =>
+    region === 'all' || (region.startsWith(SEA) ? seaOf.get(p.id) === region.slice(SEA.length) : sidoOf(p) === region);
   const regionOptions = useMemo<DropdownOption<string>[]>(() => {
     const counts = new Map<string, number>();
-    for (const p of places.data ?? []) counts.set(sidoOf(p), (counts.get(sidoOf(p)) ?? 0) + 1);
+    const seas = new Map<string, number>();
+    for (const p of places.data ?? []) {
+      counts.set(sidoOf(p), (counts.get(sidoOf(p)) ?? 0) + 1);
+      const sea = seaOf.get(p.id);
+      if (sea) seas.set(sea, (seas.get(sea) ?? 0) + 1);
+    }
     return [
       { value: 'all', label: '전국' },
+      ...SEA_ORDER.filter((sea) => seas.has(sea)).map((sea) => ({
+        value: `${SEA}${sea}`,
+        label: `${sea} 전체`,
+        hint: `${seas.get(sea)}곳`,
+      })),
       ...[...counts.entries()].sort((a, b) => b[1] - a[1]).map(([sd, n]) => ({ value: sd, label: sd, hint: `${n}곳` })),
     ];
-  }, [places.data]);
+  }, [places.data, seaOf]);
   const [recentPlaces, setRecentPlaces] = useState<Place[]>([]);
   useEffect(() => {
     getRecent(RECENT_PLACES).then((ids) =>
@@ -126,7 +152,7 @@ export default function ExploreScreen() {
       // 자료가 오래됐으면 「조건에 맞는 곳」을 고르지 않는다 (최신처럼 보이지 않게)
       // 「조건에 맞는 곳」은 추천이므로 좌표 불일치 의심 곳은 뺀다 (전체 보기에는 안내와 함께 남김)
       .filter((r) => !onlyMatching || (!stale && r.check.status === 'meets' && recommendable(r.place)))
-      .filter((r) => region === 'all' || sidoOf(r.place) === region);
+      .filter((r) => inRegion(r.place));
     // 현재 위치가 있으면 거리순, 없으면 지역 이름 → 낚시터 이름순 (임의 기준의 「가까운 순」 없음)
     list.sort((a, b) =>
       a.dist != null && b.dist != null
@@ -134,14 +160,15 @@ export default function ExploreScreen() {
         : a.place.region_name.localeCompare(b.place.region_name) || a.place.name.localeCompare(b.place.name),
     );
     return list;
-  }, [places.data, byId, origin, criteria, onlyMatching, stale, region]);
+  }, [places.data, byId, origin, criteria, onlyMatching, stale, region, seaOf]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const regionName = region.startsWith(SEA) ? region.slice(SEA.length) : region;
   const orderLabel = gps.loading
     ? '현재 위치 확인 중…'
     : origin
-      ? `${region === 'all' ? '' : `${region} · `}현재 위치에서 가까운 순`
+      ? `${region === 'all' ? '' : `${regionName} · `}현재 위치에서 가까운 순`
       : region !== 'all'
-        ? `${region} 낚시터 · 이름순`
+        ? `${regionName} 낚시터 · 이름순`
         : '전국 · 지역 이름순 (내 위치를 쓰거나 지역을 고르면 그 기준으로 보여드려요)';
 
   const selected = rows.find((r) => r.place.id === selectedId) ?? null;
@@ -171,10 +198,10 @@ export default function ExploreScreen() {
   useEffect(() => {
     if (!mapReady || region === 'all' || origin) return;
     const pts = (places.data ?? [])
-      .filter((p) => sidoOf(p) === region && usableForLocation(p))
+      .filter((p) => inRegion(p) && usableForLocation(p))
       .map((p) => ({ latitude: p.lat!, longitude: p.lon! }));
     if (pts.length) mapRef.current?.fitToCoordinates(pts, { edgePadding: { top: 40, right: 40, bottom: 40, left: 40 }, animated: true });
-  }, [region, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [region, mapReady, seaOf]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pinColor = (r: (typeof rows)[number]) => {
     if (r.s?.warning_level === 'warning') return theme.danger;

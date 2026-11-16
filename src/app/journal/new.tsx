@@ -46,7 +46,8 @@ function NewJournalScreenInner() {
         submitLabel="저장"
         submitting={save.isPending}
         serverError={save.error?.message}
-        onSubmit={(input) =>
+        shareOption
+        onSubmit={(input, { share }) =>
           save.mutate(
             // 계획의 낚시터 그대로 저장할 때만 계획에 연결 (장소를 바꾸면 연결하지 않는다)
             params.trip_stop && String(input.place_id) === params.place
@@ -55,8 +56,10 @@ function NewJournalScreenInner() {
             {
             onSuccess: (res) => {
               Alert.alert('저장했습니다', pointResultMessage(res));
-              // 저장한 기록 상세로 (인증 상태·공유를 바로 볼 수 있게)
-              if (res.journal) router.replace({ pathname: '/journal/[id]', params: { id: String(res.journal.id) } });
+              // 「커뮤니티에도 올리기」를 켰으면 기록 공유 글쓰기로, 아니면 저장한 기록 상세로
+              if (res.journal && share)
+                router.replace({ pathname: '/community/new', params: { journal: String(res.journal.id) } });
+              else if (res.journal) router.replace({ pathname: '/journal/[id]', params: { id: String(res.journal.id) } });
               else router.back();
             },
             },

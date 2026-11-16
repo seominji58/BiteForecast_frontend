@@ -1,5 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
 import { type Criteria, DEFAULT_CRITERIA } from '@/lib/criteria';
@@ -54,19 +54,22 @@ export const pushRecentPlace = (id: number) => pushRecent(RECENT_PLACES, String(
 
 const EXPLORE_REGION = 'biteforecast.explore_region';
 
-/** 출조 탐색에서 고른 지역(시·도). 'all' = 고르지 않음 */
+/** 출조 탐색에서 고른 지역: 시·도 이름 또는 해역('sea:서해'). 'all' = 고르지 않음 */
 export function useExploreRegion(): [string, (v: string) => void] {
   const [v, setV] = useState('all');
+  // 저장값을 읽기 전에 새로 고른 값이 있으면 (홈에서 지역을 넘겨받음) 늦게 온 저장값으로 덮지 않는다
+  const touched = useRef(false);
   useEffect(() => {
     let alive = true;
     read(EXPLORE_REGION)
-      .then((x) => alive && x && setV(x))
+      .then((x) => alive && x && !touched.current && setV(x))
       .catch(() => undefined);
     return () => {
       alive = false;
     };
   }, []);
   const update = (next: string) => {
+    touched.current = true;
     setV(next);
     write(EXPLORE_REGION, next).catch(() => undefined);
   };

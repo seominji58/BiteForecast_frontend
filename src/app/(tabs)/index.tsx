@@ -69,6 +69,12 @@ export default function HomeScreen() {
   const plan = () =>
     router.push({ pathname: '/trip/new', params: { ...(date ? { date } : {}), ...(x.species ? { species: x.species.code } : {}) } });
   const points = () => router.push({ pathname: '/points', params: date ? { date } : {} });
+  // 지도는 홈에서 고른 지역 그대로 연다: 내 주변 → 현재 위치, 해역 → 그 해역 전체, 전국 → 전국
+  const openMap = () =>
+    router.push({
+      pathname: '/explore',
+      params: x.region === '내 주변' ? { near: '1' } : { region: x.region === '전국' ? 'all' : `sea:${x.region}` },
+    });
 
   const qc = useQueryClient();
   const refresh = () =>
@@ -171,7 +177,7 @@ export default function HomeScreen() {
       />
 
       {/* 지도 · 출조계획 */}
-      <HomeActions onMap={() => router.push('/explore')} onPlan={plan} />
+      <HomeActions onMap={openMap} onPlan={plan} />
 
       {/* 오늘의 낚시 정보 미리보기 */}
       <SectionHeader title={date === today ? '오늘의 낚시 정보 미리보기' : `${dateText} 낚시 정보 미리보기`} actionLabel="추천 낚시터" onAction={points} />

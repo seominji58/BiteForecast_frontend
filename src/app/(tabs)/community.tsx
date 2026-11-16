@@ -50,7 +50,8 @@ export default function CommunityScreen() {
   const [homeSpeciesCode] = useHomeSpecies();
   const homeSp = speciesByCode(homeSpeciesCode);
   const interestSpecies = homeSp ? (homeSp.speciesCode ?? homeSp.name) : 'all';
-  const sido = sidoSel ?? exploreRegion;
+  // 지도 지역이 해역(sea:서해)이면 시·도 필터로 쓸 수 없어 전체로 본다
+  const sido = sidoSel ?? (exploreRegion.startsWith('sea:') ? 'all' : exploreRegion);
   const speciesCode = speciesSel ?? interestSpecies;
   const byInterest = sidoSel == null && speciesSel == null && (sido !== 'all' || speciesCode !== 'all');
   const category = filter === 'all' ? null : filter;
