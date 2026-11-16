@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ImageBackground, Keyboard, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Keyboard, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useDateRange } from '@/api/queries';
 import type { Place } from '@/api/types';
@@ -26,6 +26,8 @@ import { type Region, REGIONS } from '@/lib/prefs';
 import { josa } from '@/lib/species';
 import { SPECIES_IMAGES } from '@/lib/species-images';
 
+const HERO_RATIO = 1672 / 941; // 배경 사진 가로/세로
+
 // 시간대별 분위기만 바꾼다 (데이터·검색 로직과 무관)
 function homeBackgroundSource(hour = new Date().getHours()) {
   if (hour >= 5 && hour < 9) return require('../../../assets/home-backgrounds/dawn.png');
@@ -47,6 +49,8 @@ export default function HomeScreen() {
   const date = dateSel ?? today;
   const x = useExplore(date, today);
   const [query, setQuery] = useState('');
+  // 배경 사진(16:9)의 낚시꾼이 오른쪽 끝에 있어서, 가운데 맞춤(cover) 대신 오른쪽에 붙여 잘리지 않게 한다
+  const [hero, setHero] = useState({ w: 0, h: 0 });
   const [sheet, setSheet] = useState<'date' | 'region' | null>(null);
   const [term, setTerm] = useState<TermKey | null>(null);
 
@@ -93,7 +97,17 @@ export default function HomeScreen() {
   return (
     <TabScreen title="" immersive onRefresh={refresh}>
       {/* 상단: 바다 배경 · 검색 · 내 주변 · 지도 탐색 · 날짜 */}
-      <ImageBackground source={homeBackgroundSource()} imageStyle={styles.heroImage} style={styles.hero}>
+      <View onLayout={(e) => setHero({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })} style={styles.hero}>
+        {hero.h > 0 ? (
+          <Image
+            source={homeBackgroundSource()}
+            resizeMode="cover"
+            style={[
+              styles.heroImage,
+              { width: Math.max(hero.w, hero.h * HERO_RATIO), height: Math.max(hero.h, hero.w / HERO_RATIO) },
+            ]}
+          />
+        ) : null}
         <View pointerEvents="none" style={styles.heroShade} />
         <View style={styles.heroCopy}>
           <Text style={styles.heroTitle}>오늘은 어떤 낚시를 떠나세요?</Text>
@@ -120,7 +134,7 @@ export default function HomeScreen() {
             );
           })}
         </ScrollView>
-      </ImageBackground>
+      </View>
 
       {query.trim() ? (
         <Card>
@@ -282,7 +296,7 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.7 },
   bold: { fontWeight: '700' },
   hero: { backgroundColor: Brand.navy, marginTop: -16, marginHorizontal: -16, paddingTop: 104, paddingHorizontal: 16, paddingBottom: 14, gap: 10, overflow: 'hidden' },
-  heroImage: { borderRadius: 0 },
+  heroImage: { position: 'absolute', top: 0, right: 0 },
   heroShade: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(5, 30, 58, 0.42)' },
   heroCopy: { paddingHorizontal: 4, paddingTop: 8, gap: 4 },
   heroTitle: { color: '#FFFFFF', fontSize: 25, lineHeight: 32, fontWeight: '800' },
