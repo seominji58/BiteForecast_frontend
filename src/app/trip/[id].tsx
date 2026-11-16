@@ -58,12 +58,15 @@ function TripBody({
   const [openDays, setOpenDays] = useState<Set<string>>(
     () => new Set(days.length <= 2 ? days : [days.find((d) => d >= today) ?? days[0]]),
   );
+  // 한 화면에 모든 것을 늘어놓지 않게 탭으로 나눈다: 장소 · 함께 · 준비물
+  const [tab, setTab] = useState<'plan' | 'members' | 'checklist'>('plan');
   const allOpen = openDays.size === days.length;
   const [editing, setEditing] = useState<TripStop | null>(null);
   const favorites = useFavorites();
   const del = useDeleteTrip();
   const mutate = useTripMutation((fn: () => Promise<Trip>) => fn());
-  const run = (fn: () => Promise<Trip>) => mutate.mutate(fn, { onError: (e) => Alert.alert('저장하지 못했어요', e.message) });
+  const run = (fn: () => Promise<Trip>) =>
+    mutate.mutate(fn, { onError: (e) => Alert.alert('저장하지 못했어요', e.message) });
   const byStop = new Map((outlook?.stops ?? []).map((o) => [o.stop_id, o]));
   // 함께 가는 계획: 계획·장소 수정과 삭제는 만든 사람만 (참여자는 보기 · 준비물 체크·담당 · 기록)
   const owner = trip.my_role === 'owner';
@@ -126,174 +129,229 @@ function TripBody({
         ) : null}
       </View>
 
-      <ThemedText type="small" themeColor="textSecondary">
-        내 기준: {criteriaLabel(criteria)}
-        {outlook ? ` · ${freshnessLine(outlook.data_status)}` : ''}
-      </ThemedText>
+      <View style={[styles.tabs, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+        {(
+          [
+            ['plan', `장소 ${trip.stops.length}`],
+            ['members', `함께 ${participants(trip).length}명`],
+            ['checklist', `준비물 ${trip.checklist.filter((c) => c.checked).length}/${trip.checklist.length}`],
+          ] as const
+        ).map(([key, label]) => {
+          const on = tab === key;
+          return (
+            <Pressable
+              key={key}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: on }}
+              onPress={() => setTab(key)}
+              style={[styles.tab, on && { backgroundColor: Brand.navy }]}>
+              <ThemedText type="smallBold" themeColor="textSecondary" style={on ? styles.onNavy : undefined}>
+                {label}
+              </ThemedText>
+            </Pressable>
+          );
+        })}
+      </View>
 
-      {/* 날짜별 장소 — 날짜마다 접기·펼치기 (7일 × 5곳이어도 화면이 길어지지 않게) */}
-      {days.length > 1 ? (
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => setOpenDays(allOpen ? new Set() : new Set(days))}
-          style={styles.toggleAll}>
-          <ThemedText type="small" themeColor="tint">
-            {allOpen ? '모두 접기' : '모두 펼치기'}
+      {tab === 'plan' ? (
+        <>
+          <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+            내 기준: {criteriaLabel(criteria)}
           </ThemedText>
-        </Pressable>
-      ) : null}
-      {days.map((day, i) => {
-        // 주 장소 먼저, 그다음 예비 (각각 정한 순서대로)
-        const stops = trip.stops
-          .filter((s) => s.day === day)
-          .sort((x, y) => (x.role === y.role ? x.sort_order - y.sort_order : x.role === 'main' ? -1 : 1));
-        const mains = stops.filter((s) => s.role === 'main');
-        const alts = stops.filter((s) => s.role !== 'main');
-        const pair = stops.length >= 2 ? [stops[0], stops[1]] : null;
-        const open = openDays.has(day);
-        const summary = stops.length
-          ? [mains.length ? `주 ${mains.map((s) => s.place.name).join('·')}` : '주 장소 없음', alts.length ? `예비 ${alts.length}곳` : null]
-              .filter(Boolean)
-              .join(' · ')
-          : '장소 없음';
-        return (
-          <View key={day} style={[styles.day, { borderColor: theme.border, backgroundColor: theme.backgroundElement }]}>
+
+          {/* 날짜별 장소 — 날짜마다 접기·펼치기 (7일 × 5곳이어도 화면이 길어지지 않게) */}
+          {days.length > 1 ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityState={{ expanded: open }}
-              accessibilityLabel={`${dayLabel(day)}, ${summary}, ${open ? '접기' : '펼치기'}`}
-              onPress={() => {
-                const next = new Set(openDays);
-                if (open) next.delete(day);
-                else next.add(day);
-                setOpenDays(next);
-              }}
-              style={({ pressed }) => [styles.dayHead, pressed && styles.pressed]}>
-              <View style={[styles.dayBadge, { backgroundColor: theme.tintSoft }]}>
-                <ThemedText type="small" themeColor="tint">
-                  DAY {i + 1}
-                </ThemedText>
-              </View>
-              <View style={styles.flex}>
-                <ThemedText type="smallBold">
-                  {dayLabel(day)}
-                  {day < today ? ' · 지남' : day === today ? ' · 오늘' : ''}
-                </ThemedText>
-                {!open ? (
-                  <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                    {summary}
-                  </ThemedText>
-                ) : null}
-              </View>
-              <ThemedText themeColor="textSecondary">{open ? '▲' : '▼'}</ThemedText>
+              onPress={() => setOpenDays(allOpen ? new Set() : new Set(days))}
+              style={styles.toggleAll}>
+              <ThemedText type="small" themeColor="tint">
+                {allOpen ? '모두 접기' : '모두 펼치기'}
+              </ThemedText>
             </Pressable>
-            {open ? (
-              <View style={styles.dayBody}>
-                {stops.length === 0 ? (
-                  <ThemedText type="small" themeColor="textSecondary">
-                    아직 고른 낚시터가 없어요.
-                  </ThemedText>
-                ) : null}
-                {[
-                  ['주 장소', mains],
-                  ['예비 장소', alts],
-                ].map(([label, list]) =>
-                  (list as TripStop[]).length ? (
-                    <View key={label as string} style={styles.group}>
-                      <ThemedText type="small" themeColor={label === '주 장소' ? 'tint' : 'textSecondary'} style={styles.groupLabel}>
-                        {label as string}
+          ) : null}
+          {days.map((day, i) => {
+            // 주 장소 먼저, 그다음 예비 (각각 정한 순서대로)
+            const stops = trip.stops
+              .filter((s) => s.day === day)
+              .sort((x, y) => (x.role === y.role ? x.sort_order - y.sort_order : x.role === 'main' ? -1 : 1));
+            const mains = stops.filter((s) => s.role === 'main');
+            const alts = stops.filter((s) => s.role !== 'main');
+            const pair = stops.length >= 2 ? [stops[0], stops[1]] : null;
+            const open = openDays.has(day);
+            const summary = stops.length
+              ? [
+                  mains.length ? `주 ${mains.map((s) => s.place.name).join('·')}` : '주 장소 없음',
+                  alts.length ? `예비 ${alts.length}곳` : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
+              : '장소 없음';
+            return (
+              <View
+                key={day}
+                style={[styles.day, { borderColor: theme.border, backgroundColor: theme.backgroundElement }]}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: open }}
+                  accessibilityLabel={`${dayLabel(day)}, ${summary}, ${open ? '접기' : '펼치기'}`}
+                  onPress={() => {
+                    const next = new Set(openDays);
+                    if (open) next.delete(day);
+                    else next.add(day);
+                    setOpenDays(next);
+                  }}
+                  style={({ pressed }) => [styles.dayHead, pressed && styles.pressed]}>
+                  <View style={[styles.dayBadge, { backgroundColor: theme.tintSoft }]}>
+                    <ThemedText type="small" themeColor="tint">
+                      DAY {i + 1}
+                    </ThemedText>
+                  </View>
+                  <View style={styles.flex}>
+                    <ThemedText type="smallBold">
+                      {dayLabel(day)}
+                      {day < today ? ' · 지남' : day === today ? ' · 오늘' : ''}
+                    </ThemedText>
+                    {!open ? (
+                      <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                        {summary}
                       </ThemedText>
-                      {(list as TripStop[]).map((s) => (
-                        <StopCard
-                          key={s.id}
-                          stop={s}
-                          o={byStop.get(s.id)}
-                          lastDay={outlook?.forecast_last_day ?? null}
-                          criteria={criteria}
-                          today={today}
-                          canEdit={owner}
-                          onEdit={() => setEditing(s)}
-                          onToggleRole={() =>
-                            run(() => api.updateTripStop(trip.id, s.id, { role: s.role === 'main' ? 'alternative' : 'main' }))
-                          }
-                          onDelete={() =>
-                            Alert.alert(`${s.place.name}을(를) 뺄까요?`, undefined, [
-                              { text: '취소', style: 'cancel' },
-                              { text: '빼기', style: 'destructive', onPress: () => run(() => api.deleteTripStop(trip.id, s.id)) },
-                            ])
+                    ) : null}
+                  </View>
+                  <ThemedText themeColor="textSecondary">{open ? '▲' : '▼'}</ThemedText>
+                </Pressable>
+                {open ? (
+                  <View style={styles.dayBody}>
+                    {stops.length === 0 ? (
+                      <ThemedText type="small" themeColor="textSecondary">
+                        아직 고른 낚시터가 없어요.
+                      </ThemedText>
+                    ) : null}
+                    {[
+                      ['주 장소', mains],
+                      ['예비 장소', alts],
+                    ].map(([label, list]) =>
+                      (list as TripStop[]).length ? (
+                        <View key={label as string} style={styles.group}>
+                          <ThemedText
+                            type="small"
+                            themeColor={label === '주 장소' ? 'tint' : 'textSecondary'}
+                            style={styles.groupLabel}>
+                            {label as string}
+                          </ThemedText>
+                          {(list as TripStop[]).map((s) => (
+                            <StopCard
+                              key={s.id}
+                              stop={s}
+                              o={byStop.get(s.id)}
+                              lastDay={outlook?.forecast_last_day ?? null}
+                              criteria={criteria}
+                              today={today}
+                              canEdit={owner}
+                              onEdit={() => setEditing(s)}
+                              onToggleRole={() =>
+                                run(() =>
+                                  api.updateTripStop(trip.id, s.id, {
+                                    role: s.role === 'main' ? 'alternative' : 'main',
+                                  }),
+                                )
+                              }
+                              onDelete={() =>
+                                Alert.alert(`${s.place.name}을(를) 뺄까요?`, undefined, [
+                                  { text: '취소', style: 'cancel' },
+                                  {
+                                    text: '빼기',
+                                    style: 'destructive',
+                                    onPress: () => run(() => api.deleteTripStop(trip.id, s.id)),
+                                  },
+                                ])
+                              }
+                            />
+                          ))}
+                        </View>
+                      ) : null,
+                    )}
+                    <View style={styles.dayActions}>
+                      {owner && stops.length < MAX_STOPS_PER_DAY ? (
+                        <SmallButton
+                          icon="find-sea"
+                          label="장소 추가"
+                          onPress={() => setAddingDay(addingDay === day ? null : day)}
+                        />
+                      ) : null}
+                      {pair ? (
+                        <SmallButton
+                          icon="find-compare"
+                          label="두 곳 비교"
+                          onPress={() =>
+                            router.push({
+                              pathname: '/compare',
+                              params: { a: String(pair[0].place.id), b: String(pair[1].place.id), date: day },
+                            })
                           }
                         />
-                      ))}
+                      ) : null}
                     </View>
-                  ) : null,
-                )}
-                <View style={styles.dayActions}>
-                  {owner && stops.length < MAX_STOPS_PER_DAY ? (
-                    <SmallButton
-                      icon="find-sea"
-                      label="장소 추가"
-                      onPress={() => setAddingDay(addingDay === day ? null : day)}
-                    />
-                  ) : null}
-                  {pair ? (
-                    <SmallButton
-                      icon="find-compare"
-                      label="두 곳 비교"
-                      onPress={() =>
-                        router.push({
-                          pathname: '/compare',
-                          params: { a: String(pair[0].place.id), b: String(pair[1].place.id), date: day },
-                        })
-                      }
-                    />
-                  ) : null}
-                </View>
-                {addingDay === day ? (
-                  // 장소 추가: 즐겨찾기 바로 넣기 + 검색 (검색 시트가 칩을 가리지 않게 따로 연다)
-                  <View style={styles.wrap}>
-                    {(favorites.data ?? []).slice(0, 5).map((p) => (
-                      <Chip
-                        key={p.id}
-                        label={`★ ${p.name}`}
-                        selected={false}
-                        onPress={() => {
-                          setAddingDay(null);
-                          run(() => api.addTripStop(trip.id, { day, place_id: p.id, role: stops.length ? 'alternative' : 'main' }));
-                        }}
-                      />
-                    ))}
-                    <Chip label="낚시터 검색…" selected={false} onPress={() => setPickingDay(day)} />
+                    {addingDay === day ? (
+                      // 장소 추가: 즐겨찾기 바로 넣기 + 검색 (검색 시트가 칩을 가리지 않게 따로 연다)
+                      <View style={styles.wrap}>
+                        {(favorites.data ?? []).slice(0, 5).map((p) => (
+                          <Chip
+                            key={p.id}
+                            label={`★ ${p.name}`}
+                            selected={false}
+                            onPress={() => {
+                              setAddingDay(null);
+                              run(() =>
+                                api.addTripStop(trip.id, {
+                                  day,
+                                  place_id: p.id,
+                                  role: stops.length ? 'alternative' : 'main',
+                                }),
+                              );
+                            }}
+                          />
+                        ))}
+                        <Chip label="낚시터 검색…" selected={false} onPress={() => setPickingDay(day)} />
+                      </View>
+                    ) : null}
                   </View>
                 ) : null}
               </View>
-            ) : null}
-          </View>
-        );
-      })}
+            );
+          })}
 
-      {/* 출조 전 참고: 첫 장소 시·도와 목표 어종의 최근 이용자 조황 (예보와 구분, 없으면 숨김) */}
-      {trip.stops[0] ? (
-        <CatchStrip
-          title={`${sidoOf(trip.stops[0].place)} 최근 이용자 조황`}
-          filter={{
-            sido: sidoOf(trip.stops[0].place),
-            species: speciesForRecord(trip.species_code, trip.species_etc)
-              ? (trip.species_code ?? trip.species_etc)
-              : null,
-          }}
-          note="이용자가 올린 조황이에요. 예보가 아니에요."
-        />
+          {/* 출조 전 참고: 첫 장소 시·도와 목표 어종의 최근 이용자 조황 (예보와 구분, 없으면 숨김) */}
+          {trip.stops[0] ? (
+            <CatchStrip
+              title={`${sidoOf(trip.stops[0].place)} 최근 이용자 조황`}
+              filter={{
+                sido: sidoOf(trip.stops[0].place),
+                species: speciesForRecord(trip.species_code, trip.species_etc)
+                  ? (trip.species_code ?? trip.species_etc)
+                  : null,
+              }}
+              note="이용자가 올린 조황이에요. 예보가 아니에요."
+            />
+          ) : null}
+
+          <ThemedText type="small" themeColor="textSecondary">
+            {outlook ? `${freshnessLine(outlook.data_status)} · ` : ''}해황·물때는 참고 자료예요. 출조 전 특보를 꼭
+            확인하세요.
+          </ThemedText>
+          {owner ? (
+            <Pressable accessibilityRole="button" onPress={confirmDelete} hitSlop={8} style={styles.deleteLink}>
+              <ThemedText type="small" themeColor="danger">
+                계획 지우기
+              </ThemedText>
+            </Pressable>
+          ) : null}
+        </>
       ) : null}
 
-      <TripMembers trip={trip} run={run} />
+      {tab === 'members' ? <TripMembers trip={trip} run={run} /> : null}
 
-      <Checklist trip={trip} run={run} />
-
-      <ThemedText type="small" themeColor="textSecondary">
-        해황은 볼 때마다 최신 공공데이터로 다시 계산해요. 물때는 가까운 조위관측소 예보(참고 자료)예요. 조과를 보장하지 않으며 출조 전
-        특보를 꼭 확인하세요.
-      </ThemedText>
-      {owner ? <Button label="계획 지우기" variant="danger" onPress={confirmDelete} /> : null}
+      {tab === 'checklist' ? <Checklist trip={trip} run={run} /> : null}
 
       <PlacePicker
         visible={pickingDay !== null}
@@ -456,7 +514,9 @@ function StopEditorBody({
           <PickerField mode="time" a11y="시작 시간" value={start} onChange={setStart} placeholder="시작" />
           <ThemedText themeColor="textSecondary">~</ThemedText>
           <PickerField mode="time" a11y="끝 시간" value={end} onChange={setEnd} placeholder="끝" />
-          {start || end ? <Chip label="시간 지우기" selected={false} onPress={() => (setStart(null), setEnd(null))} /> : null}
+          {start || end ? (
+            <Chip label="시간 지우기" selected={false} onPress={() => (setStart(null), setEnd(null))} />
+          ) : null}
         </View>
         {bad ? (
           <ThemedText type="small" themeColor="danger">
@@ -476,7 +536,11 @@ function StopEditorBody({
             label="저장"
             disabled={bad}
             onPress={() =>
-              onSave({ start_time: start ? toHm(start) : null, end_time: end ? toHm(end) : null, memo: memo.trim() || null })
+              onSave({
+                start_time: start ? toHm(start) : null,
+                end_time: end ? toHm(end) : null,
+                memo: memo.trim() || null,
+              })
             }
           />
         </View>
@@ -528,7 +592,11 @@ function Checklist({ trip, run }: { trip: Trip; run: (fn: () => Promise<Trip>) =
           const mineItem = !!me && c.assignee_user_id === me.user_id;
           // 참여자가 다른 사람 담당을 바꿀 수는 없다 (보여주기만)
           const canAssign = together && (owner || c.assignee_user_id === null || mineItem);
-          const assignLabel = c.assignee_nickname ? `담당 ${c.assignee_nickname}${mineItem ? '(나)' : ''}` : owner ? '담당 정하기' : '내가 챙길게';
+          const assignLabel = c.assignee_nickname
+            ? `담당 ${c.assignee_nickname}${mineItem ? '(나)' : ''}`
+            : owner
+              ? '담당 정하기'
+              : '내가 챙길게';
           return (
             <View key={c.id} style={styles.checkRow}>
               <Pressable
@@ -539,11 +607,16 @@ function Checklist({ trip, run }: { trip: Trip; run: (fn: () => Promise<Trip>) =
                 <View
                   style={[
                     styles.box,
-                    { borderColor: c.checked ? theme.tint : theme.textSecondary, backgroundColor: c.checked ? theme.tint : 'transparent' },
+                    {
+                      borderColor: c.checked ? theme.tint : theme.textSecondary,
+                      backgroundColor: c.checked ? theme.tint : 'transparent',
+                    },
                   ]}>
                   {c.checked ? <ThemedText style={styles.tick}>✓</ThemedText> : null}
                 </View>
-                <ThemedText style={[styles.flex, c.checked && styles.done]} themeColor={c.checked ? 'textSecondary' : 'text'}>
+                <ThemedText
+                  style={[styles.flex, c.checked && styles.done]}
+                  themeColor={c.checked ? 'textSecondary' : 'text'}>
                   {c.label}
                 </ThemedText>
               </Pressable>
@@ -576,7 +649,14 @@ function Checklist({ trip, run }: { trip: Trip; run: (fn: () => Promise<Trip>) =
         {owner && items.length < 30 ? (
           <View style={styles.row}>
             <View style={styles.flex}>
-              <TextField value={text} onChangeText={setText} placeholder="준비물 추가" maxLength={40} onSubmitEditing={add} returnKeyType="done" />
+              <TextField
+                value={text}
+                onChangeText={setText}
+                placeholder="준비물 추가"
+                maxLength={40}
+                onSubmitEditing={add}
+                returnKeyType="done"
+              />
             </View>
             <Button label="추가" variant="secondary" onPress={add} />
           </View>
@@ -587,7 +667,10 @@ function Checklist({ trip, run }: { trip: Trip; run: (fn: () => Promise<Trip>) =
         title={assigning ? `「${assigning.label}」 누가 챙길까요?` : ''}
         options={[
           { value: 'none', label: '담당 없음' },
-          ...participants(trip).map((m) => ({ value: String(m.user_id), label: m.mine ? `${m.nickname} (나)` : m.nickname })),
+          ...participants(trip).map((m) => ({
+            value: String(m.user_id),
+            label: m.mine ? `${m.nickname} (나)` : m.nickname,
+          })),
         ]}
         value={assigning ? (assigning.assignee_user_id === null ? 'none' : String(assigning.assignee_user_id)) : null}
         onPick={(v) => {
@@ -601,13 +684,25 @@ function Checklist({ trip, run }: { trip: Trip; run: (fn: () => Promise<Trip>) =
   );
 }
 
-function SmallButton({ icon, label, onPress }: { icon: 'find-sea' | 'find-compare'; label: string; onPress: () => void }) {
+function SmallButton({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: 'find-sea' | 'find-compare';
+  label: string;
+  onPress: () => void;
+}) {
   const theme = useTheme();
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [styles.small, { borderColor: theme.border, backgroundColor: theme.backgroundElement }, pressed && styles.pressed]}>
+      style={({ pressed }) => [
+        styles.small,
+        { borderColor: theme.border, backgroundColor: theme.backgroundElement },
+        pressed && styles.pressed,
+      ]}>
       <AppIcon name={icon} size={18} />
       <ThemedText type="smallBold">{label}</ThemedText>
     </Pressable>
@@ -634,7 +729,14 @@ export default function TripScreen() {
 
 const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  speciesArt: { width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' },
+  speciesArt: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   flex1: { flex: 1 },
   flex: { flex: 1 },
   pressed: { opacity: 0.7 },
@@ -657,13 +759,30 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.35)',
   },
   day: { borderWidth: 1, borderRadius: 12, overflow: 'hidden' },
-  dayHead: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 56, paddingHorizontal: 12, paddingVertical: 8 },
+  dayHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minHeight: 56,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
   dayBody: { paddingHorizontal: 12, paddingBottom: 12, gap: 8 },
   group: { gap: 6 },
   groupLabel: { fontWeight: '700' },
   toggleAll: { alignSelf: 'flex-end', minHeight: 32, justifyContent: 'center' },
   dayBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   dayActions: { flexDirection: 'row', gap: 8 },
+  tabs: { flexDirection: 'row', borderWidth: 1, borderRadius: 12, padding: 4, gap: 4 },
+  tab: {
+    flex: 1,
+    minHeight: 40,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  deleteLink: { alignSelf: 'center', paddingVertical: 8, minHeight: 44, justifyContent: 'center' },
   small: {
     flex: 1,
     flexDirection: 'row',

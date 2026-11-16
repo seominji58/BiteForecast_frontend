@@ -97,7 +97,7 @@ export function JournalForm({
         </View>
         {skunk ? (
           <ThemedText type="small" themeColor="textSecondary">
-            못 잡은 날도 출조 기록이에요. 그날 물때·바다 기록이 함께 남아 다음 출조 때 참고할 수 있어요.
+            못 잡은 날도 기록돼요. 그날 물때·바다 기록이 함께 남아요.
           </ThemedText>
         ) : (
           <>
@@ -129,8 +129,7 @@ export function JournalForm({
       <Section title="사진 (인증용, 최대 4장)" icon={<UiIcon name="photo" size={IconSize.row} />}>
         <PhotoPicker state={photos} />
         <ThemedText type="small" themeColor="textSecondary">
-          물고기와 계측(자·줄자)이 보이면 검토가 빨라요. 위치 정보는 지우고 저장하며, 사진은 나만 볼 수 있어요(커뮤니티에
-          공유하면 공개).
+          자가 보이면 검토가 빨라요 · 위치정보 지움 · 나만 봐요
         </ThemedText>
       </Section>
 
@@ -180,14 +179,14 @@ export function JournalForm({
       {shareOption ? (
         <Card>
           <View style={styles.between}>
-            <ThemedText type="smallBold" style={styles.flex}>
-              커뮤니티에도 올리기
-            </ThemedText>
+            <View style={styles.flex}>
+              <ThemedText type="smallBold">커뮤니티에도 올리기</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                저장 후 글쓰기에서 위치 공개 범위를 골라요
+              </ThemedText>
+            </View>
             <Switch value={share} onValueChange={setShare} accessibilityLabel="커뮤니티에도 올리기" />
           </View>
-          <ThemedText type="small" themeColor="textSecondary">
-            저장한 뒤 조황공유 글쓰기로 넘어가요. 제목·내용과 위치 공개 범위(낚시터 이름·지역만·숨김)를 고른 뒤 올려요.
-          </ThemedText>
         </Card>
       ) : null}
 
@@ -197,13 +196,13 @@ export function JournalForm({
       {canRequestAfterSave ? (
         <ThemedText type="small" themeColor="textSecondary">
           {hasPhoto
-            ? `인증 신청 조건: 사진 ✓ · 어종 ${hasSpecies ? '✓' : '필요'}. 관리자가 확인해 승인하면 포인트가 지급돼요.`
-            : '사진을 추가하면 인증을 신청할 수 있어요. 포인트는 인증이 완료된 기록에만 지급돼요.'}
+            ? `인증 조건: 사진 ✓ · 어종 ${hasSpecies ? '✓' : '필요'} · 승인되면 포인트 지급`
+            : '사진을 넣으면 인증 신청 가능 · 포인트는 인증된 기록에만'}
         </ThemedText>
       ) : (
         <ThemedText type="small" themeColor="textSecondary">
-          {status === 'approved' ? '인증 완료 기록이에요. ' : '인증 검토 중인 기록이에요. '}
-          장소·일시·어종·마릿수·길이·사진을 바꾸면 다시 검토 대기로 돌아가요.
+          {status === 'approved' ? '인증 완료 기록 · ' : '인증 검토 중 · '}
+          장소·일시·조과·사진을 바꾸면 다시 검토해요.
         </ThemedText>
       )}
 
