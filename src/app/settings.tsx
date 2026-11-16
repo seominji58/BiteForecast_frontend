@@ -1,13 +1,16 @@
+import { useQueryClient } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
-import { API_URL } from '@/api';
+import { api, API_URL } from '@/api';
 import { useBlocks, useSources, useUnblock } from '@/api/queries';
 import { Card, ErrorView, Loading, StackScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
+import { useAuth } from '@/lib/auth';
 import { KIND_TEXT } from '@/lib/compare';
+import { kakaoUnlink } from '@/lib/kakao';
 
 // SCR-07 설정·법적 안내 (FR-15)
 // TODO: 이용약관·개인정보 처리방침 링크, 문의처, 내 데이터 삭제 (배포 전 필수)
@@ -73,7 +76,48 @@ export default function SettingsScreen() {
           </ThemedText>
         )}
       </Card>
+
+      <DeleteAccount />
     </StackScreen>
+  );
+}
+
+/** 회원 탈퇴 (로그인했을 때만, 설정 맨 아래). 앱 안에서 계정을 지울 수 있어야 한다 */
+function DeleteAccount() {
+  const { account, signOut } = useAuth();
+  const qc = useQueryClient();
+  if (!account) return null;
+  const confirmDelete = () =>
+    Alert.alert('회원 탈퇴', '낚시 기록·사진·글·댓글·포인트가 모두 삭제되고 되돌릴 수 없어요. 탈퇴할까요?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '탈퇴',
+        style: 'destructive',
+        onPress: () =>
+          api
+            .deleteAccount()
+            .then(async () => {
+              // 카카오로 가입했으면 카카오 연결도 끊는다 (앱에서 SDK 로, 실패해도 탈퇴는 이미 끝남)
+              if (account.providers?.includes('kakao') || account.provider === 'kakao') await kakaoUnlink();
+              await signOut();
+              qc.clear();
+              router.dismissAll();
+              Alert.alert('탈퇴했어요', '그동안 이용해 주셔서 감사합니다.');
+            })
+            .catch((e: Error) => Alert.alert('탈퇴하지 못했어요', e.message)),
+      },
+    ]);
+  return (
+    <Card>
+      <ThemedText type="sectionTitle">계정</ThemedText>
+      <Pressable accessibilityRole="button" onPress={confirmDelete} style={styles.linkRow}>
+        <ThemedText themeColor="danger">회원 탈퇴</ThemedText>
+        <ThemedText themeColor="textSecondary">›</ThemedText>
+      </Pressable>
+      <ThemedText type="small" themeColor="textSecondary">
+        탈퇴하면 기록·사진·글·포인트가 모두 지워지고 되돌릴 수 없어요.
+      </ThemedText>
+    </Card>
   );
 }
 

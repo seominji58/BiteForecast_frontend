@@ -116,7 +116,11 @@ export default function HomeScreen() {
         <SearchBar value={query} onChangeText={setQuery} onClear={() => setQuery('')} placeholder="어종·지역·낚시터 검색" />
         <View style={styles.heroActions}>
           {/* 지도는 아래 「지도에서 찾기」 버튼 하나로 (중복 정리) */}
-          <HeroButton icon="find-gps" label="내 주변" active={x.near} onPress={x.locate} />
+          <HeroButton
+            icon="find-gps"
+            label="내 주변"
+            onPress={() => router.push({ pathname: '/explore', params: { near: '1' } })}
+          />
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateRow}>
           {dates.map((d) => {

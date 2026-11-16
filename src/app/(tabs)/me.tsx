@@ -1,8 +1,6 @@
-import { useQueryClient } from '@tanstack/react-query';
 import { router, type Href } from 'expo-router';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
-import { api } from '@/api';
 import { useMyTitle, useRecordSummary } from '@/api/queries';
 import { AppIcon } from '@/components/app-icon';
 import { Button } from '@/components/form';
@@ -13,12 +11,11 @@ import type { AppIconName } from '@/constants/icons';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
-import { kakaoUnlink } from '@/lib/kakao';
 
 /**
  * 내정보 (기본 프로필, 2026-11-16)
  * - 로그인 전: 「로그인 / 회원가입」 하나 + 최근 본 낚시터(가로 한 줄) + 설정
- * - 로그인 후: 프로필(닉네임·칭호·로그인 수단) → 요약 3칸 → 메뉴 → 즐겨찾기·최근 → 계정(로그아웃·탈퇴)
+ * - 로그인 후: 프로필(닉네임·칭호·로그인 수단) → 요약 3칸 → 메뉴 → 즐겨찾기·최근 → 로그아웃 (탈퇴는 설정)
  * 칭호·포인트·인증 현황은 「칭호·포인트」 화면, 도감·최대어는 「내 낚시 요약」 화면에서 본다
  */
 const PROVIDER_NAME: Record<string, string> = { email: '이메일', google: '구글', kakao: '카카오' };
@@ -119,7 +116,7 @@ function SignedIn() {
       <Card style={styles.menu}>
         <MenuRow icon="total-fish" label="내 낚시 요약·도감" sub="첫 포획, 어종별 최대어" href="/my-records" />
         <MenuRow icon="medal" label="칭호·포인트" sub="사진 인증 현황, 포인트 내역" href="/my-points" />
-        <MenuRow icon="regulation" label="설정·정보" sub="차단한 사용자, 데이터 출처, 약관" href="/settings" last />
+        <MenuRow icon="regulation" label="설정·정보" sub="차단한 사용자, 약관, 회원 탈퇴" href="/settings" last />
       </Card>
 
       <FavoritesSection />
@@ -167,48 +164,16 @@ function MenuRow({
   );
 }
 
-/** 계정: 약관, 로그아웃, 탈퇴 (앱 안에서 계정 삭제 가능해야 함) */
+/** 로그아웃만 (회원 탈퇴는 설정 → 계정에서, 실수로 누르지 않게) */
 function AccountSection() {
   const { account, signOut } = useAuth();
-  const qc = useQueryClient();
   if (!account) return null;
-
   const confirmSignOut = () =>
     Alert.alert('로그아웃할까요?', '기록은 계정에 그대로 남아요. 다시 로그인하면 이어서 볼 수 있어요.', [
       { text: '취소', style: 'cancel' },
       { text: '로그아웃', onPress: () => signOut() },
     ]);
-
-  const confirmDelete = () =>
-    Alert.alert('회원 탈퇴', '낚시 기록·사진·글·댓글·포인트가 모두 삭제되고 되돌릴 수 없어요. 탈퇴할까요?', [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '탈퇴',
-        style: 'destructive',
-        onPress: () =>
-          api
-            .deleteAccount()
-            .then(async () => {
-              // 카카오로 가입했으면 카카오 연결도 끊는다 (앱에서 SDK 로, 실패해도 탈퇴는 이미 끝남)
-              if (account.providers?.includes('kakao') || account.provider === 'kakao') await kakaoUnlink();
-              await signOut();
-              qc.clear();
-              Alert.alert('탈퇴했어요', '그동안 이용해 주셔서 감사합니다.');
-            })
-            .catch((e: Error) => Alert.alert('탈퇴하지 못했어요', e.message)),
-      },
-    ]);
-
-  return (
-    <>
-      <Button label="로그아웃" variant="secondary" onPress={confirmSignOut} />
-      <Pressable accessibilityRole="button" onPress={confirmDelete} hitSlop={8} style={styles.deleteLink}>
-        <ThemedText type="small" themeColor="textSecondary">
-          회원 탈퇴
-        </ThemedText>
-      </Pressable>
-    </>
-  );
+  return <Button label="로그아웃" variant="secondary" onPress={confirmSignOut} />;
 }
 
 function Stat({ icon, label, value, sub }: { icon: AppIconName; label: string; value: string; sub?: string }) {
@@ -274,5 +239,4 @@ const styles = StyleSheet.create({
   stat: { flex: 1, gap: 2, alignItems: 'center' },
   menu: { paddingVertical: 0, gap: 0 },
   menuRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, minHeight: 60, paddingVertical: 10 },
-  deleteLink: { alignSelf: 'center', paddingVertical: 8, minHeight: 44, justifyContent: 'center' },
 });
