@@ -85,6 +85,8 @@ export default function ExploreScreen() {
     error: null,
   });
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  // 아래 목록은 접어 둔다 (지도가 주인공). 한 줄 막대를 누르면 가로 카드가 펼쳐진다
+  const [listOpen, setListOpen] = useState(false);
   const mapRef = useRef<AppMapHandle>(null);
   // 지금 지도에 보이는 범위 (마커 묶음 계산용, 이동·확대가 멈출 때 갱신)
   const [view, setView] = useState<MapRegion | null>(null);
@@ -391,18 +393,34 @@ export default function ExploreScreen() {
           />
         ) : (
           <>
-            <View style={styles.between}>
-              <ThemedText type="smallBold">
-                {panelTitle} {rows.length}곳
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ expanded: listOpen }}
+              onPress={() => setListOpen((v) => !v)}
+              style={styles.bar}>
+              <View style={styles.flex}>
+                <ThemedText type="smallBold" numberOfLines={1}>
+                  {panelTitle} {rows.length}곳
+                  {origin && rows[0]?.dist != null ? (
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {`  가장 가까운 곳 ${rows[0].place.name} ${distLabel(rows[0].dist, rows[0].place)}`}
+                    </ThemedText>
+                  ) : null}
+                </ThemedText>
+                {listOpen ? (
+                  <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                    {orderLabel}
+                  </ThemedText>
+                ) : null}
+              </View>
+              <ThemedText type="smallBold" themeColor="tint">
+                {listOpen ? '목록 닫기 ▾' : '목록 ▴'}
               </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary" style={styles.flex} numberOfLines={1}>
-                {orderLabel}
-              </ThemedText>
-            </View>
+            </Pressable>
             {summary.isError ? <ErrorView message={summary.error.message} onRetry={() => summary.refetch()} /> : null}
             {places.isError ? <ErrorView message={places.error.message} onRetry={() => places.refetch()} /> : null}
             {summary.isPending || places.isPending ? <ActivityIndicator color={theme.tint} /> : null}
-            {rows.length === 0 && summary.isSuccess ? (
+            {!listOpen ? null : rows.length === 0 && summary.isSuccess ? (
               <ScrollView style={styles.emptyBox}>
                 <CriteriaResult
                   dataStatus={summary.data.data_status}
@@ -441,7 +459,7 @@ export default function ExploreScreen() {
                 )}
               />
             )}
-            {summary.isSuccess ? (
+            {listOpen && summary.isSuccess ? (
               <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
                 {freshnessLine(summary.data.data_status)}
                 {excluded ? ` · 위치 확인 필요 ${excluded}곳 제외` : ''}
@@ -698,7 +716,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
   },
-  panel: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: Layout.screenPadding, paddingTop: 10, paddingBottom: 28, gap: 8 },
+  panel: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: Layout.screenPadding, paddingTop: 6, paddingBottom: 26, gap: 8 },
+  bar: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 },
   carousel: { gap: 8 },
   card: { width: 280 },
   emptyBox: { maxHeight: 280 },
