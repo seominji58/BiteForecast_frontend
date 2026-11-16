@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
+import { type ReactNode, useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { api, API_URL } from '@/api';
@@ -19,8 +20,7 @@ export default function SettingsScreen() {
 
   return (
     <StackScreen>
-      <Card>
-        <ThemedText type="sectionTitle">데이터 출처</ThemedText>
+      <Fold title="데이터 출처" hint={sources.data ? `공공데이터 ${sources.data.length}종` : undefined}>
         {sources.isPending && <Loading />}
         {sources.isError && <ErrorView message={sources.error.message} onRetry={() => sources.refetch()} />}
         {sources.data?.map((s) => (
@@ -42,18 +42,17 @@ export default function SettingsScreen() {
         <ThemedText type="small" themeColor="textSecondary">
           공공데이터포털(data.go.kr)을 통해 제공받은 공공데이터를 이용합니다.
         </ThemedText>
-      </Card>
+      </Fold>
 
       <BlockedUsers />
 
-      <Card>
-        <ThemedText type="sectionTitle">이용 안내</ThemedText>
-        <ThemedText themeColor="textSecondary">
+      <Fold title="이용 안내" hint="예보·지수 해석, 책임 범위">
+        <ThemedText type="small" themeColor="textSecondary">
           • 관측소 값은 낚시 장소의 현장 조건과 다를 수 있으며, 관측소까지의 거리를 함께 표시합니다.{'\n'}• 바다낚시지수는
           국립해양조사원 발표값을 그대로 보여주며 앱이 판정한 값이 아닙니다.{'\n'}• 실제 입질·조과를 보장하지 않습니다.
           출조 전 공식 특보와 현장 출입 제한을 확인하세요.{'\n'}• 목록의 장소를 낚시 허용구역으로 보증하지 않습니다.
         </ThemedText>
-      </Card>
+      </Fold>
 
       <Card>
         <ThemedText type="sectionTitle">약관</ThemedText>
@@ -79,6 +78,31 @@ export default function SettingsScreen() {
 
       <DeleteAccount />
     </StackScreen>
+  );
+}
+
+/** 접었다 펴는 칸 (설정 화면이 길어지지 않게 처음엔 제목만) */
+function Fold({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Card>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        onPress={() => setOpen((v) => !v)}
+        style={styles.linkRow}>
+        <View style={styles.flex}>
+          <ThemedText type="smallBold">{title}</ThemedText>
+          {hint && !open ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              {hint}
+            </ThemedText>
+          ) : null}
+        </View>
+        <ThemedText themeColor="textSecondary">{open ? '▴' : '▾'}</ThemedText>
+      </Pressable>
+      {open ? children : null}
+    </Card>
   );
 }
 
