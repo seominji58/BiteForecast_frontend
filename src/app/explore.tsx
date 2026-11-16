@@ -1,27 +1,24 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Keyboard, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { useDateRange, useFishingIndex, usePlaces, usePlacesSummary } from '@/api/queries';
+import { useDateRange, useFishingIndex, usePlaces, usePlacesSummary, useSpecies } from '@/api/queries';
 import type { Place, PlaceSummary } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { Dropdown, type DropdownOption } from '@/components/dropdown';
 import { AppMap, type AppMapHandle, type MapMarker, type MapRegion } from '@/components/map/app-map';
 import { Button, Chip } from '@/components/form';
-import { Card, ErrorView } from '@/components/screen';
+import { Card } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, IconSize, Layout } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { timeLabel } from '@/lib/compare';
-import { CriteriaResult } from '@/components/criteria-result';
 import {
-  breakdown,
   CHECK_TEXT,
   checkPlace,
   type Criteria,
   criteriaLabel,
-  freshnessLine,
   INDEX_STEPS,
   WAVE_STEPS,
   WARNING_SHORT,
@@ -29,8 +26,9 @@ import {
 } from '@/lib/criteria';
 import { type Coords, getCurrentCoords } from '@/lib/location';
 import { CoordNote, SameCoordSheet } from '@/components/coord-note';
-import { coordKey, distLabel, km, PLACE_IMAGE, PLACE_TYPE_LABEL, recommendable, sidoOf, usableForLocation } from '@/lib/place';
-import { SPECIES } from '@/lib/species';
+import { coordKey, distLabel, km, matches, PLACE_IMAGE, PLACE_TYPE_LABEL, recommendable, sidoOf, usableForLocation } from '@/lib/place';
+import { mergeWithApi, SPECIES } from '@/lib/species';
+import { SearchBar } from '@/components/search-bar';
 import { useCriteria, useExploreRegion, useHomePlace } from '@/lib/prefs';
 
 const KOREA: MapRegion = { latitude: 36.0, longitude: 127.8, latitudeDelta: 6.5, longitudeDelta: 6.5 };
@@ -42,7 +40,7 @@ type Origin = { kind: 'gps' | 'home'; coords: Coords; label: string } | null;
 /** 지역 값 앞붙임: 해역 (예: 'sea:서해'). 시·도는 이름 그대로 */
 const SEA = 'sea:';
 const SEA_ORDER = ['서해', '남해', '동해', '제주'] as const;
-/** 지도 어종 칩: 국립해양조사원 바다낚시지수가 있는 어종만 (지수 없는 어종은 장소를 고를 근거가 없다) */
+/** 지도 어종 칩: 공식 바다낚시지수 어종을 앞에, 나머지는 「+ 다른 어종」에서 */
 const INDEX_SPECIES = SPECIES.filter((x) => x.indexName).map((x) => x.indexName!);
 
 /**
@@ -61,15 +59,27 @@ export default function ExploreScreen() {
   const [homeId, , homeLoaded] = useHomePlace();
   const [criteria, setCriteria] = useCriteria();
   // 어종 칩 (M2): 오늘 그 어종 지수를 발표한 지점 + 지점 가까운 낚시터만 지도·목록에 남긴다
+  // 근거 두 가지: ① 그날 공식 낚시지수 지점(+10km 안 낚시터) ② 낚시터가 알린 대상 어종(공공데이터 원문). 둘 다 조황은 아니다
   const [fish, setFish] = useState<string | null>(null);
-  const fi = useFishingIndex(fish ? range.data?.today : undefined);
-  const fishPlaces = useMemo(() => {
-    if (!fish || !fi.data) return null;
-    const ids = new Set<number>();
-    for (const pt of fi.data.points)
-      if (pt.species.some((x) => x.species === fish)) for (const l of pt.places) ids.add(l.place_id);
-    return ids;
-  }, [fish, fi.data]);
+  const [fishSheet, setFishSheet] = useState(false);
+  const speciesApi = useSpecies();
+  const allSpecies = useMemo(() => mergeWithApi(speciesApi.data), [speciesApi.data]);
+  const fishItem = allSpecies.find((x) => x.name === fish) ?? null;
+  const fishIsIndex = !!fish && INDEX_SPECIES.includes(fish);
+  const fi = useFishingIndex(fishIsIndex ? range.data?.today : undefined);
+  const fishMatch = useMemo(() => {
+    if (!fish) return null;
+    const index = new Set<number>();
+    if (fishIsIndex && fi.data)
+      for (const pt of fi.data.points)
+        if (pt.species.some((x) => x.species === fish)) for (const l of pt.places) index.add(l.place_id);
+    const names = [fish, fishItem?.alias].filter((x): x is string => !!x);
+    const info = new Set(
+      (places.data ?? []).filter((p) => p.info_species && names.some((n) => p.info_species!.includes(n))).map((p) => p.id),
+    );
+    return { index, info, all: new Set([...index, ...info]) };
+  }, [fish, fishIsIndex, fishItem, fi.data, places.data]);
+  const fishPlaces = fishMatch?.all ?? null;
 
   const [onlyMatching, setOnlyMatching] = useState(params.mode === 'criteria');
   // 같은 화면이 다른 진입점(조건으로 찾기 ↔ 지도)으로 다시 열리면 스위치를 진입점에 맞춘다
@@ -85,8 +95,8 @@ export default function ExploreScreen() {
     error: null,
   });
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  // 아래 목록은 접어 둔다 (지도가 주인공). 한 줄 막대를 누르면 가로 카드가 펼쳐진다
-  const [listOpen, setListOpen] = useState(false);
+  // 낚시터 이름·지역 검색 (목록을 늘어놓지 않고, 고르면 지도에서 그곳으로)
+  const [query, setQuery] = useState('');
   const mapRef = useRef<AppMapHandle>(null);
   // 지금 지도에 보이는 범위 (마커 묶음 계산용, 이동·확대가 멈출 때 갱신)
   const [view, setView] = useState<MapRegion | null>(null);
@@ -177,17 +187,7 @@ export default function ExploreScreen() {
     return list;
   }, [places.data, byId, origin, criteria, onlyMatching, stale, region, seaOf, fishPlaces]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const regionName = region.startsWith(SEA) ? region.slice(SEA.length) : region;
-  const orderLabel = gps.loading
-    ? '현재 위치 확인 중…'
-    : origin
-      ? `${region === 'all' ? '' : `${regionName} · `}현재 위치에서 가까운 순`
-      : region !== 'all'
-        ? `${regionName} 낚시터 · 이름순`
-        : '전국 · 지역 이름순 (내 위치를 쓰거나 지역을 고르면 그 기준으로 보여드려요)';
-
   const selected = rows.find((r) => r.place.id === selectedId) ?? null;
-  const excluded = (places.data ?? []).filter((p) => !usableForLocation(p)).length;
   // 같은 좌표를 쓰는 낚시터는 핀 하나로 묶고, 누르면 목록으로 펼친다
   const pins = useMemo(() => {
     const g = new Map<string, typeof rows>();
@@ -313,21 +313,40 @@ export default function ExploreScreen() {
     : KOREA;
 
   const checkOf = (r: (typeof rows)[number]) => (!stale && (onlyMatching || params.mode === 'criteria') ? r.check : null);
-  const panelTitle = origin ? '가까운 낚시터' : onlyMatching ? '조건에 맞는 곳' : '낚시터';
   const note = gps.error
     ? { text: gps.error, color: 'warning' as const }
+    : summary.isError || places.isError
+      ? { text: '낚시터·해황 자료를 불러오지 못했어요. 잠시 후 다시 열어 주세요', color: 'warning' as const }
     : summary.isSuccess && stale
       ? { text: `⚠ ${summary.data.data_status.stale_reason}`, color: 'warning' as const }
-      : fish
+      : fish && fishMatch
         ? {
-            text: fi.isLoading
-              ? `${fish} 지수 지점 불러오는 중…`
-              : fi.isError
-                ? '낚시지수를 불러오지 못했어요'
-                : `오늘 ${fish} 지수 지점·${fi.data?.max_km ?? 10}km 안 ${rows.length}곳 · 바다 조건 참고값`,
+            text:
+              fishIsIndex && fi.isLoading
+                ? `${fish} 지수 지점 불러오는 중…`
+                : rows.length === 0
+                  ? `${fish}: ${fishIsIndex ? '이 지역에 지수 지점·안내한 낚시터가 없어요' : '공식 지수가 없고, 이 지역에 이 어종을 안내한 낚시터도 없어요'}`
+                  : `${fish} ${rows.length}곳 · ${[
+                      fishMatch.index.size ? '공식 낚시지수 지점 근처' : null,
+                      fishMatch.info.size ? '낚시터가 알린 대상 어종' : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' + ')} 기준 (조황 아님)`,
             color: 'textSecondary' as const,
           }
-        : null;
+        : onlyMatching && summary.isSuccess && rows.length === 0
+          ? { text: '지금 내 조건에 맞는 곳이 없어요 · 「기준 바꾸기」로 조건을 넓혀 보세요', color: 'warning' as const }
+          : null;
+  const searchHits = query.trim()
+    ? (places.data ?? []).filter((p) => usableForLocation(p) && matches(p, query)).slice(0, 6)
+    : [];
+  const pickPlace = (p: Place) => {
+    Keyboard.dismiss();
+    setQuery('');
+    setSelectedId(p.id);
+    if (p.lat != null && p.lon != null)
+      mapRef.current?.moveTo({ latitude: p.lat, longitude: p.lon, latitudeDelta: 0.3, longitudeDelta: 0.3 }, 300);
+  };
 
   return (
     <ThemedView style={styles.flex}>
@@ -349,6 +368,30 @@ export default function ExploreScreen() {
         ) : null}
 
         <View style={styles.top} pointerEvents="box-none">
+          <View style={styles.searchWrap}>
+            <SearchBar value={query} onChangeText={setQuery} onClear={() => setQuery('')} placeholder="낚시터·지역 검색" />
+            {searchHits.length ? (
+              <View style={[styles.hits, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                {searchHits.map((p) => (
+                  <Pressable key={p.id} accessibilityRole="button" onPress={() => pickPlace(p)} style={styles.hit}>
+                    <AppIcon name={PLACE_IMAGE[p.type]} size={IconSize.inline + 4} />
+                    <ThemedText type="smallBold" numberOfLines={1} style={styles.flex}>
+                      {p.name}
+                    </ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {p.region_name}
+                    </ThemedText>
+                  </Pressable>
+                ))}
+              </View>
+            ) : query.trim() ? (
+              <View style={[styles.hits, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                <ThemedText type="small" themeColor="textSecondary" style={styles.hit}>
+                  찾는 낚시터가 없어요
+                </ThemedText>
+              </View>
+            ) : null}
+          </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
             <Dropdown label="지역" value={region} options={regionOptions} onChange={setRegion} compact />
             <Chip label={onlyMatching ? '내 조건만 ✓' : '내 조건만'} selected={onlyMatching} onPress={() => setOnlyMatching((v) => !v)} />
@@ -356,9 +399,11 @@ export default function ExploreScreen() {
           </ScrollView>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
             <Chip label="전체 어종" selected={!fish} onPress={() => setFish(null)} />
+            {fish && !INDEX_SPECIES.includes(fish) ? <Chip label={fish} selected onPress={() => setFish(null)} /> : null}
             {INDEX_SPECIES.map((name) => (
               <Chip key={name} label={name} selected={fish === name} onPress={() => setFish(fish === name ? null : name)} />
             ))}
+            <Chip label="+ 다른 어종" selected={false} onPress={() => setFishSheet(true)} />
           </ScrollView>
           {note ? (
             <View style={[styles.notePill, { backgroundColor: theme.background }]}>
@@ -379,9 +424,9 @@ export default function ExploreScreen() {
         </Pressable>
       </View>
 
-      {/* 아래 패널: 고른 곳 카드, 아니면 낚시터를 가로로 넘기는 한 줄 (세로로 길게 늘어놓지 않는다) */}
-      <View style={[styles.panel, { backgroundColor: theme.background, borderColor: theme.border }]}>
-        {selected ? (
+      {/* 아래에는 목록을 두지 않는다 — 핀이나 검색으로 고른 곳만 카드로 */}
+      {selected ? (
+        <View style={[styles.panel, { backgroundColor: theme.background, borderColor: theme.border }]}>
           <SelectedCard
             place={selected.place}
             s={selected.s}
@@ -391,83 +436,32 @@ export default function ExploreScreen() {
             pick={params.pick === 'compare' ? { a: params.a ? Number(params.a) : null } : null}
             onClose={() => setSelectedId(null)}
           />
-        ) : (
-          <>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ expanded: listOpen }}
-              onPress={() => setListOpen((v) => !v)}
-              style={styles.bar}>
-              <View style={styles.flex}>
-                <ThemedText type="smallBold" numberOfLines={1}>
-                  {panelTitle} {rows.length}곳
-                  {origin && rows[0]?.dist != null ? (
-                    <ThemedText type="small" themeColor="textSecondary">
-                      {`  가장 가까운 곳 ${rows[0].place.name} ${distLabel(rows[0].dist, rows[0].place)}`}
-                    </ThemedText>
-                  ) : null}
-                </ThemedText>
-                {listOpen ? (
-                  <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                    {orderLabel}
-                  </ThemedText>
-                ) : null}
-              </View>
-              <ThemedText type="smallBold" themeColor="tint">
-                {listOpen ? '목록 닫기 ▾' : '목록 ▴'}
-              </ThemedText>
-            </Pressable>
-            {summary.isError ? <ErrorView message={summary.error.message} onRetry={() => summary.refetch()} /> : null}
-            {places.isError ? <ErrorView message={places.error.message} onRetry={() => places.refetch()} /> : null}
-            {summary.isPending || places.isPending ? <ActivityIndicator color={theme.tint} /> : null}
-            {!listOpen ? null : rows.length === 0 && summary.isSuccess ? (
-              <ScrollView style={styles.emptyBox}>
-                <CriteriaResult
-                  dataStatus={summary.data.data_status}
-                  b={breakdown(summary.data.places, criteria)}
-                  criteria={criteria}
-                  places={places.data ?? []}
-                  origin={null}
-                  onChangeCriteria={() => setEditCriteria(true)}
-                />
-                <Button label="모든 낚시터 보기" variant="secondary" onPress={() => setOnlyMatching(false)} />
-              </ScrollView>
-            ) : (
-              <FlatList
-                horizontal
-                data={rows}
-                keyExtractor={(r) => String(r.place.id)}
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.carousel}
-                initialNumToRender={4}
-                renderItem={({ item: r }) => (
-                  <PlaceRow
-                    place={r.place}
-                    s={r.s}
-                    dist={r.dist}
-                    check={checkOf(r)}
-                    selected={false}
-                    onPress={() => {
-                      setSelectedId(r.place.id);
-                      if (r.place.lat != null && r.place.lon != null)
-                        mapRef.current?.moveTo(
-                          { latitude: r.place.lat, longitude: r.place.lon, latitudeDelta: 0.3, longitudeDelta: 0.3 },
-                          300,
-                        );
-                    }}
-                  />
-                )}
+        </View>
+      ) : null}
+
+      {/* 다른 어종 고르기 (공식 지수가 없는 어종 포함) */}
+      <Modal visible={fishSheet} transparent animationType="slide" onRequestClose={() => setFishSheet(false)}>
+        <Pressable style={styles.backdrop} onPress={() => setFishSheet(false)} />
+        <View style={[styles.sheet, { backgroundColor: theme.background }]}>
+          <ThemedText type="sectionTitle">어종 고르기</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            공식 낚시지수가 없는 어종은 낚시터가 알린 대상 어종으로만 찾아요. 실제로 잡히는지(조황)는 아니에요.
+          </ThemedText>
+          <ScrollView style={styles.sheetList} contentContainerStyle={styles.wrap}>
+            {allSpecies.map((x) => (
+              <Chip
+                key={x.code}
+                label={x.indexName ? `${x.name} · 지수` : x.name}
+                selected={fish === x.name}
+                onPress={() => {
+                  setFish(x.name);
+                  setFishSheet(false);
+                }}
               />
-            )}
-            {listOpen && summary.isSuccess ? (
-              <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                {freshnessLine(summary.data.data_status)}
-                {excluded ? ` · 위치 확인 필요 ${excluded}곳 제외` : ''}
-              </ThemedText>
-            ) : null}
-          </>
-        )}
-      </View>
+            ))}
+          </ScrollView>
+        </View>
+      </Modal>
 
       {/* 내 조건 바꾸기: 화면 아래에서 올라오는 시트 */}
       <Modal visible={editCriteria} transparent animationType="slide" onRequestClose={() => setEditCriteria(false)}>
@@ -541,67 +535,6 @@ function metricText(s: PlaceSummary | undefined) {
     return `${label} ${bits.length ? bits.join(' · ') : '자료 없음'}`;
   };
   return `${part('파고', 'm', s.wave_obs, s.wave_fc_max)}\n${part('풍속', 'm/s', s.wind_obs, s.wind_fc_max)}`;
-}
-
-function PlaceRow({
-  place,
-  s,
-  dist,
-  check,
-  selected,
-  onPress,
-}: {
-  place: Place;
-  s: PlaceSummary | undefined;
-  dist: number | null;
-  check: ReturnType<typeof checkPlace> | null;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  const theme = useTheme();
-  const w = s ? WARNING_SHORT[s.warning_level] : null;
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.row,
-        styles.card,
-        { borderColor: selected ? Brand.orange : theme.border, backgroundColor: theme.backgroundElement },
-        pressed && styles.pressed,
-      ]}>
-      <AppIcon name={PLACE_IMAGE[place.type]} size={IconSize.menu} />
-      <View style={styles.flex}>
-        <View style={styles.between}>
-          <ThemedText type="smallBold" numberOfLines={1} style={styles.flex}>
-            {place.name}
-          </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {distLabel(dist, place) ?? place.region_name}
-          </ThemedText>
-        </View>
-        <CoordNote place={place} compact />
-        <ThemedText type="small" numberOfLines={1}>
-          {w ? (
-            <ThemedText type="small" themeColor={w.color} style={styles.bold}>
-              {w.text}
-            </ThemedText>
-          ) : null}
-          {check ? (
-            <ThemedText type="small" themeColor={CHECK_TEXT[check.status].color} style={styles.bold}>
-              {`  ${CHECK_TEXT[check.status].label}`}
-            </ThemedText>
-          ) : null}
-          {s?.index ? (
-            <ThemedText type="small" themeColor="textSecondary">{`  지수 최고 ${s.index.best}`}</ThemedText>
-          ) : null}
-        </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
-          {metricText(s)}
-        </ThemedText>
-      </View>
-    </Pressable>
-  );
 }
 
 function SelectedCard({
@@ -717,10 +650,10 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   panel: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: Layout.screenPadding, paddingTop: 6, paddingBottom: 26, gap: 8 },
-  bar: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 },
-  carousel: { gap: 8 },
-  card: { width: 280 },
-  emptyBox: { maxHeight: 280 },
+  searchWrap: { marginHorizontal: Layout.screenPadding, gap: 4 },
+  hits: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4 },
+  hit: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 },
+  sheetList: { maxHeight: 360 },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' },
   sheet: { padding: Layout.screenPadding, paddingBottom: 36, gap: 12, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
   between: { flexDirection: 'row', alignItems: 'center', gap: 8 },

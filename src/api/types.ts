@@ -20,6 +20,8 @@ export type Place = {
   location_suspect?: boolean;
   /** 좌표 품질 (가장 최근 검증 기록). 없으면 판단 안 됨 */
   coord?: CoordQuality | null;
+  /** 낚시터가 알린 대상 어종 원문 (전국낚시터정보표준데이터, 예: 「우럭+참돔+농어 등」). 조황 아님 */
+  info_species?: string | null;
 };
 
 /** 좌표 품질 (docs/03_데이터/2026-11-09_좌표품질_검증보고서.md) */
