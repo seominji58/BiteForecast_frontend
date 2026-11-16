@@ -62,21 +62,33 @@ export default function PlaceDetailScreen() {
             {place.id === homeId ? '내 기준 낚시터' : '기준 낚시터 아님'}
             {cond.data ? ` · ${timeLabel(cond.data.generated_at)} 갱신` : ''}
           </ThemedText>
-          {today ? <AddToTripButton placeId={place.id} placeName={place.name} date={today} /> : null}
-          <Button
-            label="여기서 기록 남기기"
-            variant="secondary"
-            onPress={() => router.push({ pathname: '/journal/new', params: { place: String(place.id) } })}
-          />
+          <View style={styles.actions}>
+            {today ? (
+              <View style={styles.flex}>
+                <AddToTripButton placeId={place.id} placeName={place.name} date={today} />
+              </View>
+            ) : null}
+            <View style={styles.flex}>
+              <Button
+                label="기록 남기기"
+                variant="secondary"
+                onPress={() => router.push({ pathname: '/journal/new', params: { place: String(place.id) } })}
+              />
+            </View>
+          </View>
           {place.id !== homeId ? (
-            <Button
-              label="이 낚시터를 기준으로 설정"
-              variant="secondary"
+            <Pressable
+              accessibilityRole="button"
+              hitSlop={8}
+              style={styles.homeLink}
               onPress={() => {
                 setHomeId(place.id);
                 router.back();
-              }}
-            />
+              }}>
+              <ThemedText type="small" themeColor="tint">
+                이 낚시터를 기준으로 설정
+              </ThemedText>
+            </Pressable>
           ) : null}
         </Card>
       ) : null}
@@ -167,6 +179,8 @@ function FavoriteStar({ placeId }: { placeId: number }) {
 
 const styles = StyleSheet.create({
   star: { fontSize: 26, lineHeight: 30 },
+  actions: { flexDirection: 'row', gap: 8 },
+  homeLink: { alignSelf: 'center', minHeight: 36, justifyContent: 'center' },
   moreBtn: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
   flex: { flex: 1 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
