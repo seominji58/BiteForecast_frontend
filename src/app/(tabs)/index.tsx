@@ -6,13 +6,12 @@ import { Image, Keyboard, Pressable, ScrollView, StyleSheet, Text, View } from '
 import { useDateRange } from '@/api/queries';
 import type { Place } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
-import { HomeActions, SeaPreview } from '@/components/home-explore';
+import { HomeActions, SeaLine } from '@/components/home-explore';
 import { OptionSheet } from '@/components/option-sheet';
 import { Card, SectionHeader, TabScreen } from '@/components/screen';
 import { CatchStrip } from '@/components/catch-strip';
 import { SearchBar } from '@/components/search-bar';
 import { SpeciesImage, SpeciesRail } from '@/components/species';
-import { TermSheet } from '@/components/term-sheet';
 import { ThemedText } from '@/components/themed-text';
 import type { AppIconName } from '@/constants/icons';
 import { Brand, IconSize } from '@/constants/theme';
@@ -20,7 +19,6 @@ import { useTheme } from '@/hooks/use-theme';
 import { dayLabel, dayList } from '@/lib/compare';
 import { freshnessLine } from '@/lib/criteria';
 import { useExplore } from '@/lib/explore';
-import type { TermKey } from '@/lib/glossary';
 import { matches, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
 import { type Region, REGIONS } from '@/lib/prefs';
 import { josa } from '@/lib/species';
@@ -52,7 +50,6 @@ export default function HomeScreen() {
   // 배경 사진(16:9)의 낚시꾼이 오른쪽 끝에 있어서, 가운데 맞춤(cover) 대신 오른쪽에 붙여 잘리지 않게 한다
   const [hero, setHero] = useState({ w: 0, h: 0 });
   const [sheet, setSheet] = useState<'date' | 'region' | null>(null);
-  const [term, setTerm] = useState<TermKey | null>(null);
 
   const railSpecies = useMemo(() => x.allSpecies.filter((s) => SPECIES_IMAGES[s.code]), [x.allSpecies]);
   const results = query.trim() ? (x.places.data ?? []).filter((p) => matches(p, query)).slice(0, 5) : [];
@@ -182,6 +179,12 @@ export default function HomeScreen() {
         </Card>
       ) : null}
 
+      {/* ① 이번 주 조황 (서비스 개선 v2 H-A): 이용자가 올린 글. 예보와 구분, 글이 없으면 칸을 숨긴다 */}
+      <CatchStrip
+        title={x.species ? `요즘 ${x.species.name} 조황` : '요즘 이용자 조황'}
+        filter={{ species: x.species ? (x.species.speciesCode ?? x.species.name) : null }}
+      />
+
       {/* 어종 */}
       <SectionHeader title="어떤 어종을 잡으러 가세요?" actionLabel="전체 어종 보기" onAction={() => router.push('/species')} />
       <SpeciesRail items={railSpecies} selected={x.speciesCode} onSelect={x.setSpeciesCode} />
@@ -197,15 +200,14 @@ export default function HomeScreen() {
       {/* 지도 · 출조계획 */}
       <HomeActions onMap={openMap} onPlan={plan} />
 
-      {/* 오늘의 낚시 정보 미리보기 */}
-      <SectionHeader title={date === today ? '오늘의 낚시 정보 미리보기' : `${dateText} 낚시 정보 미리보기`} actionLabel="추천 낚시터" onAction={points} />
+      {/* 바다 한 줄 (4칸 → 1줄, 서비스 개선 v2 H-B). 누르면 지도 */}
       {x.near && (x.gps.loading || x.gps.error) ? (
         // 위치를 기다리는 동안 「자료 없음」으로 보이지 않게
         <ThemedText type="small" themeColor={x.gps.error ? 'warning' : 'textSecondary'}>
           {x.gps.error ?? '현재 위치를 확인하는 중이에요… 위치 권한을 허용하면 내 주변 60km 바다 정보를 보여드려요.'}
         </ThemedText>
       ) : x.summary.isSuccess ? (
-        <SeaPreview list={x.scoped} tide={x.tide} future={x.future} pending={x.pending} onInfo={setTerm} />
+        <SeaLine list={x.scoped} tide={x.tide} future={x.future} pending={x.pending} scopeName={x.scopeName} onPress={openMap} />
       ) : (
         <ThemedText type="small" themeColor={x.summary.isError ? 'warning' : 'textSecondary'}>
           {x.summary.isError ? '해황 자료를 잠시 확인할 수 없어요.' : '바다 정보를 불러오는 중이에요…'}
@@ -218,19 +220,12 @@ export default function HomeScreen() {
           </ThemedText>
         </Pressable>
       ) : null}
-      {x.summary.isSuccess ? (
-        <ThemedText type="small" themeColor={x.summary.data.data_status.stale ? 'warning' : 'textSecondary'}>
-          {x.scopeName} 기준 · {freshnessLine(x.summary.data.data_status)}
+      {x.summary.isSuccess && x.summary.data.data_status.stale ? (
+        <ThemedText type="small" themeColor="warning">
+          {freshnessLine(x.summary.data.data_status)}
         </ThemedText>
       ) : null}
 
-      {/* 이용자 조황: 고른 어종의 최근 글 (예보와 구분, 글이 없으면 숨김) */}
-      <CatchStrip
-        title={x.species ? `최근 ${x.species.name} 이용자 조황` : '최근 이용자 조황'}
-        filter={{ species: x.species ? (x.species.speciesCode ?? x.species.name) : null }}
-      />
-
-      <TermSheet term={term} onClose={() => setTerm(null)} />
       <OptionSheet
         open={sheet === 'date'}
         title="출조 날짜"

@@ -399,6 +399,61 @@ export function HomeActions({ onMap, onPlan }: { onMap: () => void; onPlan: () =
 }
 
 /** 오늘의 바다 미리보기 (지역 단위, 범위로 — 하나로 뭉뚱그리지 않음) */
+/**
+ * 바다 한 줄 (홈, 서비스 개선 v2 H-B): 특보 · 파고 · 풍속 · 물때. 누르면 지도.
+ * 지역 안 낚시터들의 예보 최댓값 (가장 거친 곳 기준 — 평균으로 낮춰 보이지 않게). 확인 불가를 「없음」으로 쓰지 않는다
+ */
+export function SeaLine({
+  list,
+  tide,
+  future,
+  pending,
+  scopeName,
+  onPress,
+}: {
+  list: PlaceSummary[];
+  tide: string | null;
+  future: boolean;
+  pending: boolean;
+  scopeName: string;
+  onPress: () => void;
+}) {
+  const theme = useTheme();
+  const waves = list.flatMap((s) => (s.wave_fc_max ? [s.wave_fc_max.v] : []));
+  const winds = list.flatMap((s) => (s.wind_fc_max ? [s.wind_fc_max.v] : []));
+  const wMax = waves.length ? Math.max(...waves) : null;
+  const vMax = winds.length ? Math.max(...winds) : null;
+  const warn = list.filter((s) => s.warning_level === 'warning').length;
+  const unknown = list.length > 0 && list.every((s) => s.warning_level === 'unknown');
+  const warnText = unknown ? '특보 확인 불가' : warn ? `${future ? '지금 ' : ''}특보 ${warn}곳` : `${future ? '지금 ' : ''}특보 없음`;
+  const parts = [
+    pending ? '파고·풍속 발표 전' : wMax != null ? `파고 ${formatForecastWave(wMax)}` : null,
+    !pending && vMax != null ? `풍속 ${vMax}m/s` : null,
+    tide,
+  ].filter(Boolean);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${scopeName} 바다: ${warnText}, ${parts.join(', ')}. 지도에서 보기`}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.seaLine,
+        { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+        pressed && styles.pressed,
+      ]}>
+      <AppIcon name="wave" size={22} />
+      <ThemedText type="small" numberOfLines={1} adjustsFontSizeToFit style={styles.flex1}>
+        <ThemedText type="smallBold">{scopeName} </ThemedText>
+        <ThemedText type="smallBold" themeColor={warn ? 'danger' : unknown ? 'warning' : 'success'}>
+          {warnText}
+        </ThemedText>
+        {parts.length ? ` · ${parts.join(' · ')}` : ''}
+      </ThemedText>
+      <ThemedText themeColor="textSecondary">›</ThemedText>
+    </Pressable>
+  );
+}
+
 export function SeaPreview({
   list,
   tide,
@@ -476,6 +531,8 @@ export function SeaPreview({
 }
 
 const styles = StyleSheet.create({
+  seaLine: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, minHeight: 52 },
+  flex1: { flex: 1 },
   flex: { flex: 1 },
   col: { gap: 8 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 6 },

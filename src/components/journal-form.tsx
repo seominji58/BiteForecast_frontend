@@ -43,7 +43,8 @@ export function JournalForm({
   defaultFishedAt,
   shareOption,
 }: Props) {
-  const [share, setShare] = useState(false);
+  // 공유 기본 켜짐 (서비스 개선 v2 R-A): 저장 뒤 글쓰기 화면에서 확인하고 올린다(위치는 「지역만」 기본). 끄면 나만 보기
+  const [share, setShare] = useState(true);
   const [placeId, setPlaceId] = useState<number | null>(initial?.place_id ?? defaultPlaceId ?? null);
   const [fishedAt, setFishedAt] = useState(() => (initial ? new Date(initial.fished_at) : (defaultFishedAt ?? new Date())));
   const [species, setSpecies] = useState<SpeciesValue>({
@@ -182,7 +183,7 @@ export function JournalForm({
             <View style={styles.flex}>
               <ThemedText type="smallBold">커뮤니티에도 올리기</ThemedText>
               <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                저장 후 글쓰기에서 위치 공개 범위를 골라요
+                저장 후 확인하고 올려요 · 위치는 지역만 기본
               </ThemedText>
             </View>
             <Switch value={share} onValueChange={setShare} accessibilityLabel="커뮤니티에도 올리기" />
