@@ -453,14 +453,24 @@ export type Account = {
   id: number;
   nickname: string;
   email: string | null;
-  provider: 'email' | 'google';
+  /** 대표 로그인 수단 */
+  provider: 'email' | 'google' | 'kakao';
+  /** 연결된 로그인 수단 전부 */
+  providers?: string[];
   created_at: string;
 };
 /** 로그인 없이 이 기기에서 쓴 기록을 계정으로 옮겼는지/옮길 수 있는지 */
 export type MergeInfo = { done: boolean; available: boolean; journals: number; posts: number };
 export type AuthResult = { status: 'ok'; token: string; expires_at: string; account: Account; merge: MergeInfo };
 export type GoogleSignupNeeded = { status: 'signup_required'; email: string | null; name: string | null };
-export type AuthConfig = { google: boolean; email: boolean };
+export type AuthConfig = { google: boolean; kakao?: boolean; email: boolean };
+/** 처음 보는 소셜 계정 (닉네임·약관 동의 후 가입) */
+export type SignupNeeded = {
+  status: 'signup_required';
+  provider: 'google' | 'kakao';
+  email: string | null;
+  name: string | null;
+};
 
 // --- 출조계획 (설계안 2026-11-09). 로그인한 본인 것만 ---
 export type TripRole = 'main' | 'alternative';

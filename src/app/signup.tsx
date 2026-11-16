@@ -10,22 +10,26 @@ import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { pendingGoogle } from '@/lib/google';
+import { pendingKakao } from '@/lib/kakao';
 
 const NICK_RE = /^[0-9A-Za-z가-힣_]{2,12}$/;
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 /**
- * 회원가입. mode=email: 이메일·비밀번호·닉네임·약관 / mode=google: 구글 계정 확인 후 닉네임·약관만.
+ * 회원가입. mode=email: 이메일·비밀번호·닉네임·약관 / mode=google·kakao: 소셜 계정 확인 후 닉네임·약관만.
  * 이 기기에서 로그인 없이 쓰던 기록은 가입한 계정에 그대로 이어진다.
  */
 export default function SignupScreen() {
-  const mode = useLocalSearchParams<{ mode?: string }>().mode === 'google' ? 'google' : 'email';
+  const param = useLocalSearchParams<{ mode?: string }>().mode;
+  const mode = param === 'google' || param === 'kakao' ? param : 'email';
   const { signIn } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
-  const [nickname, setNickname] = useState(mode === 'google' ? suggestNick(pendingGoogle.name) : '');
+  const [nickname, setNickname] = useState(
+    mode === 'google' ? suggestNick(pendingGoogle.name) : mode === 'kakao' ? suggestNick(pendingKakao.name) : '',
+  );
   const [nickMsg, setNickMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [agree, setAgree] = useState<Agreements>({ over_14: false, terms: false, privacy: false });
   const [busy, setBusy] = useState(false);
@@ -56,14 +60,23 @@ export default function SignupScreen() {
     if (!NICK_RE.test(n)) return setError('닉네임은 2~12자의 한글·영문·숫자·밑줄(_)만 쓸 수 있어요.');
     if (!allAgreed) return setError('필수 항목에 모두 동의해 주세요.');
     if (mode === 'google' && !pendingGoogle.idToken) return setError('구글 로그인부터 다시 해 주세요.');
+    if (mode === 'kakao' && !pendingKakao.idToken) return setError('카카오 로그인부터 다시 해 주세요.');
     setBusy(true);
     setError(null);
     try {
       const res =
         mode === 'google'
           ? await api.googleSignup({ id_token: pendingGoogle.idToken!, nickname: n, agreements: agree })
-          : await api.signup({ email: email.trim(), password, nickname: n, agreements: agree });
+          : mode === 'kakao'
+            ? await api.socialSignup('kakao', {
+                token: pendingKakao.idToken!,
+                nonce: pendingKakao.nonce,
+                nickname: n,
+                agreements: agree,
+              })
+            : await api.signup({ email: email.trim(), password, nickname: n, agreements: agree });
       Object.assign(pendingGoogle, { idToken: null, email: null, name: null });
+      Object.assign(pendingKakao, { idToken: null, nonce: null, name: null });
       await signIn(res);
       router.dismissAll();
     } catch (e) {
@@ -75,9 +88,23 @@ export default function SignupScreen() {
 
   return (
     <StackScreen>
-      <Stack.Screen options={{ title: mode === 'google' ? '구글 계정으로 가입' : '이메일로 회원가입' }} />
+      <Stack.Screen
+        options={{
+          title: mode === 'google' ? '구글 계정으로 가입' : mode === 'kakao' ? '카카오 계정으로 가입' : '이메일로 회원가입',
+        }}
+      />
 
-      {mode === 'google' ? (
+      {mode === 'kakao' ? (
+        <Card>
+          <ThemedText type="small" themeColor="textSecondary">
+            카카오 계정
+          </ThemedText>
+          <ThemedText type="smallBold">닉네임과 약관 동의만 받으면 가입돼요</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            카카오에서 이메일은 받지 않아요. 5분 안에 가입을 마치지 못하면 카카오 로그인을 다시 눌러 주세요.
+          </ThemedText>
+        </Card>
+      ) : mode === 'google' ? (
         <Card>
           <ThemedText type="small" themeColor="textSecondary">
             구글 계정

@@ -16,10 +16,13 @@ import type { AppIconName } from '@/constants/icons';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
+import { kakaoUnlink } from '@/lib/kakao';
 import { formatDateTime, POINT_REASON_LABEL } from '@/lib/format';
 import { VERIFY_LABEL } from '@/lib/verification';
 
 // SCR-06 내정보: 계정 + 칭호·포인트(FR-11, 12) + 기록 요약(FR-13) + 설정 진입(SCR-07)
+const PROVIDER_NAME: Record<string, string> = { email: '이메일', google: '구글', kakao: '카카오' };
+
 export default function MeScreen() {
   const title = useMyTitle();
   const journals = useJournals();
@@ -104,6 +107,8 @@ function AccountSection() {
             api
               .deleteAccount()
               .then(async () => {
+                // 카카오로 가입했으면 카카오 연결도 끊는다 (앱에서 SDK 로, 실패해도 탈퇴는 이미 끝남)
+                if (account.providers?.includes('kakao') || account.provider === 'kakao') await kakaoUnlink();
                 await signOut();
                 qc.clear();
                 Alert.alert('탈퇴했어요', '그동안 이용해 주셔서 감사합니다.');
@@ -122,7 +127,7 @@ function AccountSection() {
             로그인
           </ThemedText>
           <ThemedText type="smallBold">
-            {account.provider === 'google' ? '구글' : '이메일'}
+            {PROVIDER_NAME[account.provider] ?? '이메일'}
             {account.email ? ` · ${account.email}` : ''}
           </ThemedText>
         </View>

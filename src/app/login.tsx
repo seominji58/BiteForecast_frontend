@@ -11,9 +11,10 @@ import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { googleAvailable, googleIdToken, pendingGoogle } from '@/lib/google';
+import { kakaoAvailable, kakaoIdToken, pendingKakao } from '@/lib/kakao';
 
 /**
- * 로그인 (2026-11-09 결정: 구글 + 이메일). 해황 보기는 로그인 없이 되고,
+ * 로그인 (2026-11-16: 카카오 · 구글 · 이메일). 해황 보기는 로그인 없이 되고,
  * 기록·사진 인증·포인트·글쓰기·댓글·좋아요·신고는 로그인 후 쓸 수 있다.
  */
 export default function LoginScreen() {
@@ -22,11 +23,14 @@ export default function LoginScreen() {
   const config = useAuthConfig();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [busy, setBusy] = useState<'email' | 'google' | null>(null);
+  const [busy, setBusy] = useState<'email' | 'google' | 'kakao' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // 서버에 구글 클라이언트 ID 가 있고, 이 앱 빌드에 구글 모듈이 있을 때만 버튼을 보인다
   const showGoogle = config.data?.google && googleAvailable();
+  // 카카오도 서버 설정(네이티브 앱 키)과 이 앱 빌드의 카카오 모듈이 모두 있을 때만
+  const showKakao = config.data?.kakao && kakaoAvailable();
+  const showSocial = showGoogle || showKakao;
 
   const done = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
@@ -39,6 +43,28 @@ export default function LoginScreen() {
       done();
     } catch (e) {
       setError((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const loginKakao = async () => {
+    setBusy('kakao');
+    setError(null);
+    try {
+      const { nonce } = await api.authNonce();
+      const idToken = await kakaoIdToken(nonce);
+      if (!idToken) return; // 사용자가 취소
+      const res = await api.social('kakao', { token: idToken, nonce });
+      if (res.status === 'signup_required') {
+        Object.assign(pendingKakao, { idToken, nonce, name: res.name });
+        router.push({ pathname: '/signup', params: { mode: 'kakao' } });
+        return;
+      }
+      await signIn(res);
+      done();
+    } catch (e) {
+      Alert.alert('카카오 로그인 실패', (e as Error).message);
     } finally {
       setBusy(null);
     }
@@ -75,6 +101,19 @@ export default function LoginScreen() {
         </ThemedText>
       </View>
 
+      {showKakao ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="카카오 로그인"
+          onPress={loginKakao}
+          disabled={busy !== null}
+          style={({ pressed }) => [styles.kakao, (pressed || busy !== null) && styles.dim]}>
+          {busy === 'kakao' ? <ActivityIndicator color="#000" /> : <ThemedText style={styles.kakaoMark}>●</ThemedText>}
+          <ThemedText type="smallBold" style={styles.kakaoText}>
+            카카오 로그인
+          </ThemedText>
+        </Pressable>
+      ) : null}
       {showGoogle ? (
         <Pressable
           accessibilityRole="button"
@@ -89,13 +128,13 @@ export default function LoginScreen() {
           <ThemedText type="smallBold">구글로 계속하기</ThemedText>
         </Pressable>
       ) : null}
-      {!showGoogle && __DEV__ ? (
+      {!showSocial && __DEV__ ? (
         <ThemedText type="small" themeColor="textSecondary">
-          (개발 안내) 구글 로그인은 구글 클라이언트 ID 설정 후 개발용 앱에서 보여요. 실행 가이드 참고.
+          (개발 안내) 카카오·구글 로그인은 키 설정 후 개발용 앱(Expo Go 아님)에서 보여요. 실행 가이드 참고.
         </ThemedText>
       ) : null}
 
-      {showGoogle ? (
+      {showSocial ? (
         <View style={styles.divider}>
           <View style={[styles.line, { backgroundColor: theme.border }]} />
           <ThemedText type="small" themeColor="textSecondary">
@@ -148,6 +187,18 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
+  // 카카오 로그인 버튼: 카카오 디자인 가이드 색 (노랑 #FEE500, 글자 검정 85%)
+  kakao: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    minHeight: 48,
+    borderRadius: 12,
+    backgroundColor: '#FEE500',
+  },
+  kakaoText: { color: 'rgba(0,0,0,0.85)' },
+  kakaoMark: { color: '#000', fontSize: 14 },
   head: { alignItems: 'center', gap: 6, paddingVertical: 8 },
   center: { textAlign: 'center' },
   dim: { opacity: 0.6 },

@@ -45,5 +45,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     plugins.push(['@react-native-google-signin/google-signin', { iosUrlScheme: reversedClientId(GOOGLE_IOS) }]);
   }
 
-  return { ...config, name: config.name ?? '입질예보', slug: config.slug ?? 'biteforecast', plugins };
+  return {
+    ...config,
+    name: config.name ?? '입질예보',
+    slug: config.slug ?? 'biteforecast',
+    ios: {
+      ...config.ios,
+      // 로그인 확인 창(「'앱'이 kauth.kakao.com 을 사용하여 로그인…」)에 내부 이름 대신 「입질예보」가 보이게
+      infoPlist: { ...config.ios?.infoPlist, CFBundleName: '입질예보' },
+    },
+    plugins,
+  };
 };
