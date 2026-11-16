@@ -1,0 +1,243 @@
+/**
+ * 카카오맵 (@react-native-kakao/map). 개발용·배포 빌드에서만 동작한다 (Expo Go 없음).
+ * - 마커는 카카오 「라벨」: 색 원 이미지 + (묶음이면) 가운데 숫자 글자. RN 뷰는 마커로 쓸 수 없다
+ * - 위도 폭(delta) ↔ 줌 레벨은 여기서 바꾼다
+ * - 카카오 콘솔에서 「카카오맵 사용 설정」이 켜져 있어야 지도가 그려진다.
+ *   인증 실패(403 등)나 초기화 실패면 빈 화면 대신 예비 지도(react-native-maps)로 바꿔 보여준다
+ */
+/* eslint-disable @typescript-eslint/no-require-imports */
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { Image, StyleSheet, View } from "react-native";
+
+import { RnMapsMap } from "@/components/map/provider-rnmaps";
+import type {
+  AppMapHandle,
+  AppMapProps,
+  MarkerTone,
+} from "@/components/map/types";
+
+type KakaoMapModule = typeof import("@react-native-kakao/map");
+let mod: KakaoMapModule | null = null;
+try {
+  mod = require("@react-native-kakao/map") as KakaoMapModule;
+} catch {
+  mod = null;
+}
+
+const APP_KEY = process.env.EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY;
+let ready: Promise<void> | null = null;
+
+/** 이 빌드에서 카카오맵을 쓸 수 있는지 (네이티브 모듈 + 앱 키) */
+export function kakaoMapAvailable(): boolean {
+  return !!mod && !!APP_KEY;
+}
+
+function init(): Promise<void> {
+  if (!mod || !APP_KEY)
+    return Promise.reject(new Error("카카오맵을 쓸 수 없는 빌드예요"));
+  ready ??= mod.initializeKakaoMapSDK(APP_KEY).catch((e) => {
+    ready = null;
+    throw e;
+  });
+  return ready;
+}
+
+/** 보이는 위도 폭 → 카카오 줌 레벨 (구글 지도와 같은 단위로 맞춤, 6~20) */
+export function deltaToZoom(delta: number): number {
+  return Math.max(
+    6,
+    Math.min(20, Math.round(Math.log2(360 / Math.max(delta, 0.0005)))),
+  );
+}
+
+const TONES: MarkerTone[] = ["navy", "teal", "gray", "danger", "selected"];
+const asset = (src: number, size: number) => ({
+  uri: Image.resolveAssetSource(src)?.uri ?? "",
+  width: size,
+  height: size,
+});
+const DOT: Record<MarkerTone, number> = {
+  navy: require("@/assets/map/dot-navy.png"),
+  teal: require("@/assets/map/dot-teal.png"),
+  gray: require("@/assets/map/dot-gray.png"),
+  danger: require("@/assets/map/dot-danger.png"),
+  selected: require("@/assets/map/dot-selected.png"),
+};
+const GROUP: Record<MarkerTone, number> = {
+  navy: require("@/assets/map/group-navy.png"),
+  teal: require("@/assets/map/group-teal.png"),
+  gray: require("@/assets/map/group-gray.png"),
+  danger: require("@/assets/map/group-danger.png"),
+  selected: require("@/assets/map/group-selected.png"),
+};
+const ME = require("@/assets/map/me.png");
+
+const LAYER = "places";
+const ME_LAYER = "me";
+
+export const KakaoMap = forwardRef<AppMapHandle, AppMapProps>(function KakaoMap(
+  { initialRegion, markers, userLocation, onMarkerPress, onReady, style },
+  ref,
+) {
+  const [sdkReady, setSdkReady] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const map = useRef<import("@react-native-kakao/map").KakaoMapViewRef>(null);
+  const fallback = useRef<AppMapHandle>(null);
+
+  useEffect(() => {
+    let alive = true;
+    init().then(
+      () => alive && setSdkReady(true),
+      () => alive && setFailed(true),
+    );
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useImperativeHandle(
+    ref,
+    () =>
+      failed || !mod
+        ? {
+            moveTo: (r, ms) => fallback.current?.moveTo(r, ms),
+            fitTo: (pts) => fallback.current?.fitTo(pts),
+          }
+        : {
+            moveTo: (r, ms = 300) =>
+              void map.current
+                ?.moveCamera(
+                  {
+                    latitude: r.latitude,
+                    longitude: r.longitude,
+                    zoomLevel: deltaToZoom(r.latitudeDelta),
+                  },
+                  { duration: ms },
+                )
+                .catch(() => undefined),
+            fitTo: (pts) =>
+              void map.current
+                ?.updateCamera(
+                  {
+                    type: "fit",
+                    coordinates: pts.map((p) => ({
+                      latitude: p.lat,
+                      longitude: p.lon,
+                    })),
+                  },
+                  { duration: 300 },
+                )
+                .catch(() => undefined),
+          },
+    [failed],
+  );
+
+  const scene = useMemo(() => {
+    const styles = [
+      ...TONES.map((t) => ({
+        id: `dot-${t}`,
+        levels: [
+          { level: 0, image: asset(DOT[t], 25), anchor: { x: 0.5, y: 0.5 } },
+        ],
+      })),
+      ...TONES.map((t) => ({
+        id: `group-${t}`,
+        levels: [
+          {
+            level: 0,
+            image: asset(GROUP[t], 37),
+            anchor: { x: 0.5, y: 0.5 },
+            textLayout: "center" as const,
+            textLines: [{ fontSize: 13, color: "#FFFFFF" }],
+          },
+        ],
+      })),
+      {
+        id: "me",
+        levels: [
+          { level: 0, image: asset(ME, 30), anchor: { x: 0.5, y: 0.5 } },
+        ],
+      },
+    ];
+    const labels = markers.map((m) => ({
+      id: m.id,
+      layerId: LAYER,
+      styleId: m.count && m.count > 1 ? `group-${m.tone}` : `dot-${m.tone}`,
+      coordinate: { latitude: m.lat, longitude: m.lon },
+      text: m.count && m.count > 1 ? [{ value: String(m.count) }] : undefined,
+      // 선택한 곳이 맨 위에 오게
+      rank: m.tone === "selected" ? 1000 : m.tone === "danger" ? 100 : 1,
+      clickable: true,
+    }));
+    if (userLocation)
+      labels.push({
+        id: "__me__",
+        layerId: ME_LAYER,
+        styleId: "me",
+        coordinate: { latitude: userLocation.lat, longitude: userLocation.lon },
+        text: undefined,
+        rank: 2000,
+        clickable: false,
+      });
+    return {
+      styles,
+      // 겹쳐도 모두 보이게 (가까운 낚시터 핀이 서로 가리지 않도록 경쟁 없음)
+      layers: [
+        { id: LAYER, clickable: true, competition: "none" as const, zOrder: 1 },
+        {
+          id: ME_LAYER,
+          clickable: false,
+          competition: "none" as const,
+          zOrder: 2,
+        },
+      ],
+      labels,
+    };
+  }, [markers, userLocation]);
+
+  // 카카오맵을 쓸 수 없으면 예비 지도로 (같은 마커·같은 ref 동작)
+  if (failed || !mod)
+    return (
+      <RnMapsMap
+        ref={fallback}
+        style={style}
+        initialRegion={initialRegion}
+        markers={markers}
+        userLocation={userLocation}
+        onMarkerPress={onMarkerPress}
+        onReady={onReady}
+      />
+    );
+  if (!sdkReady) return <View style={[style, styles.empty]} />;
+  const KakaoMapView = mod.KakaoMapView;
+  return (
+    <KakaoMapView
+      ref={map}
+      style={style}
+      initialCamera={{
+        latitude: initialRegion.latitude,
+        longitude: initialRegion.longitude,
+        zoomLevel: deltaToZoom(initialRegion.latitudeDelta),
+      }}
+      options={{ poi: { visible: true, clickable: false } }}
+      labels={scene}
+      onMapReady={onReady}
+      onError={(e) => {
+        if (__DEV__) console.warn("[카카오맵]", e.code, e.message);
+        setFailed(true);
+      }}
+      onLabelClick={(e) => e.id !== "__me__" && onMarkerPress?.(e.id)}
+    />
+  );
+});
+
+const styles = StyleSheet.create({
+  empty: { backgroundColor: "#E6ECF1" },
+});
