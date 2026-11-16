@@ -20,7 +20,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     'expo-build-properties',
     {
       // iOS 최소 버전은 Expo 58 기본값(16.4 이상)을 그대로 쓴다 — 카카오맵 SDK 요구(15.1)보다 높다
+      // 개발용 빌드의 네트워크 검사기를 끈다: 카카오 SDK(Alamofire) 요청을 가로채다 앱이 강제 종료됐다
+      // (카카오 로그인 직후 토큰 요청에서 dispatch 큐 확인 실패, 시뮬레이터 2026-11-16). 배포 빌드에는 원래 없다
+      ios: { networkInspector: false },
       android: {
+        networkInspector: false,
         // 카카오 SDK 저장소 (로그인 SDK · 지도 SDK)
         extraMavenRepos: [
           'https://devrepo.kakao.com/nexus/content/groups/public/',
