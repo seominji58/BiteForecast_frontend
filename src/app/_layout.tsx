@@ -50,10 +50,13 @@ export default function RootLayout() {
           <Stack.Screen name="species" options={{ title: '전체 어종' }} />
           <Stack.Screen name="points" options={{ title: '추천 낚시터' }} />
           <Stack.Screen name="my-records" options={{ title: '내 낚시 요약' }} />
+          <Stack.Screen name="my-points" options={{ title: '칭호·포인트' }} />
+          <Stack.Screen name="profile-edit" options={{ title: '닉네임 변경' }} />
           <Stack.Screen name="trip/new" options={{ title: '새 출조계획' }} />
           <Stack.Screen name="trip/[id]" options={{ title: '출조계획' }} />
           <Stack.Screen name="trip/join" options={{ title: '초대 코드로 참여' }} />
           <Stack.Screen name="login" options={{ title: '로그인' }} />
+          <Stack.Screen name="login-email" options={{ title: '이메일 로그인' }} />
           <Stack.Screen name="signup" options={{ title: '회원가입' }} />
           <Stack.Screen name="terms" options={{ title: '이용약관' }} />
           <Stack.Screen name="privacy" options={{ title: '개인정보 처리방침' }} />

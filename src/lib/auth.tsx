@@ -5,6 +5,7 @@ import { Alert } from 'react-native';
 import { api, ApiError } from '@/api';
 import type { Account, AuthResult } from '@/api/types';
 import { googleSignOut } from '@/lib/google';
+import { kakaoSignOut } from '@/lib/kakao';
 import { loadToken, onTokenChange, setToken } from '@/lib/session';
 
 type Status = 'loading' | 'guest' | 'signed-in';
@@ -92,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     await api.logout().catch(() => undefined);
     await googleSignOut();
+    await kakaoSignOut();
     await setToken(null);
     await refreshUserData();
   };

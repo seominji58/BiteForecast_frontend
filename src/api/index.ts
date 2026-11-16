@@ -30,6 +30,7 @@ import type {
   RecordSummary,
   Region,
   ReportResult,
+  SignupNeeded,
   Species,
   Trip,
   TripInput,
@@ -155,6 +156,14 @@ export const api = {
     request<AuthResult | GoogleSignupNeeded>('/auth/google', { method: 'POST', body: { id_token: idToken } }),
   googleSignup: (b: { id_token: string; nickname: string; agreements: Agreements }) =>
     request<AuthResult>('/auth/google/signup', { method: 'POST', body: b }),
+  /** 소셜 로그인 직전 일회성 값 (카카오 ID 토큰에 넣는다, 5분) */
+  authNonce: () => request<{ nonce: string; expires_in: number }>('/auth/nonce', { method: 'POST' }),
+  social: (provider: 'google' | 'kakao', b: { token: string; nonce?: string | null }) =>
+    request<AuthResult | SignupNeeded>(`/auth/social/${provider}`, { method: 'POST', body: b }),
+  socialSignup: (
+    provider: 'google' | 'kakao',
+    b: { token: string; nonce?: string | null; nickname: string; agreements: Agreements },
+  ) => request<AuthResult>(`/auth/social/${provider}/signup`, { method: 'POST', body: b }),
   nicknameCheck: (nickname: string) =>
     request<{ available: boolean; message: string | null }>(`/auth/nickname-check?nickname=${encodeURIComponent(nickname)}`),
   logout: () => request<void>('/auth/logout', { method: 'POST' }),
