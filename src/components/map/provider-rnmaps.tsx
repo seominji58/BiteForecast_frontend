@@ -12,6 +12,7 @@ export const TONE_COLOR: Record<MarkerTone, string> = {
   danger: '#C62828',
   selected: '#F28C28',
   catch: '#B8641A',
+  good: '#22A05A',
 };
 
 export const RnMapsMap = forwardRef<AppMapHandle, AppMapProps>(function RnMapsMap(

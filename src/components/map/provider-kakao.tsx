@@ -47,7 +47,7 @@ export function zoomToDelta(zoom: number): number {
   return 360 / 2 ** zoom;
 }
 
-const TONES: MarkerTone[] = ['navy', 'teal', 'gray', 'danger', 'selected', 'catch'];
+const TONES: MarkerTone[] = ['navy', 'teal', 'gray', 'danger', 'selected', 'catch', 'good'];
 const asset = (src: number, size: number) => ({
   uri: Image.resolveAssetSource(src)?.uri ?? '',
   width: size,
@@ -60,6 +60,7 @@ const DOT: Record<MarkerTone, number> = {
   danger: require('@/assets/map/dot-danger.png'),
   selected: require('@/assets/map/dot-selected.png'),
   catch: require('@/assets/map/dot-catch.png'),
+  good: require('@/assets/map/dot-good.png'),
 };
 const GROUP: Record<MarkerTone, number> = {
   navy: require('@/assets/map/group-navy.png'),
@@ -68,6 +69,7 @@ const GROUP: Record<MarkerTone, number> = {
   danger: require('@/assets/map/group-danger.png'),
   selected: require('@/assets/map/group-selected.png'),
   catch: require('@/assets/map/group-catch.png'),
+  good: require('@/assets/map/group-good.png'),
 };
 const ME = require('@/assets/map/me.png');
 

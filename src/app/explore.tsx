@@ -42,6 +42,8 @@ const SEA = 'sea:';
 const SEA_ORDER = ['서해', '남해', '동해', '제주'] as const;
 /** 지도 어종 칩: 공식 바다낚시지수 어종을 앞에, 나머지는 「+ 다른 어종」에서 */
 const INDEX_SPECIES = SPECIES.filter((x) => x.indexName).map((x) => x.indexName!);
+/** 공식 낚시지수 등급 순서 (높을수록 바다 조건이 그 어종에 맞음) */
+const GRADE_RANK: Record<string, number> = { 매우좋음: 5, 좋음: 4, 보통: 3, 나쁨: 2, 매우나쁨: 1 };
 
 /**
  * 낚시터 찾기 (사용자 결정 2026-11-05): 지도 + 거리순 목록 + 특보·해황 요약 → 상세 해황 / 비교.
@@ -87,6 +89,36 @@ export default function ExploreScreen() {
     return { user, index, info, all: new Set([...user, ...index, ...info]) };
   }, [fish, fishIsIndex, fishItem, fi.data, places.data, catches.data]);
   const fishPlaces = fishMatch?.all ?? null;
+  // 고른 어종의 오늘 공식 낚시지수 (국립해양조사원 발표값 그대로). 낚시터마다 가장 가까운 지수 지점의 등급
+  // 바다 조건이 그 어종에 맞는지를 나타내는 값이지 조황·어획 가능성이 아니다
+  const fishGrade = useMemo(() => {
+    const m = new Map<number, { best: string; text: string; station: string; km: number | null }>();
+    if (!fish || !fishIsIndex || !fi.data) return m;
+    const dist = new Map<number, number>();
+    for (const pt of fi.data.points) {
+      const sp = pt.species.find((x) => x.species === fish);
+      if (!sp) continue;
+      const grades = fi.data.periods.map((per) => sp.grades[per]).filter((g): g is string => !!g);
+      if (!grades.length) continue;
+      const best = grades.reduce((a, b) => ((GRADE_RANK[b] ?? 0) > (GRADE_RANK[a] ?? 0) ? b : a));
+      const text = fi.data.periods
+        .filter((per) => sp.grades[per])
+        .map((per) => `${per} ${sp.grades[per]}`)
+        .join(' · ');
+      for (const l of pt.places) {
+        const d = l.distance_km ?? 99;
+        if (d >= (dist.get(l.place_id) ?? Infinity)) continue;
+        dist.set(l.place_id, d);
+        m.set(l.place_id, { best, text, station: pt.station_name, km: l.distance_km });
+      }
+    }
+    return m;
+  }, [fish, fishIsIndex, fi.data]);
+  const goodGrade = (id: number) => (GRADE_RANK[fishGrade.get(id)?.best ?? ''] ?? 0) >= 4;
+  const badGrade = (id: number) => {
+    const r = GRADE_RANK[fishGrade.get(id)?.best ?? ''];
+    return r != null && r <= 2;
+  };
 
   const [onlyMatching, setOnlyMatching] = useState(params.mode === 'criteria');
   // 같은 화면이 다른 진입점(조건으로 찾기 ↔ 지도)으로 다시 열리면 스위치를 진입점에 맞춘다
@@ -250,7 +282,11 @@ export default function ExploreScreen() {
     if (r.place.id === selectedId) return 'selected';
     if (r.s?.warning_level === 'warning') return 'danger';
     if (!stale && (onlyMatching || params.mode === 'criteria')) return r.check.status === 'meets' ? 'teal' : 'gray';
-    return catchById.has(r.place.id) ? 'catch' : 'navy';
+    // 순서: 이용자 조황(실제 글) → 공식 지수 좋음 이상 → 지수 나쁨 → 그 외
+    if (catchById.has(r.place.id)) return 'catch';
+    if (goodGrade(r.place.id)) return 'good';
+    if (badGrade(r.place.id)) return 'gray';
+    return 'navy';
   };
   // 지도 마커 묶기: 지금 보이는 범위를 격자로 나눠, 화면에서 가까운 낚시터끼리 숫자 원 하나로 묶는다.
   // 확대할수록 격자가 작아져 갈라진다. 선택한 낚시터는 묶지 않고 따로 보인다.
@@ -276,11 +312,12 @@ export default function ExploreScreen() {
       const all = groups.flat();
       const warn = all.some((x) => x.s?.warning_level === 'warning');
       const caught = all.some((x) => catchById.has(x.place.id));
+      const good = all.some((x) => goodGrade(x.place.id));
       return {
         id: `c${key}`,
         lat: groups.reduce((a, g) => a + g[0].place.lat!, 0) / groups.length,
         lon: groups.reduce((a, g) => a + g[0].place.lon!, 0) / groups.length,
-        tone: warn ? 'danger' : caught ? 'catch' : 'navy',
+        tone: warn ? 'danger' : caught ? 'catch' : good ? 'good' : 'navy',
         count: all.length,
         label: `가까운 낚시터 ${all.length}곳, 눌러서 확대`,
       };
@@ -291,11 +328,12 @@ export default function ExploreScreen() {
       return { id: `p${r.place.id}`, lat: r.place.lat!, lon: r.place.lon!, tone: tone(r), label: r.place.name };
     const warn = group.some((x) => x.s?.warning_level === 'warning');
     const caught = group.some((x) => catchById.has(x.place.id));
+    const good = group.some((x) => goodGrade(x.place.id));
     return {
       id: `g${coordKey(r.place)}`,
       lat: r.place.lat!,
       lon: r.place.lon!,
-      tone: warn ? 'danger' : caught ? 'catch' : 'navy',
+      tone: warn ? 'danger' : caught ? 'catch' : good ? 'good' : 'navy',
       count: group.length,
       label: `같은 좌표의 낚시터 ${group.length}곳`,
     };
@@ -336,12 +374,20 @@ export default function ExploreScreen() {
                 : rows.length === 0
                   ? `${fish}: ${fishIsIndex ? '이 지역에 지수 지점·안내한 낚시터가 없어요' : '공식 지수가 없고, 이 지역에 이 어종을 안내한 낚시터도 없어요'}`
                   : `${fish} ${rows.length}곳 · ${[
-                      fishMatch.user.size ? `이용자 조황 ${fishMatch.user.size}` : null,
-                      fishMatch.index.size ? '공식 지수 지점 근처' : null,
-                      fishMatch.info.size ? '낚시터가 알린 대상 어종' : null,
+                      rows.some((r) => fishMatch.user.has(r.place.id))
+                        ? `이용자 조황 ${rows.filter((r) => fishMatch.user.has(r.place.id)).length}`
+                        : null,
+                      fishIsIndex ? `오늘 지수 좋음 이상 ${rows.filter((r) => goodGrade(r.place.id)).length}` : null,
+                      rows.some((r) => fishMatch.info.has(r.place.id))
+                        ? `낚시터 안내 ${rows.filter((r) => fishMatch.info.has(r.place.id)).length}`
+                        : null,
                     ]
                       .filter(Boolean)
-                      .join(' · ')}`,
+                      .join(' · ')}${
+                      fishIsIndex
+                        ? '\n🟢 지수 좋음↑(바다 조건, 조황 아님) · 🟠테두리 최근 조황 · 🔴 특보'
+                        : '\n🟠테두리 최근 조황 · 나머지는 낚시터가 알린 대상 어종'
+                    }`,
             color: 'textSecondary' as const,
           }
         : onlyMatching && summary.isSuccess && rows.length === 0
@@ -417,7 +463,7 @@ export default function ExploreScreen() {
           </ScrollView>
           {note ? (
             <View style={[styles.notePill, { backgroundColor: theme.background }]}>
-              <ThemedText type="small" themeColor={note.color} numberOfLines={2}>
+              <ThemedText type="small" themeColor={note.color} numberOfLines={4}>
                 {note.text}
               </ThemedText>
             </View>
@@ -443,6 +489,7 @@ export default function ExploreScreen() {
             dist={selected.dist}
             check={checkOf(selected)}
             caught={catchById.get(selected.place.id) ?? null}
+            grade={fish && fishGrade.get(selected.place.id) ? { fish, ...fishGrade.get(selected.place.id)! } : null}
             homeId={homeId}
             pick={params.pick === 'compare' ? { a: params.a ? Number(params.a) : null } : null}
             onClose={() => setSelectedId(null)}
@@ -554,6 +601,7 @@ function SelectedCard({
   dist,
   check,
   caught,
+  grade,
   homeId,
   pick,
   onClose,
@@ -564,6 +612,8 @@ function SelectedCard({
   check: ReturnType<typeof checkPlace> | null;
   /** 최근 이용자 조황 요약 (없으면 null) */
   caught: CatchSummary | null;
+  /** 고른 어종의 오늘 공식 낚시지수 (어종을 골랐고 지수가 있을 때만) */
+  grade: { fish: string; text: string; station: string; km: number | null } | null;
   homeId: number | null;
   /** 비교 화면에서 고르러 온 경우: 이미 고른 A (없으면 이 곳이 A) */
   pick: { a: number | null } | null;
@@ -606,6 +656,12 @@ function SelectedCard({
           </ThemedText>
         </Pressable>
       ) : null}
+      {grade ? (
+        <ThemedText type="small">
+          오늘 {grade.fish} 낚시지수 {grade.text} · 국립해양조사원 {grade.station}
+          {grade.km != null && grade.km >= 1 ? ` ${Math.round(grade.km)}km` : ''}
+        </ThemedText>
+      ) : null}
       {w ? (
         <ThemedText type="smallBold" themeColor={w.color}>
           {w.text}
@@ -618,7 +674,7 @@ function SelectedCard({
           수온 실측 {s.temp_obs.v}°C ({timeLabel(s.temp_obs.t)})
         </ThemedText>
       ) : null}
-      {s?.index ? (
+      {s?.index && !grade ? (
         <ThemedText type="small">
           바다낚시지수({s.index.period}) {s.index.best === s.index.worst ? s.index.best : `${s.index.worst}~${s.index.best}`} ·
           국립해양조사원
