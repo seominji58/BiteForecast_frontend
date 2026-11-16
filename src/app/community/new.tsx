@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Switch, View } from 'react-native';
 
 import { useCreatePost, useJournal } from '@/api/queries';
 import type { LocationVisibility, PostCategory } from '@/api/types';
@@ -41,6 +41,7 @@ function NewPostScreenInner() {
   const [species, setSpecies] = useState<SpeciesValue>(NO_SPECIES);
   const [visibility, setVisibility] = useState<LocationVisibility>('region');
   const [regionId, setRegionId] = useState<number | null>(null);
+  const [showTackle, setShowTackle] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const submit = () => {
@@ -61,6 +62,7 @@ function NewPostScreenInner() {
             photo_ids: [],
             journal_id: journalId,
             location_visibility: visibility,
+            show_tackle: showTackle,
           }
         : {
             category,
@@ -154,6 +156,18 @@ function NewPostScreenInner() {
           </>
         ) : null}
 
+        {sharing && journal.data && (journal.data.bait || journal.data.rig) ? (
+          <View style={styles.between}>
+            <View style={styles.flex}>
+              <ThemedText type="smallBold">미끼·채비 같이 보여주기</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {[journal.data.bait, journal.data.rig].filter(Boolean).join(' · ')}
+              </ThemedText>
+            </View>
+            <Switch value={showTackle} onValueChange={setShowTackle} accessibilityLabel="미끼·채비 같이 보여주기" />
+          </View>
+        ) : null}
+
         <LocationVisibilityField
           value={visibility}
           onChange={setVisibility}
@@ -207,6 +221,8 @@ function SharedJournal({ j }: { j: NonNullable<ReturnType<typeof useJournal>['da
 
 const styles = StyleSheet.create({
   form: { gap: 16 },
+  between: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  flex: { flex: 1 },
   body: { minHeight: 140 },
   thumbs: { flexDirection: 'row', gap: 6 },
   thumb: { width: 60, height: 60, borderRadius: 8 },

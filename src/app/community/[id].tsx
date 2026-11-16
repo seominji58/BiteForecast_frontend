@@ -108,8 +108,16 @@ export default function PostScreen() {
               {p.catch.count != null ? ` · ${p.catch.count}마리` : ''}
               {p.catch.max_length_cm != null ? ` · 최대 ${p.catch.max_length_cm}cm` : ''}
             </ThemedText>
+            {p.catch.bait || p.catch.rig ? (
+              <ThemedText type="small">
+                {[p.catch.bait ? `미끼 ${p.catch.bait}` : null, p.catch.rig ? `채비 ${p.catch.rig}` : null]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </ThemedText>
+            ) : null}
             <ThemedText type="small" themeColor="textSecondary">
-              {formatDateTime(p.catch.fished_at)} · 관리자가 사진을 확인한 기록이에요
+              {formatDateTime(p.catch.fished_at)} ·{' '}
+              {p.verified ? '관리자가 사진을 확인한 기록이에요' : '작성자의 낚시 기록이에요 (인증 전)'}
             </ThemedText>
           </View>
         ) : null}
@@ -191,7 +199,12 @@ export default function PostScreen() {
         <Button label="로그인하고 댓글 쓰기" variant="secondary" onPress={needLogin} />
       )}
 
-      <ReportSheet target={reportTarget} onClose={() => setReportTarget(null)} />
+      <ReportSheet
+        target={reportTarget}
+        onClose={() => setReportTarget(null)}
+        // 글쓴이를 차단하면 이 글도 더 이상 보이지 않으므로 목록으로 돌아간다
+        onBlocked={(t) => t.type === 'post' && router.back()}
+      />
     </StackScreen>
   );
 }

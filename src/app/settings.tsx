@@ -1,8 +1,8 @@
 import Constants from 'expo-constants';
-import { StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { API_URL } from '@/api';
-import { useSources } from '@/api/queries';
+import { useBlocks, useSources, useUnblock } from '@/api/queries';
 import { Card, ErrorView, Loading, StackScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
@@ -40,6 +40,8 @@ export default function SettingsScreen() {
         </ThemedText>
       </Card>
 
+      <BlockedUsers />
+
       <Card>
         <ThemedText type="sectionTitle">이용 안내</ThemedText>
         <ThemedText themeColor="textSecondary">
@@ -62,7 +64,40 @@ export default function SettingsScreen() {
   );
 }
 
+/** 차단한 사용자 (로그인했고 차단한 사람이 있을 때만). 풀면 그 사람의 글·댓글이 다시 보인다 */
+function BlockedUsers() {
+  const blocks = useBlocks();
+  const unblock = useUnblock();
+  if (!blocks.isSuccess || blocks.data.length === 0) return null;
+  return (
+    <Card>
+      <ThemedText type="sectionTitle">차단한 사용자 {blocks.data.length}</ThemedText>
+      {blocks.data.map((b) => (
+        <View key={b.user_id} style={styles.row}>
+          <ThemedText style={styles.flex}>{b.nickname}</ThemedText>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${b.nickname} 차단 풀기`}
+            hitSlop={8}
+            style={styles.unblock}
+            onPress={() =>
+              Alert.alert(`${b.nickname}님 차단을 풀까요?`, '그 사람의 글·댓글이 다시 보여요.', [
+                { text: '취소', style: 'cancel' },
+                { text: '풀기', onPress: () => unblock.mutate(b.user_id) },
+              ])
+            }>
+            <ThemedText type="smallBold" themeColor="tint">
+              차단 풀기
+            </ThemedText>
+          </Pressable>
+        </View>
+      ))}
+    </Card>
+  );
+}
+
 const styles = StyleSheet.create({
+  unblock: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 },
   flex: { flex: 1 },
   row: { flexDirection: 'row', gap: Spacing.two, alignItems: 'flex-start' },
   status: { fontWeight: '700', width: 30 },

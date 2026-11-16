@@ -16,12 +16,13 @@ import { Card, ErrorView, Loading, SectionHeader, StackScreen } from '@/componen
 import { SpeciesImage } from '@/components/species';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { CatchStrip } from '@/components/catch-strip';
 import { ownerName, participants, TripMembers } from '@/components/trip-members';
 import { Brand, IconSize } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { dayLabel } from '@/lib/compare';
 import { criteriaLabel, freshnessLine } from '@/lib/criteria';
-import { PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
+import { PLACE_IMAGE, PLACE_TYPE_LABEL, sidoOf } from '@/lib/place';
 import { useCriteria } from '@/lib/prefs';
 import { speciesForRecord } from '@/lib/species';
 import { dday, hmToDate, outlookLine, periodLabel, timeRange, toHm, tripDays } from '@/lib/trip';
@@ -269,6 +270,20 @@ function TripBody({
           </View>
         );
       })}
+
+      {/* 출조 전 참고: 첫 장소 시·도와 목표 어종의 최근 이용자 조황 (예보와 구분, 없으면 숨김) */}
+      {trip.stops[0] ? (
+        <CatchStrip
+          title={`${sidoOf(trip.stops[0].place)} 최근 이용자 조황`}
+          filter={{
+            sido: sidoOf(trip.stops[0].place),
+            species: speciesForRecord(trip.species_code, trip.species_etc)
+              ? (trip.species_code ?? trip.species_etc)
+              : null,
+          }}
+          note="이용자가 올린 조황이에요. 예보가 아니에요."
+        />
+      ) : null}
 
       <TripMembers trip={trip} run={run} />
 
