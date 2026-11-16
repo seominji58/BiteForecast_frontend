@@ -26,16 +26,10 @@ export function LoginRequired({
       <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
         {message}
       </ThemedText>
+      {/* 로그인 화면(카카오·구글·이메일)에서 처음이면 바로 가입까지 이어진다 */}
       <View style={styles.actions}>
         <View style={styles.flex}>
-          <Button
-            label="회원가입"
-            variant="secondary"
-            onPress={() => router.push({ pathname: '/signup', params: { mode: 'email' } })}
-          />
-        </View>
-        <View style={styles.flex}>
-          <Button label="로그인" onPress={() => router.push('/login')} />
+          <Button label="로그인 / 회원가입" onPress={() => router.push('/login')} />
         </View>
       </View>
     </Card>
