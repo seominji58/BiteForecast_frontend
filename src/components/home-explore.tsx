@@ -426,8 +426,14 @@ export function SeaLine({
   const warn = list.filter((s) => s.warning_level === 'warning').length;
   const unknown = list.length > 0 && list.every((s) => s.warning_level === 'unknown');
   const warnText = unknown ? '특보 확인 불가' : warn ? `${future ? '지금 ' : ''}특보 ${warn}곳` : `${future ? '지금 ' : ''}특보 없음`;
+  // 단기예보가 없는 날(4일 뒤~)은 기상청 중기해상예보의 해역 파고 범위로 (참고)
+  const mids = list.flatMap((s) => (s.mid_sea ? [s.mid_sea] : []));
+  const midLo = mids.flatMap((m) => (m.wave_min != null ? [m.wave_min] : []));
+  const midHi = mids.flatMap((m) => (m.wave_max != null ? [m.wave_max] : []));
+  const midText =
+    midHi.length > 0 ? `파고 ${midLo.length ? Math.min(...midLo) : '?'}~${Math.max(...midHi)}m(해역 예보)` : null;
   const parts = [
-    pending ? '파고·풍속 발표 전' : wMax != null ? `파고 ${formatForecastWave(wMax)}` : null,
+    pending ? (midText ?? '파고·풍속 발표 전') : wMax != null ? `파고 ${formatForecastWave(wMax)}` : midText,
     !pending && vMax != null ? `풍속 ${vMax}m/s` : null,
     tide,
   ].filter(Boolean);

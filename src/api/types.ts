@@ -314,6 +314,14 @@ export type DateRange = { today: string; min: string; max: string; timezone: str
 // --- 전체 낚시터 요약 (지도·주변·조건으로 찾기). 실측(obs)과 예보(fc)는 다른 필드 ---
 export type SeaGroup = '서해' | '남해' | '동해' | '제주';
 export type ValueAt = { v: number; t: string };
+export type MidSea = {
+  region: string;
+  wave_min: number | null;
+  wave_max: number | null;
+  periods: { period: 'am' | 'pm' | 'day'; wave_min: number | null; wave_max: number | null; weather: string | null }[];
+  issued_at: string;
+};
+
 export type PlaceSummary = {
   place_id: number;
   /** 원본 좌표 의심 → 출조 후보·지도에서 제외 */
@@ -342,6 +350,8 @@ export type PlaceSummary = {
     species_count: number;
     station_km: number | null;
   } | null;
+  /** 기상청 중기해상예보 (4~10일 뒤, 해역 단위 파고 범위). 단기예보가 없는 날의 참고 — 조건 판정에 쓰지 않는다 */
+  mid_sea?: MidSea | null;
 };
 /** 자료별 마지막 수집 시각. stale 이면 출조 탐색 판단에 쓰지 않는다 */
 export type DataStatus = {
@@ -617,6 +627,8 @@ export type StopOutlook = {
   warning_is_current: boolean;
   tides: TideEvent[];
   warning_note?: string | null;
+  /** 단기예보가 없는 날의 기상청 중기해상예보 (해역 범위, 참고) */
+  mid_sea?: MidSea | null;
 };
 
 export type TripOutlook = {

@@ -90,6 +90,14 @@ export function outlookLine(o: StopOutlook | undefined, c: Criteria, lastDay: st
       tide: o.warning_note ?? null,
     };
   }
+  if (o.forecast_status === 'pending' && o.mid_sea?.wave_max != null)
+    // 4~10일 뒤: 기상청 중기해상예보 (해역 범위). 낚시터 지점 예보가 아니라 참고, 조건 판정은 하지 않는다
+    return {
+      text: `해역 예보 파고 ${o.mid_sea.wave_min ?? '?'}~${o.mid_sea.wave_max}m (${o.mid_sea.region}, 참고) · 낚시터별 예보는 출조 3일 전부터`,
+      fit: null,
+      tone: 'textSecondary',
+      tide: tideText(o),
+    };
   if (o.forecast_status === 'pending')
     return {
       text: `파고·풍속 예보 발표 전${lastDay ? ` (예보는 ${dayLabel(lastDay)}까지)` : ''} · 출조 3~4일 전부터 보여드려요`,

@@ -648,7 +648,13 @@ function SelectedCard({
   // 바다 한 줄: 특보 · 파고 · 풍속 (예보 최대, 없으면 실측). 자세한 건 상세에서
   const wave = s?.wave_fc_max?.v ?? s?.wave_obs?.v;
   const wind = s?.wind_fc_max?.v ?? s?.wind_obs?.v;
-  const seaLine = [w?.text, wave != null ? `파고 ${wave}m` : null, wind != null ? `풍속 ${wind}m/s` : null]
+  // 단기예보가 없으면 기상청 중기해상예보 (해역 범위, 참고)
+  const mid = wave == null && s?.mid_sea?.wave_max != null ? s.mid_sea : null;
+  const seaLine = [
+    w?.text,
+    wave != null ? `파고 ${wave}m` : mid ? `파고 ${mid.wave_min ?? '?'}~${mid.wave_max}m · ${mid.region} 해역 예보` : null,
+    wind != null ? `풍속 ${wind}m/s` : null,
+  ]
     .filter(Boolean)
     .join(' · ');
   const openDetail = () => router.push({ pathname: '/place/[id]', params: { id: String(place.id) } });

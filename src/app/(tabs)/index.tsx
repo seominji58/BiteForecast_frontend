@@ -127,7 +127,7 @@ export default function HomeScreen() {
                 key={d}
                 accessibilityRole="button"
                 accessibilityState={{ selected: on }}
-                accessibilityLabel={`${dayLabel(d)}${beyond(d) ? ', 예보 발표 전' : ''}`}
+                accessibilityLabel={`${dayLabel(d)}${beyond(d) ? ', 해역 예보만' : ''}`}
                 onPress={() => setDate(d)}
                 style={({ pressed }) => [styles.datePill, on && styles.datePillOn, pressed && styles.pressed]}>
                 <Text style={[styles.dateText, !on && beyond(d) && styles.dateTextPending, on && styles.dateTextOn]}>{shortDay(d)}</Text>
@@ -230,7 +230,7 @@ export default function HomeScreen() {
         open={sheet === 'date'}
         title="출조 날짜"
         value={date ?? null}
-        options={dates.map((d) => ({ value: d, label: dayLabel(d), sub: beyond(d) ? '파고·풍속 예보 발표 전' : undefined }))}
+        options={dates.map((d) => ({ value: d, label: dayLabel(d), sub: beyond(d) ? '해역 파고 예보(참고)·물때만' : undefined }))}
         onPick={(d) => setDate(d)}
         onClose={() => setSheet(null)}
       />
