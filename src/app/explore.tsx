@@ -654,6 +654,7 @@ function SelectedCard({
     w?.text,
     wave != null ? `파고 ${wave}m` : mid ? `파고 ${mid.wave_min ?? '?'}~${mid.wave_max}m · ${mid.region} 해역 예보` : null,
     wind != null ? `풍속 ${wind}m/s` : null,
+    s?.mulddae,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -694,6 +695,11 @@ function SelectedCard({
       {seaLine ? (
         <ThemedText type="small" themeColor={w?.color === 'danger' ? 'danger' : 'textSecondary'} numberOfLines={1}>
           {seaLine}
+        </ThemedText>
+      ) : null}
+      {s?.sunrise ? (
+        <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+          일출 {s.sunrise} · 일몰 {s.sunset ?? '–'}
         </ThemedText>
       ) : null}
       {check ? (

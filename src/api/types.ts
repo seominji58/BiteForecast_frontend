@@ -352,6 +352,12 @@ export type PlaceSummary = {
   } | null;
   /** 기상청 중기해상예보 (4~10일 뒤, 해역 단위 파고 범위). 단기예보가 없는 날의 참고 — 조건 판정에 쓰지 않는다 */
   mid_sea?: MidSea | null;
+  /** 물때(몇 물) — 음력 달력 계산 (서해 7물때식, 남해·동해·제주 8물때식) */
+  mulddae?: string | null;
+  mulddae_style?: string | null;
+  /** 일출·일몰 (KST HH:MM, 좌표로 계산) */
+  sunrise?: string | null;
+  sunset?: string | null;
 };
 /** 자료별 마지막 수집 시각. stale 이면 출조 탐색 판단에 쓰지 않는다 */
 export type DataStatus = {
@@ -629,6 +635,12 @@ export type StopOutlook = {
   warning_note?: string | null;
   /** 단기예보가 없는 날의 기상청 중기해상예보 (해역 범위, 참고) */
   mid_sea?: MidSea | null;
+  /** 물때(몇 물) — 음력 달력 계산 (서해 7물때식, 남해·동해·제주 8물때식) */
+  mulddae?: string | null;
+  mulddae_style?: string | null;
+  /** 일출·일몰 (KST HH:MM, 좌표로 계산) */
+  sunrise?: string | null;
+  sunset?: string | null;
 };
 
 export type TripOutlook = {

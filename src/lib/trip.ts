@@ -63,7 +63,21 @@ export type OutlookLine = {
  * - pending: 예보 발표 전 / past: 지난 날짜 / location_check: 위치 확인 필요
  * - 특보는 오늘일 때만 「지금 발효」로, 다른 날은 「그날 특보 발표 전」
  */
+/** 출조계획 장소의 그날 해황 한 줄 + 물때(몇 물)·일출·일몰 (달력 계산이라 먼 날짜에도 있다) */
 export function outlookLine(o: StopOutlook | undefined, c: Criteria, lastDay: string | null): OutlookLine {
+  const line = outlookLineBase(o, c, lastDay);
+  if (!o) return line;
+  const cal = [
+    o.mulddae ? `${o.mulddae}(${o.mulddae_style ?? '물때'})` : null,
+    o.sunrise ? `일출 ${o.sunrise}` : null,
+    o.sunset ? `일몰 ${o.sunset}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  return cal ? { ...line, tide: line.tide ? `${cal}\n${line.tide}` : cal } : line;
+}
+
+function outlookLineBase(o: StopOutlook | undefined, c: Criteria, lastDay: string | null): OutlookLine {
   const tideText = (x: StopOutlook) =>
     x.tides.length
       ? `${x.tides.map((t) => `${t.type === 'high' ? '만조' : '간조'} ${timeLabel(t.t)}`).join(' · ')} — ${x.tides[0].station_name} 관측소${

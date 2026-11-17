@@ -399,6 +399,12 @@ export function HomeActions({ onMap, onPlan }: { onMap: () => void; onPlan: () =
 }
 
 /** 오늘의 바다 미리보기 (지역 단위, 범위로 — 하나로 뭉뚱그리지 않음) */
+function mostCommon(xs: string[]): string | null {
+  const c = new Map<string, number>();
+  for (const x of xs) c.set(x, (c.get(x) ?? 0) + 1);
+  return [...c].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+}
+
 /**
  * 바다 한 줄 (홈, 서비스 개선 v2 H-B): 특보 · 파고 · 풍속 · 물때. 누르면 지도.
  * 지역 안 낚시터들의 예보 최댓값 (가장 거친 곳 기준 — 평균으로 낮춰 보이지 않게). 확인 불가를 「없음」으로 쓰지 않는다
@@ -432,10 +438,12 @@ export function SeaLine({
   const midHi = mids.flatMap((m) => (m.wave_max != null ? [m.wave_max] : []));
   const midText =
     midHi.length > 0 ? `파고 ${midLo.length ? Math.min(...midLo) : '?'}~${Math.max(...midHi)}m(해역 예보)` : null;
+  // 물때: 달력 계산값(모든 곳·모든 날짜). 지역 안에서 가장 많은 값, 없으면 공식 지수의 물때
+  const mul = mostCommon(list.flatMap((s) => (s.mulddae ? [s.mulddae] : [])));
   const parts = [
     pending ? (midText ?? '파고·풍속 발표 전') : wMax != null ? `파고 ${formatForecastWave(wMax)}` : midText,
     !pending && vMax != null ? `풍속 ${vMax}m/s` : null,
-    tide,
+    mul ?? tide,
   ].filter(Boolean);
   return (
     <Pressable

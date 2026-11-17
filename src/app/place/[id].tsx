@@ -2,7 +2,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { useConditions, useDateRange, useFavorites, usePlaces, useSetFavorite } from '@/api/queries';
+import { useConditions, useDateRange, useFavorites, usePlaces, usePlacesSummary, useSetFavorite } from '@/api/queries';
 import { AddToTripButton } from '@/components/add-to-trip';
 import { CatchStrip } from '@/components/catch-strip';
 import { CoordNote } from '@/components/coord-note';
@@ -33,6 +33,9 @@ export default function PlaceDetailScreen() {
   const cond = useConditions(place ? placeId : null, today);
   const pc = cond.data?.place;
   const [more, setMore] = useState(false);
+  // 물때(몇 물)·일출·일몰 — 전체 요약에 들어 있는 달력 계산값 (지도와 같은 응답이라 다시 받지 않는다)
+  const summary = usePlacesSummary(today);
+  const cal = summary.data?.places.find((x) => x.place_id === placeId);
 
   return (
     <StackScreen>
@@ -105,6 +108,17 @@ export default function PlaceDetailScreen() {
           {/* ② 가도 될까: 특보 + 지금 바다 */}
           <MarineWarningBanner w={pc.warning} />
           <SectionHeader title="지금 바다" />
+          {cal?.mulddae || cal?.sunrise ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              {[
+                cal.mulddae ? `물때 ${cal.mulddae} (${cal.mulddae_style}, 음력 계산)` : null,
+                cal.sunrise ? `일출 ${cal.sunrise}` : null,
+                cal.sunset ? `일몰 ${cal.sunset}` : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </ThemedText>
+          ) : null}
           <MetricTable pc={pc} />
 
           {/* ③ 자세히: 날씨·물때·지수는 펼쳐서 */}
