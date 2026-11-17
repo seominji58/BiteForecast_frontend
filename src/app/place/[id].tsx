@@ -108,10 +108,11 @@ export default function PlaceDetailScreen() {
           {/* ② 가도 될까: 특보 + 지금 바다 */}
           <MarineWarningBanner w={pc.warning} />
           <SectionHeader title="지금 바다" />
-          {cal?.mulddae || cal?.sunrise ? (
+          {cal?.mulddae || cal?.sunrise || cal?.wind_dir_fc ? (
             <ThemedText type="small" themeColor="textSecondary">
               {[
                 cal.mulddae ? `물때 ${cal.mulddae} (${cal.mulddae_style}, 음력 계산)` : null,
+                cal.wind_dir_fc && cal.wind_fc_max ? `가장 센 바람 ${cal.wind_dir_fc}풍 ${cal.wind_fc_max.v}m/s` : null,
                 cal.sunrise ? `일출 ${cal.sunrise}` : null,
                 cal.sunset ? `일몰 ${cal.sunset}` : null,
               ]

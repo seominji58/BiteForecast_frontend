@@ -52,7 +52,7 @@ export type MyTitle = {
 /** 일지 환경정보(관측소 자료)에 쓰는 지표 */
 export type Metric = 'tide_level' | 'wave_height' | 'wind_speed' | 'water_temp';
 /** 기상청 단기예보 육상 날씨 (TMP·POP·SKY·PTY). SKY·PTY 는 기상청 코드 그대로 */
-export type WeatherMetric = 'air_temp' | 'precipitation_probability' | 'sky_state' | 'precipitation_type';
+export type WeatherMetric = 'air_temp' | 'precipitation_probability' | 'sky_state' | 'precipitation_type' | 'wind_direction';
 export type DataKind = 'forecast' | 'observed';
 
 /** 일지 당시 인근 관측소 환경정보 (FR-10). value/kind 가 null 이면 「자료 없음」 */
@@ -358,6 +358,8 @@ export type PlaceSummary = {
   /** 일출·일몰 (KST HH:MM, 좌표로 계산) */
   sunrise?: string | null;
   sunset?: string | null;
+  /** 가장 센 바람 시각의 풍향 (16방위, 바람이 불어오는 쪽. 예: 북서) */
+  wind_dir_fc?: string | null;
 };
 /** 자료별 마지막 수집 시각. stale 이면 출조 탐색 판단에 쓰지 않는다 */
 export type DataStatus = {
@@ -641,6 +643,8 @@ export type StopOutlook = {
   /** 일출·일몰 (KST HH:MM, 좌표로 계산) */
   sunrise?: string | null;
   sunset?: string | null;
+  /** 가장 센 바람 시각의 풍향 (16방위, 바람이 불어오는 쪽. 예: 북서) */
+  wind_dir_fc?: string | null;
 };
 
 export type TripOutlook = {

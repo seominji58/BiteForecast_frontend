@@ -127,7 +127,7 @@ function outlookLineBase(o: StopOutlook | undefined, c: Criteria, lastDay: strin
         : '그날 특보 발표 전';
   const parts = [
     o.wave_fc_max ? `파고 최대 ${o.wave_fc_max.v}m` : '파고 예보 없음',
-    o.wind_fc_max ? `풍속 최대 ${o.wind_fc_max.v}m/s` : '풍속 예보 없음',
+    o.wind_fc_max ? `${o.wind_dir_fc ? `${o.wind_dir_fc}풍` : '풍속'} 최대 ${o.wind_fc_max.v}m/s` : '풍속 예보 없음',
     o.pop_fc_max ? `강수확률 최대 ${o.pop_fc_max.v}%` : null,
     o.precipitation_types.length ? `강수 ${o.precipitation_types.map(ptyLabel).join('·')}` : null,
     warn,

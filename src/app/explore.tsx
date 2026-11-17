@@ -653,7 +653,7 @@ function SelectedCard({
   const seaLine = [
     w?.text,
     wave != null ? `파고 ${wave}m` : mid ? `파고 ${mid.wave_min ?? '?'}~${mid.wave_max}m · ${mid.region} 해역 예보` : null,
-    wind != null ? `풍속 ${wind}m/s` : null,
+    wind != null ? `${s?.wind_fc_max && s.wind_dir_fc ? `${s.wind_dir_fc}풍` : '풍속'} ${wind}m/s` : null,
     s?.mulddae,
   ]
     .filter(Boolean)

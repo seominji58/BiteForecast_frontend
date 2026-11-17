@@ -429,6 +429,8 @@ export function SeaLine({
   const winds = list.flatMap((s) => (s.wind_fc_max ? [s.wind_fc_max.v] : []));
   const wMax = waves.length ? Math.max(...waves) : null;
   const vMax = winds.length ? Math.max(...winds) : null;
+  // 가장 바람이 센 곳의 풍향 (북서풍 등)
+  const vDir = vMax != null ? list.find((s) => s.wind_fc_max?.v === vMax)?.wind_dir_fc : null;
   const warn = list.filter((s) => s.warning_level === 'warning').length;
   const unknown = list.length > 0 && list.every((s) => s.warning_level === 'unknown');
   const warnText = unknown ? '특보 확인 불가' : warn ? `${future ? '지금 ' : ''}특보 ${warn}곳` : `${future ? '지금 ' : ''}특보 없음`;
@@ -442,7 +444,7 @@ export function SeaLine({
   const mul = mostCommon(list.flatMap((s) => (s.mulddae ? [s.mulddae] : [])));
   const parts = [
     pending ? (midText ?? '파고·풍속 발표 전') : wMax != null ? `파고 ${formatForecastWave(wMax)}` : midText,
-    !pending && vMax != null ? `풍속 ${vMax}m/s` : null,
+    !pending && vMax != null ? `${vDir ? `${vDir}풍` : '풍속'} ${vMax}m/s` : null,
     mul ?? tide,
   ].filter(Boolean);
   return (
