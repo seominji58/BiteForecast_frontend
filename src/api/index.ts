@@ -126,6 +126,11 @@ export const api = {
   createPost: (input: PostInput) => request<PostDetail>('/community/posts', { method: 'POST', body: input, auth: true }),
   updatePost: (id: number, input: PostEdit) =>
     request<PostDetail>(`/community/posts/${id}`, { method: 'PATCH', body: input, auth: true }),
+  /** 지역·장소 검색 (카카오 로컬, 서버 대행) */
+  geoSearch: (q: string) =>
+    request<{ name: string; address: string; lat: number; lon: number; category: string | null }[]>(
+      `/geo/search?q=${encodeURIComponent(q)}`,
+    ),
   catchSummary: (days = 14) => request<CatchSummary[]>(`/community/catch-summary?days=${days}`, { auth: true }),
   deletePost: (id: number) => request<void>(`/community/posts/${id}`, { method: 'DELETE', auth: true }),
   addComment: (postId: number, body: string) =>

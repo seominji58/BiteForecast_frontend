@@ -190,6 +190,10 @@ export function useUpdatePost(id: number) {
 }
 
 /** 낚시터별 최근 이용자 조황 (지도 핀·어종 칩·낚시터 카드). 글이 바뀌면 커뮤니티와 함께 갱신 */
+/** 지역·장소 검색 (2글자 이상, 같은 검색어는 10분 캐시) */
+export const useGeoSearch = (q: string) =>
+  useQuery({ queryKey: ['geo', q], queryFn: () => api.geoSearch(q), enabled: q.trim().length >= 2, staleTime: 10 * 60_000 });
+
 export const useCatchSummary = (days = 14) =>
   useQuery({ queryKey: ['community', 'catch-summary', days], queryFn: () => api.catchSummary(days), staleTime: 5 * 60_000 });
 

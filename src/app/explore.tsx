@@ -2,7 +2,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Keyboard, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { useCatchSummary, useDateRange, useFishingIndex, usePlaces, usePlacesSummary, useSpecies } from '@/api/queries';
+import { useCatchSummary, useDateRange, useGeoSearch, useFishingIndex, usePlaces, usePlacesSummary, useSpecies } from '@/api/queries';
 import type { CatchSummary, Place, PlaceSummary } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { Dropdown, type DropdownOption } from '@/components/dropdown';
@@ -418,6 +418,19 @@ export default function ExploreScreen() {
         : onlyMatching && summary.isSuccess && rows.length === 0
           ? { text: '지금 내 조건에 맞는 곳이 없어요 · 「기준 바꾸기」로 조건을 넓혀 보세요', color: 'warning' as const }
           : null;
+  // 지역·장소 (카카오): 입력이 잠깐 멈추면 검색 (글자마다 부르지 않게)
+  const [geoQ, setGeoQ] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setGeoQ(query.trim()), 400);
+    return () => clearTimeout(t);
+  }, [query]);
+  const geo = useGeoSearch(geoQ);
+  const geoHits = query.trim() && geoQ === query.trim() ? (geo.data ?? []).slice(0, 5) : [];
+  const pickGeo = (g: { lat: number; lon: number }) => {
+    Keyboard.dismiss();
+    setQuery('');
+    mapRef.current?.moveTo({ latitude: g.lat, longitude: g.lon, latitudeDelta: 0.3, longitudeDelta: 0.3 }, 300);
+  };
   const searchHits = query.trim()
     ? (places.data ?? []).filter((p) => usableForLocation(p) && matches(p, query)).slice(0, 6)
     : [];
@@ -451,7 +464,7 @@ export default function ExploreScreen() {
         <View style={styles.top} pointerEvents="box-none">
           <View style={styles.searchWrap}>
             <SearchBar value={query} onChangeText={setQuery} onClear={() => setQuery('')} placeholder="낚시터·지역 검색" />
-            {searchHits.length ? (
+            {searchHits.length || geoHits.length ? (
               <View style={[styles.hits, { backgroundColor: theme.background, borderColor: theme.border }]}>
                 {searchHits.map((p) => (
                   <Pressable key={p.id} accessibilityRole="button" onPress={() => pickPlace(p)} style={styles.hit}>
@@ -464,11 +477,35 @@ export default function ExploreScreen() {
                     </ThemedText>
                   </Pressable>
                 ))}
+                {geoHits.length ? (
+                  <ThemedText type="small" themeColor="textSecondary" style={styles.hitHead}>
+                    지역·장소 (카카오)
+                  </ThemedText>
+                ) : null}
+                {geoHits.map((g, k) => (
+                  <Pressable key={`g${k}`} accessibilityRole="button" onPress={() => pickGeo(g)} style={styles.hit}>
+                    <AppIcon name="find-map" size={IconSize.inline + 4} />
+                    <View style={styles.flex}>
+                      <ThemedText type="smallBold" numberOfLines={1}>
+                        {g.name}
+                      </ThemedText>
+                      <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                        {g.address}
+                      </ThemedText>
+                    </View>
+                  </Pressable>
+                ))}
+              </View>
+            ) : query.trim() && (geo.isFetching || geoQ !== query.trim()) ? (
+              <View style={[styles.hits, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                <ThemedText type="small" themeColor="textSecondary" style={styles.hit}>
+                  찾는 중…
+                </ThemedText>
               </View>
             ) : query.trim() ? (
               <View style={[styles.hits, { backgroundColor: theme.background, borderColor: theme.border }]}>
                 <ThemedText type="small" themeColor="textSecondary" style={styles.hit}>
-                  찾는 낚시터가 없어요
+                  찾는 낚시터·지역이 없어요
                 </ThemedText>
               </View>
             ) : null}
@@ -763,6 +800,7 @@ const styles = StyleSheet.create({
   searchWrap: { marginHorizontal: Layout.screenPadding, gap: 4 },
   hits: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4 },
   hit: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 },
+  hitHead: { paddingTop: 6 },
   sheetList: { maxHeight: 360 },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' },
   sheet: { padding: Layout.screenPadding, paddingBottom: 36, gap: 12, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
