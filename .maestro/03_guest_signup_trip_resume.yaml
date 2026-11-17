@@ -11,7 +11,7 @@ env:
 - waitForAnimationToEnd
 - tapOn: "서해"
 - scrollUntilVisible:
-    element: "제목 (선택)"
+    element: "계획 제목"
     direction: DOWN
 - tapOn: "11/10 가입흐름 검증"
 - inputText: "11/10 가입흐름 검증"
@@ -19,9 +19,9 @@ env:
 - inputText: "가입 전 작성 메모 유지 확인"
 - hideKeyboard
 - scrollUntilVisible:
-    element: "로그인하고 계획 만들기"
+    element: "로그인하고 계획 저장"
     direction: DOWN
-- tapOn: "로그인하고 계획 만들기"
+- tapOn: "로그인하고 계획 저장"
 - waitForAnimationToEnd
 - tapOn: "이메일로 회원가입"
 - waitForAnimationToEnd
@@ -49,8 +49,8 @@ env:
 - assertVisible: "11/10 가입흐름 검증"
 - assertVisible: "가입 전 작성 메모 유지 확인"
 - scrollUntilVisible:
-    element: "계획 만들기"
+    element: "계획 저장"
     direction: DOWN
-- tapOn: "계획 만들기"
+- tapOn: "계획 저장"
 - waitForAnimationToEnd
 - assertVisible: "11/10 가입흐름 검증"

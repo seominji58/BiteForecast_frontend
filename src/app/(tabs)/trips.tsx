@@ -1,15 +1,15 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useDateRange, useTripOutlook, useTrips } from '@/api/queries';
 import type { TripListItem } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
-import { Button } from '@/components/form';
 import { LoginRequired } from '@/components/login-required';
-import { Card, ErrorView, Loading, SectionHeader, TabScreen } from '@/components/screen';
+import { ErrorView, Loading, TabScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
+import { UiIcon } from '@/components/ui-icon';
 import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
@@ -26,7 +26,20 @@ export default function TripsTab() {
   const { status } = useAuth();
   const qc = useQueryClient();
   return (
-    <TabScreen title="출조계획" onRefresh={() => qc.invalidateQueries({ queryKey: ['trips'] })}>
+    <TabScreen
+      title="출조계획"
+      onRefresh={() => qc.invalidateQueries({ queryKey: ['trips'] })}
+      right={
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="새 출조계획 만들기"
+          hitSlop={8}
+          onPress={() => router.push('/trip/new')}
+          style={({ pressed }) => [styles.newBtn, pressed && styles.pressed]}>
+          <UiIcon name="add" size={18} color="#FFFFFF" />
+          <Text style={styles.newBtnText}>계획 만들기</Text>
+        </Pressable>
+      }>
       <DraftCard />
       {status === 'loading' ? <Loading /> : status === 'signed-in' ? <TripList /> : <GuestIntro />}
     </TabScreen>
@@ -58,63 +71,101 @@ function DraftCard() {
 function GuestIntro() {
   return (
     <>
-      <Button label="새 출조계획 만들기" icon="trips" onPress={() => router.push('/trip/new')} />
-      <Card style={styles.intro}>
-        <AppIcon name="trips" size={40} />
-        <ThemedText type="sectionTitle">날짜와 낚시터를 정해 두면 그날 해황을 계속 보여드려요</ThemedText>
-        {[
-          '날짜별로 낚시터를 담고 주 장소·예비 장소를 나눠요',
-          '그날의 파고·풍속 예보, 물때, 해상 특보를 장소마다 확인해요 (예보 전이면 발표 전으로 표시)',
-          '두 곳을 같은 날 나란히 비교해요',
-          '준비물을 체크하고, 다녀온 뒤 바로 기록을 남겨요',
-        ].map((t) => (
-          <ThemedText key={t} type="small" themeColor="textSecondary" style={styles.self}>
-            • {t}
-          </ThemedText>
-        ))}
-      </Card>
+      <EmptyTrips
+        title="출조계획을 만들어 보세요"
+        message={'날짜와 낚시터를 정해 두면 그날 파고·풍속·물때·특보를 계속 보여드려요.\n작성은 로그인 없이 시작하고, 저장할 때 로그인하면 돼요.'}
+      />
       <LoginRequired
         title="저장한 계획을 보려면 로그인"
-        message="계획은 계정에 저장돼 다른 기기에서도 볼 수 있어요. 작성은 로그인 없이 시작하고, 저장할 때 로그인하면 돼요."
+        message="계획은 계정에 저장돼 다른 기기에서도 볼 수 있어요."
         icon="trips"
       />
     </>
   );
 }
 
+/** 빈 상태 (레퍼런스: 그림 + 두 줄 + 「+ 계획 만들기」) */
+function EmptyTrips({ title, message }: { title: string; message: string }) {
+  const theme = useTheme();
+  return (
+    <View style={[styles.empty, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+      <View style={[styles.emptyArt, { backgroundColor: theme.tintSoft }]}>
+        <AppIcon name="trips" size={44} />
+      </View>
+      <ThemedText type="smallBold" style={styles.center}>
+        {title}
+      </ThemedText>
+      <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
+        {message}
+      </ThemedText>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => router.push('/trip/new')}
+        style={({ pressed }) => [styles.emptyBtn, pressed && styles.pressed]}>
+        <UiIcon name="add" size={16} color="#FFFFFF" />
+        <Text style={styles.newBtnText}>계획 만들기</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 function TripList() {
+  const theme = useTheme();
   const upcoming = useTrips('upcoming');
   const past = useTrips('past');
   const range = useDateRange();
-  const [showPast, setShowPast] = useState(false);
+  const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
   const today = range.data?.today ?? '';
+  const list = tab === 'upcoming' ? upcoming : past;
+  const count = (q: typeof upcoming) => (q.data ? ` (${q.data.length})` : '');
   return (
     <>
-      <Button label="새 출조계획" icon="trips" onPress={() => router.push('/trip/new')} />
-      <Button label="초대 코드로 참여" variant="secondary" onPress={() => router.push('/trip/join')} />
-      <RecordPrompt trips={[...(past.data ?? []), ...(upcoming.data ?? [])]} today={today} />
-      <SectionHeader title="다가오는 계획" />
-      {upcoming.isPending ? (
+      <View style={styles.joinRow}>
+        <Pressable accessibilityRole="button" hitSlop={8} onPress={() => router.push('/trip/join')} style={styles.join}>
+          <UiIcon name="qr" size={16} color={theme.text} />
+          <ThemedText type="smallBold">초대 코드로 참여</ThemedText>
+        </Pressable>
+      </View>
+      <View style={[styles.seg, { backgroundColor: theme.backgroundSelected }]}>
+        {(
+          [
+            ['upcoming', `예정·진행중${count(upcoming)}`],
+            ['past', `지난 계획${count(past)}`],
+          ] as const
+        ).map(([key, label]) => {
+          const on = tab === key;
+          return (
+            <Pressable
+              key={key}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: on }}
+              onPress={() => setTab(key)}
+              style={[styles.segItem, on && { backgroundColor: Brand.navy }]}>
+              <ThemedText type="smallBold" themeColor="textSecondary" style={on ? styles.onNavy : undefined}>
+                {label}
+              </ThemedText>
+            </Pressable>
+          );
+        })}
+      </View>
+      {tab === 'upcoming' ? <RecordPrompt trips={[...(past.data ?? []), ...(upcoming.data ?? [])]} today={today} /> : null}
+      {list.isPending ? (
         <Loading />
-      ) : upcoming.isError ? (
-        <ErrorView message={upcoming.error.message} onRetry={() => upcoming.refetch()} />
-      ) : upcoming.data.length === 0 ? (
-        <Card>
-          <ThemedText type="small" themeColor="textSecondary">
-            다가오는 계획이 없어요. 홈에서 출조 후보를 보고 「출조계획에 추가」를 누르거나, 위 버튼으로 만들어 보세요.
-          </ThemedText>
-        </Card>
+      ) : list.isError ? (
+        <ErrorView message={list.error.message} onRetry={() => list.refetch()} />
+      ) : list.data.length === 0 ? (
+        tab === 'upcoming' ? (
+          <EmptyTrips title="등록된 출조계획이 없어요." message="새로운 출조계획을 만들어 낚시를 준비해 보세요!" />
+        ) : (
+          <View style={[styles.empty, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+            <ThemedText type="small" themeColor="textSecondary">
+              지난 계획이 없어요.
+            </ThemedText>
+          </View>
+        )
       ) : (
-        upcoming.data.map((t) => <TripCard key={t.id} t={t} today={today} />)
+        list.data.map((t) => <TripCard key={t.id} t={t} today={today} />)
       )}
-
-      <Pressable accessibilityRole="button" onPress={() => setShowPast((v) => !v)} style={styles.pastToggle}>
-        <ThemedText type="sectionTitle">지난 계획 {past.data ? `${past.data.length}` : ''}</ThemedText>
-        <ThemedText themeColor="textSecondary">{showPast ? '접기 ▲' : '펼치기 ▼'}</ThemedText>
-      </Pressable>
-      {showPast
-        ? (past.data ?? []).map((t) => <TripCard key={t.id} t={t} today={today} />)
-        : null}
     </>
   );
 }
@@ -155,27 +206,42 @@ function RecordPrompt({ trips, today }: { trips: TripListItem[]; today: string }
     setDismissed(next);
     write(PROMPT_DISMISSED, JSON.stringify(next)).catch(() => undefined);
   };
+  const isToday = t.start_date <= today && t.end_date >= today;
   const when = t.end_date >= today ? '오늘' : t.end_date === daysAgo(today, 1) ? '어제' : dayLabel(t.end_date);
+  const first = t.first_stop;
+  const writeRecord = () =>
+    first && first.day <= today
+      ? router.push({ pathname: '/journal/new', params: { place: String(first.place.id), date: first.day, trip_stop: String(first.id) } })
+      : router.push({ pathname: '/trip/[id]', params: { id: String(t.id) } });
   return (
-    <View style={[styles.card, { borderColor: theme.tint, backgroundColor: theme.tintSoft }]}>
-      <ThemedText type="smallBold">
-        {when} 다녀온 「{t.title}」 기록을 남길까요?
-      </ThemedText>
-      <ThemedText type="small" themeColor="textSecondary">
-        못 잡은 날도 기록해 두면 다음 출조 때 그날 바다를 다시 볼 수 있어요.
-      </ThemedText>
-      <View style={styles.promptActions}>
-        <View style={styles.flex}>
-          <Button label="기록 남기기" onPress={() => router.push({ pathname: '/trip/[id]', params: { id: String(t.id) } })} />
-        </View>
-        <Pressable accessibilityRole="button" onPress={dismiss} hitSlop={8} style={styles.promptClose}>
-          <ThemedText type="small" themeColor="textSecondary">
-            다음에
-          </ThemedText>
-        </Pressable>
+    <View style={[styles.banner, { borderColor: theme.border, backgroundColor: theme.backgroundElement }]}>
+      <View style={[styles.bannerIcon, { backgroundColor: theme.tintSoft }]}>
+        <UiIcon name="calendar" size={20} />
       </View>
+      <View style={styles.flex}>
+        <ThemedText type="smallBold" numberOfLines={1}>
+          {isToday ? '오늘은 출조 예정일이에요!' : `${when} 다녀온 출조, 기록할까요?`}
+        </ThemedText>
+        <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+          {t.title}
+        </ThemedText>
+      </View>
+      <Pressable accessibilityRole="button" onPress={writeRecord} style={({ pressed }) => [styles.bannerBtn, pressed && styles.pressed]}>
+        <Text style={styles.bannerBtnText}>기록 작성</Text>
+      </Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="다음에" onPress={dismiss} hitSlop={10} style={styles.bannerClose}>
+        <ThemedText type="small" themeColor="textSecondary">
+          ✕
+        </ThemedText>
+      </Pressable>
     </View>
   );
+}
+
+/** D-day 표시 색: 진행 중·당일 = 주황, 다가오는 날 = 틸, 지난 계획 = 회색 */
+function ddayTone(t: TripListItem, today: string): string | null {
+  if (t.end_date < today) return null;
+  return t.start_date <= today ? Brand.orange : Brand.teal;
 }
 
 function TripCard({ t, today }: { t: TripListItem; today: string }) {
@@ -186,53 +252,96 @@ function TripCard({ t, today }: { t: TripListItem; today: string }) {
   const outlook = useTripOutlook(upcoming && t.first_stop ? t.id : NaN);
   const first = t.first_stop;
   const line = first && upcoming ? outlookLine(outlook.data?.stops.find((o) => o.stop_id === first.id), criteria, outlook.data?.forecast_last_day ?? null) : null;
+  const tone = ddayTone(t, today);
+  const [, m, d] = t.start_date.split('-').map(Number);
+  const where = [t.region, first ? first.place.name : null].filter(Boolean).join(' · ') || '장소 미정';
+  const ratio = t.checklist_total ? t.checklist_done / t.checklist_total : 0;
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={`${t.title}, ${dday(t.start_date, t.end_date, today)}, ${periodLabel(t.start_date, t.end_date)}, ${where}`}
       onPress={() => router.push({ pathname: '/trip/[id]', params: { id: String(t.id) } })}
-      style={({ pressed }) => [
-        styles.card,
-        { borderColor: theme.border, backgroundColor: theme.backgroundElement },
-        pressed && styles.pressed,
-      ]}>
-      <View style={styles.cardHead}>
-        <ThemedText type="smallBold" style={styles.flex} numberOfLines={1}>
-          {t.title}
-        </ThemedText>
-        <View style={[styles.dday, { backgroundColor: upcoming ? Brand.orange : theme.backgroundSelected }]}>
-          <ThemedText type="small" style={upcoming ? styles.ddayOn : undefined}>
-            {dday(t.start_date, t.end_date, today)}
+      style={({ pressed }) => [styles.card, { borderColor: theme.border, backgroundColor: theme.backgroundElement }, pressed && styles.pressed]}>
+      {/* 사진 대신 날짜 타일 (계획에 사진 자료가 없어 가짜 사진을 쓰지 않는다) */}
+      <View style={[styles.dateTile, { backgroundColor: upcoming ? Brand.navy : theme.backgroundSelected }]}>
+        <Text style={[styles.tileMonth, !upcoming && { color: theme.textSecondary }]}>{m}월</Text>
+        <Text style={[styles.tileDay, !upcoming && { color: theme.textSecondary }]}>{d}</Text>
+      </View>
+      <View style={styles.cardBody}>
+        <View style={styles.cardHead}>
+          <ThemedText type="bodyBold" style={styles.flex} numberOfLines={1}>
+            {t.title}
           </ThemedText>
+          <View style={[styles.dday, { backgroundColor: tone ?? theme.backgroundSelected }]}>
+            <Text style={[styles.ddayText, !tone && { color: theme.textSecondary }]}>{dday(t.start_date, t.end_date, today)}</Text>
+          </View>
+        </View>
+        <InfoLine icon="calendar" text={periodLabel(t.start_date, t.end_date)} />
+        <InfoLine icon="pin" text={where} />
+        {t.member_count > 1 ? (
+          <InfoLine icon="people" text={`함께 ${t.member_count}명${t.my_role === 'member' ? ' · 초대받은 계획' : ''}`} />
+        ) : null}
+        {line ? (
+          <ThemedText type="caption" themeColor={line.tone} numberOfLines={1}>
+            {line.text}
+          </ThemedText>
+        ) : null}
+        <View style={styles.progressRow}>
+          <ThemedText type="caption" themeColor="textSecondary">
+            준비물 {t.checklist_done}/{t.checklist_total}
+            {t.journal_count ? ` · 기록 ${t.journal_count}` : ''}
+          </ThemedText>
+          <View style={[styles.bar, { backgroundColor: theme.backgroundSelected }]}>
+            <View style={[styles.barFill, { width: `${ratio * 100}%`, backgroundColor: Brand.teal }]} />
+          </View>
         </View>
       </View>
-      <ThemedText type="small" themeColor="textSecondary">
-        {periodLabel(t.start_date, t.end_date)}
-      </ThemedText>
-      <ThemedText type="small" themeColor="textSecondary">
-        {t.member_count > 1 ? `함께 ${t.member_count}명${t.my_role === 'member' ? ' · 초대받은 계획' : ''} · ` : ''}
-        장소 {t.stop_count}곳 · 준비물 {t.checklist_done}/{t.checklist_total}
-        {t.journal_count ? ` · 기록 ${t.journal_count}개` : ''}
-      </ThemedText>
-      {first ? (
-        <ThemedText type="small" numberOfLines={2}>
-          {dayLabel(first.day)} {first.place.name}
-          {line ? <ThemedText type="small" themeColor={line.tone}>{` · ${line.text}`}</ThemedText> : null}
-        </ThemedText>
-      ) : null}
+      <UiIcon name="chevron" size={18} color={theme.textSecondary} />
     </Pressable>
+  );
+}
+
+function InfoLine({ icon, text }: { icon: 'calendar' | 'pin' | 'people'; text: string }) {
+  const theme = useTheme();
+  return (
+    <View style={styles.info}>
+      <UiIcon name={icon} size={15} color={theme.textSecondary} />
+      <ThemedText type="small" themeColor="textSecondary" numberOfLines={1} style={styles.flex}>
+        {text}
+      </ThemedText>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  promptActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  promptClose: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 },
-  self: { alignSelf: 'stretch' },
+  center: { textAlign: 'center' },
   pressed: { opacity: 0.7 },
-  intro: { alignItems: 'center', gap: 8 },
-  pastToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 44 },
-  card: { borderWidth: 1, borderRadius: 12, padding: 12, gap: 4 },
-  cardHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dday: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2 },
-  ddayOn: { color: '#fff', fontWeight: '700' },
+  onNavy: { color: Brand.onNavy },
+  newBtn: { flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: Brand.orange, borderRadius: 999, paddingLeft: 10, paddingRight: 14, minHeight: 34 },
+  newBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  joinRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: -4, marginBottom: -4 },
+  join: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36 },
+  seg: { flexDirection: 'row', borderRadius: 999, padding: 4, gap: 4 },
+  segItem: { flex: 1, minHeight: 40, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  banner: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 14, padding: 12 },
+  bannerIcon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  bannerBtn: { backgroundColor: Brand.orange, borderRadius: 10, paddingHorizontal: 12, minHeight: 36, justifyContent: 'center' },
+  bannerBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  bannerClose: { minHeight: 36, justifyContent: 'center', paddingLeft: 2 },
+  card: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 14, padding: 12 },
+  dateTile: { width: 64, height: 76, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  tileMonth: { color: Brand.onNavySecondary, fontSize: 13, fontWeight: '700' },
+  tileDay: { color: '#FFFFFF', fontSize: 28, lineHeight: 32, fontWeight: '800' },
+  cardBody: { flex: 1, gap: 3 },
+  cardHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
+  dday: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
+  ddayText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
+  info: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  progressRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  bar: { flex: 1, height: 6, borderRadius: 3, overflow: 'hidden' },
+  barFill: { height: 6, borderRadius: 3 },
+  empty: { alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 14, paddingVertical: 24, paddingHorizontal: 16 },
+  emptyArt: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  emptyBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: Brand.orange, borderRadius: 999, paddingHorizontal: 16, minHeight: 40, marginTop: 6 },
 });

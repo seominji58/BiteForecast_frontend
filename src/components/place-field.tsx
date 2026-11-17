@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { usePlaces } from '@/api/queries';
+import type { Place } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { PlacePicker } from '@/components/place-picker';
 import { ThemedText } from '@/components/themed-text';
@@ -16,10 +17,13 @@ export function PlaceField({
   value,
   onChange,
   placeholder = '낚시터 선택',
+  trigger,
 }: {
   value: number | null;
   onChange: (id: number | null) => void;
   placeholder?: string;
+  /** 칸 대신 다른 모양(목록 행 등)으로 열 때 */
+  trigger?: (open: () => void, place: Place | null) => React.ReactNode;
 }) {
   const places = usePlaces();
   const theme = useTheme();
@@ -28,6 +32,7 @@ export function PlaceField({
 
   return (
     <>
+      {trigger ? trigger(() => setOpen(true), place) : (
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={place ? `낚시터: ${place.name}, 바꾸기` : placeholder}
@@ -48,6 +53,7 @@ export function PlaceField({
           {place ? '바꾸기' : '찾기'}
         </ThemedText>
       </Pressable>
+      )}
       <PlacePicker
         visible={open}
         title="낚시터 선택"

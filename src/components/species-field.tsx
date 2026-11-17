@@ -23,10 +23,13 @@ export function SpeciesField({
   value,
   onChange,
   placeholder = '어종 검색',
+  trigger,
 }: {
   value: SpeciesValue;
   onChange: (v: SpeciesValue) => void;
   placeholder?: string;
+  /** 칸 대신 다른 모양(목록 행 등)으로 열 때: 여는 함수와 지금 고른 이름을 받아 그린다 */
+  trigger?: (open: () => void, name: string | null) => React.ReactNode;
 }) {
   const species = useSpecies();
   const theme = useTheme();
@@ -37,6 +40,7 @@ export function SpeciesField({
 
   return (
     <>
+      {trigger ? trigger(() => setOpen(true), name ?? null) : (
       <View style={[styles.box, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
         <Pressable
           accessibilityRole="button"
@@ -75,6 +79,7 @@ export function SpeciesField({
           </Pressable>
         ) : null}
       </View>
+      )}
 
       <SearchSelect<Species>
         visible={open}

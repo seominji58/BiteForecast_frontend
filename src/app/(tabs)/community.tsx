@@ -1,6 +1,6 @@
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
 
 import { usePlaces, usePostPages, useSpecies } from '@/api/queries';
 import type { PostCategory } from '@/api/types';
@@ -8,15 +8,16 @@ import { AppIcon } from '@/components/app-icon';
 import { Dropdown, type DropdownOption } from '@/components/dropdown';
 import { PostCard } from '@/components/post-card';
 import { Button } from '@/components/form';
-import { Card, EmptyView, ErrorView, Loading, TabScreen } from '@/components/screen';
+import { OptionSheet } from '@/components/option-sheet';
+import { ErrorView, Loading, TabScreen } from '@/components/screen';
+import { UiIcon } from '@/components/ui-icon';
+import type { AppIconName } from '@/constants/icons';
 import { ThemedText } from '@/components/themed-text';
 import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { CATEGORY } from '@/lib/community';
 import { sidoOf } from '@/lib/place';
-import { useExploreRegion, useHomeSpecies } from '@/lib/prefs';
-import { speciesByCode } from '@/lib/species';
 
 type Sort = 'popular' | 'latest';
 type CatFilter = PostCategory | 'all';
@@ -30,11 +31,22 @@ const FILTER_OPTIONS: DropdownOption<CatFilter>[] = [
   })),
 ];
 
-// 커뮤니티 (재설계 v2 §7): [카테고리 ▾] [최신 · 인기] 한 줄 + 글 목록 + 글쓰기
-// 처음 열면 홈에서 고른 어종·지도에서 고른 시·도를 필터 기본값으로 쓴다 (서비스 개선 설계 C3). 「필터 해제」로 전체 보기
+const CAT_TABS: { value: CatFilter; label: string }[] = [
+  { value: 'all', label: '전체' },
+  { value: 'catch', label: '조황' },
+  { value: 'question', label: '질문' },
+  { value: 'tip', label: '정보·팁' },
+  { value: 'free', label: '자유' },
+];
+
+/**
+ * 커뮤니티 (2026-11-17 레퍼런스): [카테고리 탭] → [지역·어종 필터 ▾ · 최신순 ▾] → 글 카드 → 글쓰기(둥근 버튼).
+ * 처음에는 전체 글(관심 어종·지역을 자동으로 걸지 않는다). 필터를 고르면 그 조건만, 초기화로 전체.
+ * 빈 화면을 구분: 글이 아예 없음 / 필터 결과 없음 / 인기글 없음 — 가짜 글은 만들지 않는다.
+ * 다른 화면에서 ?category=tip 으로 카테고리를 정해 들어올 수 있다.
+ */
 export default function CommunityScreen() {
   const theme = useTheme();
-  // 홈 「시즌별 어종과 낚시 팁」 등에서 카테고리를 지정해 들어올 수 있다: /community?category=tip
   const paramCat = useLocalSearchParams<{ category?: string }>().category;
   const [filter, setFilter] = useState<CatFilter>('all');
   const [lastParam, setLastParam] = useState<string | undefined>(undefined);
@@ -43,17 +55,9 @@ export default function CommunityScreen() {
     if (paramCat && FILTER_OPTIONS.some((o) => o.value === paramCat)) setFilter(paramCat as CatFilter);
   }
   const [sort, setSort] = useState<Sort>('latest');
-  // null = 아직 직접 고르지 않음 → 관심 값(홈 어종·지도 시·도)을 따른다
-  const [sidoSel, setSido] = useState<string | null>(null);
-  const [speciesSel, setSpeciesCode] = useState<string | null>(null);
-  const [exploreRegion] = useExploreRegion();
-  const [homeSpeciesCode] = useHomeSpecies();
-  const homeSp = speciesByCode(homeSpeciesCode);
-  const interestSpecies = homeSp ? (homeSp.speciesCode ?? homeSp.name) : 'all';
-  // 지도 지역이 해역(sea:서해)이면 시·도 필터로 쓸 수 없어 전체로 본다
-  const sido = sidoSel ?? (exploreRegion.startsWith('sea:') ? 'all' : exploreRegion);
-  const speciesCode = speciesSel ?? interestSpecies;
-  const byInterest = sidoSel == null && speciesSel == null && (sido !== 'all' || speciesCode !== 'all');
+  const [sido, setSido] = useState('all');
+  const [speciesCode, setSpeciesCode] = useState('all');
+  const [sheet, setSheet] = useState<'filter' | 'sort' | null>(null);
   const category = filter === 'all' ? null : filter;
   const pages = usePostPages(category, sort, {
     sido: sido === 'all' ? null : sido,
@@ -63,92 +67,110 @@ export default function CommunityScreen() {
   const { signedIn } = useAuth();
   const places = usePlaces();
   const species = useSpecies();
+  const write = () => router.push(signedIn ? '/community/new' : '/login');
 
   // 지역 선택지: 낚시터가 많은 시·도 순
   const sidoOptions = useMemo<DropdownOption<string>[]>(() => {
     const counts = new Map<string, number>();
     for (const p of places.data ?? []) counts.set(sidoOf(p), (counts.get(sidoOf(p)) ?? 0) + 1);
     const list = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([s]) => ({ value: s, label: s }));
-    if (sido !== 'all' && !counts.has(sido)) list.push({ value: sido, label: sido });
     return [{ value: 'all', label: '전체 지역' }, ...list];
-  }, [places.data, sido]);
+  }, [places.data]);
   const speciesOptions = useMemo<DropdownOption<string>[]>(() => {
     const list = (species.data ?? []).map((sp) => ({ value: sp.code, label: sp.name_ko.replace(/\(.*\)/, '') }));
-    // 홈 어종이 서버 어종 목록에 없으면 (직접 입력 어종) 이름으로 거른다
-    if (speciesCode !== 'all' && !list.some((o) => o.value === speciesCode))
-      list.push({ value: speciesCode, label: homeSp?.name ?? speciesCode });
     return [{ value: 'all', label: '전체 어종' }, ...list];
-  }, [species.data, speciesCode, homeSp?.name]);
+  }, [species.data]);
   const filtered = sido !== 'all' || speciesCode !== 'all';
+  const filterText = filtered
+    ? [sido !== 'all' ? sido : null, speciesCode !== 'all' ? (speciesOptions.find((o) => o.value === speciesCode)?.label ?? speciesCode) : null]
+        .filter(Boolean)
+        .join(' · ')
+    : '지역·어종 전체';
+  const reset = () => {
+    setSido('all');
+    setSpeciesCode('all');
+  };
 
   return (
     <View style={styles.flex}>
-      <TabScreen title="커뮤니티">
-        <View style={styles.filters}>
-          <Dropdown label="카테고리" value={filter} options={FILTER_OPTIONS} onChange={setFilter} compact />
-          <Dropdown label="지역" value={sido} options={sidoOptions} onChange={setSido} compact />
-          <Dropdown label="어종" value={speciesCode} options={speciesOptions} onChange={setSpeciesCode} compact />
+      <TabScreen title="커뮤니티" right={<View />} onRefresh={() => pages.refetch()}>
+        <View style={[styles.tabs, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+          {CAT_TABS.map((c) => {
+            const on = filter === c.value;
+            return (
+              <Pressable
+                key={c.value}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: on }}
+                onPress={() => setFilter(c.value)}
+                style={[styles.tab, on && { backgroundColor: Brand.navy }]}>
+                <ThemedText type="smallBold" themeColor="textSecondary" style={on ? styles.onNavy : undefined} numberOfLines={1}>
+                  {c.label}
+                </ThemedText>
+              </Pressable>
+            );
+          })}
         </View>
+
         <View style={styles.toolbar}>
-          <ThemedText type="small" themeColor="textSecondary" style={styles.flex}>
-            {posts.isSuccess ? `글 ${posts.data!.length}${pages.hasNextPage ? '개 이상' : '개'}` : ''}
-            {byInterest ? ' · 관심 어종·지역' : filtered ? ' · 필터 적용 중' : ''}
-          </ThemedText>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`필터: ${filterText}, 바꾸기`}
+            onPress={() => setSheet('filter')}
+            style={({ pressed }) => [
+              styles.filterBtn,
+              { backgroundColor: filtered ? theme.tintSoft : theme.backgroundElement, borderColor: filtered ? theme.tint : theme.border },
+              pressed && styles.pressed,
+            ]}>
+            <UiIcon name="filter" size={16} color={filtered ? theme.tint : theme.text} />
+            <ThemedText type="smallBold" themeColor={filtered ? 'tint' : 'text'} numberOfLines={1} style={styles.shrink}>
+              {filterText}
+            </ThemedText>
+            <UiIcon name="down" size={14} color={theme.textSecondary} />
+          </Pressable>
           {filtered ? (
-            <Pressable
-              accessibilityRole="button"
-              hitSlop={8}
-              onPress={() => {
-                setSido('all');
-                setSpeciesCode('all');
-              }}>
-              <ThemedText type="smallBold" themeColor="tint">
-                필터 해제
+            <Pressable accessibilityRole="button" hitSlop={8} onPress={reset} style={styles.reset}>
+              <ThemedText type="small" themeColor="textSecondary">
+                초기화
               </ThemedText>
             </Pressable>
           ) : null}
-          <View style={[styles.segment, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
-            {(
-              [
-                ['latest', '최신'],
-                ['popular', '인기'],
-              ] as const
-            ).map(([key, label]) => {
-              const on = sort === key;
-              return (
-                <Pressable
-                  key={key}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: on }}
-                  onPress={() => setSort(key)}
-                  style={[styles.segItem, on && { backgroundColor: Brand.navy }]}>
-                  <ThemedText type="smallBold" style={on ? { color: Brand.onNavy } : undefined} themeColor="textSecondary">
-                    {label}
-                  </ThemedText>
-                </Pressable>
-              );
-            })}
-          </View>
+          <View style={styles.flex} />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`정렬: ${sort === 'latest' ? '최신순' : '인기순'}, 바꾸기`}
+            onPress={() => setSheet('sort')}
+            style={({ pressed }) => [styles.filterBtn, { backgroundColor: theme.backgroundElement, borderColor: theme.border }, pressed && styles.pressed]}>
+            <ThemedText type="smallBold">{sort === 'latest' ? '최신순' : '인기순'}</ThemedText>
+            <UiIcon name="down" size={14} color={theme.textSecondary} />
+          </Pressable>
         </View>
 
         {posts.isPending && <Loading />}
         {posts.isError && <ErrorView message={posts.error.message} onRetry={() => posts.refetch()} />}
         {posts.isSuccess &&
           (posts.data!.length === 0 ? (
-            filtered || category || sort === 'popular' ? (
-              <EmptyView
-                message={
-                  sort === 'popular'
-                    ? '최근 30일 인기글이 없어요.'
-                    : byInterest
-                      ? '관심 어종·지역의 글이 아직 없어요. 「필터 해제」로 전체 글을 볼 수 있어요.'
-                      : filtered
-                        ? '조건에 맞는 글이 없어요. 지역·어종 필터를 바꾸거나 해제해 보세요.'
-                      : `${CATEGORY[category!].label} 글이 아직 없어요. 첫 글을 남겨 보세요.`
-                }
+            filtered ? (
+              <EmptyBox
+                icon="find-map"
+                title="조건에 맞는 글이 없어요."
+                message={`${filterText}${category ? ` · ${CATEGORY[category].label}` : ''} 글이 아직 없어요.`}
+                action={{ label: '필터 초기화', onPress: reset, outline: true }}
+              />
+            ) : sort === 'popular' ? (
+              <EmptyBox
+                icon="like"
+                title="최근 30일 인기글이 없어요."
+                message="좋아요·댓글이 모이면 여기에 보여요."
+                action={{ label: '최신순 보기', onPress: () => setSort('latest'), outline: true }}
               />
             ) : (
-              <CommunityIntro onWrite={() => router.push(signedIn ? '/community/new' : '/login')} />
+              <EmptyBox
+                icon="cat-catch"
+                title={category ? `${CATEGORY[category].label} 글이 아직 없어요.` : '아직 등록된 이야기가 없어요.'}
+                message={'첫 글을 작성해\n낚시 이야기를 공유해 보세요!'}
+                action={{ label: '글쓰기', onPress: write }}
+              />
             )
           ) : (
             posts.data!.map((p) => (
@@ -173,65 +195,117 @@ export default function CommunityScreen() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="글쓰기"
-        onPress={() => router.push(signedIn ? '/community/new' : '/login')}
+        onPress={write}
         style={({ pressed }) => [styles.fab, { opacity: pressed ? 0.85 : 1 }]}>
-        <AppIcon name="comment" size={20} badge />
-        <ThemedText type="smallBold" style={styles.fabText}>
-          글쓰기
+        <UiIcon name="pencil" size={24} color="#FFFFFF" />
+      </Pressable>
+
+      {/* 지역·어종 필터 시트 */}
+      <Modal visible={sheet === 'filter'} transparent animationType="slide" onRequestClose={() => setSheet(null)}>
+        <Pressable style={styles.backdrop} onPress={() => setSheet(null)} accessibilityLabel="닫기" />
+        <View style={[styles.sheet, { backgroundColor: theme.background }]}>
+          <ThemedText type="sectionTitle">필터</ThemedText>
+          <ThemedText type="smallBold">지역</ThemedText>
+          <Dropdown label="지역" value={sido} options={sidoOptions} onChange={setSido} />
+          <ThemedText type="smallBold">어종</ThemedText>
+          <Dropdown label="어종" value={speciesCode} options={speciesOptions} onChange={setSpeciesCode} />
+          <View style={styles.sheetActions}>
+            <View style={styles.flex}>
+              <Button label="초기화" variant="secondary" onPress={reset} />
+            </View>
+            <View style={styles.flex}>
+              <Button label="적용" onPress={() => setSheet(null)} />
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <OptionSheet<Sort>
+        open={sheet === 'sort'}
+        title="정렬"
+        value={sort}
+        options={[
+          { value: 'latest', label: '최신순' },
+          { value: 'popular', label: '인기순', sub: '최근 30일 좋아요·댓글이 많은 글' },
+        ]}
+        onPick={setSort}
+        onClose={() => setSheet(null)}
+      />
+    </View>
+  );
+}
+
+/** 빈 상태 (레퍼런스: 그림 · 두 줄 · 주황 버튼) */
+function EmptyBox({
+  icon,
+  title,
+  message,
+  action,
+}: {
+  icon: AppIconName;
+  title: string;
+  message: string;
+  action: { label: string; onPress: () => void; outline?: boolean };
+}) {
+  const theme = useTheme();
+  return (
+    <View style={[styles.empty, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+      <View style={[styles.emptyArt, { backgroundColor: theme.tintSoft }]}>
+        <AppIcon name={icon} size={44} />
+      </View>
+      <ThemedText type="smallBold" style={styles.center}>
+        {title}
+      </ThemedText>
+      <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
+        {message}
+      </ThemedText>
+      <Pressable
+        accessibilityRole="button"
+        onPress={action.onPress}
+        style={({ pressed }) => [
+          styles.emptyBtn,
+          action.outline ? { borderWidth: 1.5, borderColor: theme.tint } : { backgroundColor: Brand.orange },
+          pressed && styles.pressed,
+        ]}>
+        <ThemedText type="smallBold" style={action.outline ? { color: theme.tint } : styles.onNavy}>
+          {action.label}
         </ThemedText>
       </Pressable>
     </View>
   );
 }
 
-/** 글이 하나도 없을 때: 가짜 글 대신 이 공간에서 무엇을 하는지 안내 */
-function CommunityIntro({ onWrite }: { onWrite: () => void }) {
-  return (
-    <Card>
-      <ThemedText type="smallBold">입질예보 커뮤니티에 첫 글을 남겨 주세요</ThemedText>
-      {(Object.keys(CATEGORY) as PostCategory[]).map((k) => (
-        <View key={k} style={styles.introRow}>
-          <AppIcon name={CATEGORY[k].icon} size={22} />
-          <ThemedText type="small" style={styles.flex}>
-            <ThemedText type="smallBold">{CATEGORY[k].label}</ThemedText>
-            {k === 'catch'
-              ? '  오늘 잡은 물고기 사진과 장소·어종. 인증받은 기록은 「✓ 인증 조황」으로 공유돼요.'
-              : k === 'question'
-                ? '  채비·포인트·물때 등 궁금한 점'
-                : '  시즌별 어종, 채비 요령, 지역 소식'}
-          </ThemedText>
-        </View>
-      ))}
-      <Button label="글쓰기" onPress={onWrite} />
-    </Card>
-  );
-}
-
 const styles = StyleSheet.create({
-  introRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   flex: { flex: 1 },
+  shrink: { flexShrink: 1 },
+  center: { textAlign: 'center' },
   pressed: { opacity: 0.8 },
-  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  toolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  segment: { flexDirection: 'row', borderRadius: 999, padding: 3, borderWidth: StyleSheet.hairlineWidth },
-  segItem: { paddingHorizontal: 14, paddingVertical: 5, borderRadius: 999 },
-  fabSpace: { height: 56 },
+  onNavy: { color: '#FFFFFF' },
+  tabs: { flexDirection: 'row', borderWidth: 1, borderRadius: 14, padding: 4, gap: 2 },
+  tab: { flex: 1, minHeight: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 },
+  toolbar: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  filterBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, minHeight: 38, maxWidth: 220 },
+  reset: { minHeight: 38, justifyContent: 'center' },
+  empty: { alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 16, paddingVertical: 28, paddingHorizontal: 16 },
+  emptyArt: { width: 84, height: 84, borderRadius: 42, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  emptyBtn: { borderRadius: 999, paddingHorizontal: 20, minHeight: 40, justifyContent: 'center', marginTop: 6 },
+  fabSpace: { height: 64 },
   fab: {
     position: 'absolute',
     right: 16,
     bottom: 16,
-    flexDirection: 'row',
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'center',
     backgroundColor: Brand.orange,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 999,
     shadowColor: '#000',
     shadowOpacity: 0.2,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
     elevation: 4,
   },
-  fabText: { color: '#fff' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(5,20,40,0.45)' },
+  sheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 36, gap: 10 },
+  sheetActions: { flexDirection: 'row', gap: 8, marginTop: 8 },
 });

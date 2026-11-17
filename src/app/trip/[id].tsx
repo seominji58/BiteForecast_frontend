@@ -1,6 +1,8 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { useHeaderHeight } from 'expo-router/react-navigation';
+import { Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api } from '@/api';
 import { useDateRange, useDeleteTrip, useFavorites, useTrip, useTripMutation, useTripOutlook } from '@/api/queries';
@@ -12,10 +14,10 @@ import { PickerField } from '@/components/date-time-field';
 import { Button, Chip, Field, TextField } from '@/components/form';
 import { AuthGate } from '@/components/login-required';
 import { PlacePicker } from '@/components/place-picker';
-import { Card, ErrorView, Loading, SectionHeader, StackScreen } from '@/components/screen';
-import { SpeciesImage } from '@/components/species';
+import { Card, ErrorView, Loading, SectionHeader } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { UiIcon } from '@/components/ui-icon';
 import { CatchStrip } from '@/components/catch-strip';
 import { ownerName, participants, TripMembers } from '@/components/trip-members';
 import { Brand, IconSize } from '@/constants/theme';
@@ -59,7 +61,10 @@ function TripBody({
     () => new Set(days.length <= 2 ? days : [days.find((d) => d >= today) ?? days[0]]),
   );
   // 한 화면에 모든 것을 늘어놓지 않게 탭으로 나눈다: 장소 · 함께 · 준비물
-  const [tab, setTab] = useState<'plan' | 'members' | 'checklist'>('plan');
+  const [tab, setTab] = useState<'overview' | 'plan' | 'members' | 'checklist'>('overview');
+  const insets = useSafeAreaInsets();
+  const headerHeight = useHeaderHeight();
+  const [scrolled, setScrolled] = useState(false);
   const allOpen = openDays.size === days.length;
   const [editing, setEditing] = useState<TripStop | null>(null);
   const favorites = useFavorites();
@@ -81,84 +86,148 @@ function TripBody({
       },
     ]);
 
+  // 개요에 보여줄 대표 장소: 날짜순 → 주 장소 먼저
+  const ordered = [...trip.stops].sort((x, y) =>
+    x.day === y.day ? (x.role === y.role ? x.sort_order - y.sort_order : x.role === 'main' ? -1 : 1) : x.day.localeCompare(y.day),
+  );
+  const firstStop = ordered[0] ?? null;
+  const done = trip.checklist.filter((c) => c.checked).length;
+  const people = participants(trip).length;
+  const recordStop = ordered.find((s) => s.day <= today) ?? null;
+  const writeRecord = () => {
+    if (recordStop)
+      router.push({ pathname: '/journal/new', params: { place: String(recordStop.place.id), date: recordStop.day, trip_stop: String(recordStop.id) } });
+    else if (trip.start_date <= today) router.push('/journal/new');
+    else Alert.alert('출조 날부터 기록할 수 있어요', `${dayLabel(trip.start_date)}부터 이 계획의 기록을 남길 수 있어요.`);
+  };
+  const speciesName = trip.species_name ?? trip.species_etc;
+
   return (
-    <StackScreen>
-      <Stack.Screen options={{ title: '출조계획' }} />
-      {/* 머리: 제목·기간·D-day */}
-      <View style={[styles.head, { backgroundColor: Brand.navy }]}>
-        <View style={styles.headTop}>
-          <ThemedText type="small" style={styles.onNavySub}>
-            {owner ? '나의 출조 계획' : `${ownerName(trip) ?? '친구'}님의 출조 계획`}
-          </ThemedText>
+    <ThemedView style={styles.flex}>
+      <Stack.Screen
+        options={{
+          // 사진 위에서는 투명, 스크롤해서 사진이 지나가면 네이비로 채우고 제목을 보여준다 (글자 겹침 방지)
+          title: scrolled ? trip.title : '',
+          headerTransparent: true,
+          headerStyle: { backgroundColor: scrolled ? Brand.navy : 'transparent' },
+          headerRight: owner
+            ? () => (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="계획 수정"
+                  hitSlop={10}
+                  onPress={() => router.push({ pathname: '/trip/new', params: { id: String(trip.id) } })}>
+                  <UiIcon name="edit" size={22} color="#FFFFFF" />
+                </Pressable>
+              )
+            : undefined,
+        }}
+      />
+      <ScrollView
+        onScroll={(e) => {
+          const y = e.nativeEvent.contentOffset.y > 120;
+          if (y !== scrolled) setScrolled(y);
+        }}
+        scrollEventThrottle={64}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets>
+        {/* 머리: 바다 사진(분위기) 위에 D-day · 제목 · 날짜·지역·어종 */}
+        <View style={[styles.hero, { paddingTop: headerHeight + 12 }]}>
+          <Image source={require('../../../assets/home-backgrounds/dusk.png')} resizeMode="cover" style={StyleSheet.absoluteFill} />
+          <View pointerEvents="none" style={styles.heroShade} />
           <View style={styles.dday}>
-            <ThemedText type="smallBold" style={styles.ddayText}>
-              {dday(trip.start_date, trip.end_date, today)}
-            </ThemedText>
+            <Text style={styles.ddayText}>{dday(trip.start_date, trip.end_date, today)}</Text>
+          </View>
+          {!owner ? <Text style={styles.heroSub}>{`${ownerName(trip) ?? '친구'}님의 출조 계획`}</Text> : null}
+          <Text style={styles.heroTitle} accessibilityRole="header" numberOfLines={2}>
+            {trip.title}
+          </Text>
+          <View style={styles.heroMeta}>
+            <HeroMeta icon="calendar" text={periodLabel(trip.start_date, trip.end_date)} />
+            {trip.region ? <HeroMeta icon="pin" text={trip.region} /> : null}
+            {speciesName ? <HeroMeta icon="fish" text={speciesName} /> : null}
           </View>
         </View>
-        <View style={styles.titleRow}>
-          {speciesForRecord(trip.species_code, trip.species_etc) ? (
-            // 목표 어종 그림 (기준표 코드 또는 기타 입력 이름으로 찾음)
-            <View style={styles.speciesArt}>
-              <SpeciesImage code={speciesForRecord(trip.species_code, trip.species_etc)!.code} size={44} />
-            </View>
-          ) : null}
-          <ThemedText type="sectionTitle" style={[styles.onNavy, styles.flex1]}>
-            {trip.title}
-          </ThemedText>
+
+        <View style={[styles.tabs, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+          {(
+            [
+              ['overview', '개요'],
+              ['plan', '장소·예보'],
+              ['checklist', '준비물'],
+              ['members', '동행'],
+            ] as const
+          ).map(([key, label]) => {
+            const on = tab === key;
+            return (
+              <Pressable
+                key={key}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: on }}
+                onPress={() => setTab(key)}
+                style={[styles.tab, on && { backgroundColor: Brand.navy }]}>
+                <ThemedText type="smallBold" themeColor="textSecondary" style={on ? styles.onNavy : undefined} numberOfLines={1}>
+                  {label}
+                </ThemedText>
+              </Pressable>
+            );
+          })}
         </View>
-        <ThemedText type="small" style={styles.onNavySub}>
-          {periodLabel(trip.start_date, trip.end_date)}
-          {trip.region ? ` · ${trip.region}` : ''}
-          {trip.species_name || trip.species_etc ? ` · ${trip.species_name ?? trip.species_etc}` : ''}
-        </ThemedText>
-        {trip.memo ? (
-          <ThemedText type="small" style={styles.onNavy}>
-            {trip.memo}
-          </ThemedText>
-        ) : null}
-        {owner ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.push({ pathname: '/trip/new', params: { id: String(trip.id) } })}
-            style={({ pressed }) => [styles.editBtn, pressed && styles.pressed]}>
-            <ThemedText type="smallBold" style={styles.onNavy}>
-              계획 수정
-            </ThemedText>
-          </Pressable>
-        ) : null}
-      </View>
 
-      <View style={[styles.tabs, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
-        {(
-          [
-            ['plan', `장소 ${trip.stops.length}`],
-            ['members', `함께 ${participants(trip).length}명`],
-            ['checklist', `준비물 ${trip.checklist.filter((c) => c.checked).length}/${trip.checklist.length}`],
-          ] as const
-        ).map(([key, label]) => {
-          const on = tab === key;
-          return (
-            <Pressable
-              key={key}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: on }}
-              onPress={() => setTab(key)}
-              style={[styles.tab, on && { backgroundColor: Brand.navy }]}>
-              <ThemedText type="smallBold" themeColor="textSecondary" style={on ? styles.onNavy : undefined}>
-                {label}
+        {tab === 'overview' ? (
+          <>
+            <Card style={styles.overview}>
+              <OverviewRow
+                icon="pin"
+                label="출조 장소"
+                value={firstStop ? `${firstStop.place.name}${trip.stops.length > 1 ? ` 외 ${trip.stops.length - 1}곳` : ''}` : '장소 미정'}
+                onPress={firstStop ? () => setTab('plan') : undefined}
+                action={
+                  owner && !firstStop
+                    ? { label: '낚시터 추가', onPress: () => setPickingDay(days.find((d) => d >= today) ?? days[0]) }
+                    : undefined
+                }
+              />
+              <OverviewRow icon="check" label="준비물" value={`${done}/${trip.checklist.length}`} onPress={() => setTab('checklist')} divider>
+                <View style={[styles.bar, { backgroundColor: theme.backgroundSelected }]}>
+                  <View style={[styles.barFill, { width: `${trip.checklist.length ? (done / trip.checklist.length) * 100 : 0}%` }]} />
+                </View>
+              </OverviewRow>
+              <OverviewRow icon="people" label="동행" value={`${people}명`} onPress={() => setTab('members')} divider />
+              {trip.memo ? <OverviewRow icon="memo" label="메모" value={trip.memo} divider /> : null}
+            </Card>
+
+            <View style={styles.seaHead}>
+              <ThemedText type="sectionTitle" style={styles.flex}>
+                해황 예보{firstStop ? ` (${dayLabel(firstStop.day).split(' ')[0]})` : ''}
               </ThemedText>
-            </Pressable>
-          );
-        })}
-      </View>
+              {outlook?.data_status.forecast_issued_at ? (
+                <ThemedText type="caption" themeColor="textSecondary">
+                  {formatIssued(outlook.data_status.forecast_issued_at)} 발표
+                </ThemedText>
+              ) : null}
+            </View>
+            {firstStop ? (
+              <SeaTiles stop={firstStop} o={byStop.get(firstStop.id)} lastDay={outlook?.forecast_last_day ?? null} criteria={criteria} />
+            ) : (
+              <Card>
+                <ThemedText type="small" themeColor="textSecondary">
+                  낚시터를 추가하면 그날 파고·풍속·물때·특보를 보여드려요.
+                </ThemedText>
+              </Card>
+            )}
+            <ThemedText type="caption" themeColor="textSecondary">
+              {outlook ? `${freshnessLine(outlook.data_status)} · ` : ''}해황·물때는 참고 자료예요. 출조 전 특보를 꼭 확인하세요.
+            </ThemedText>
+          </>
+        ) : null}
 
-      {tab === 'plan' ? (
-        <>
-          <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-            내 기준: {criteriaLabel(criteria)}
-          </ThemedText>
-
+        {tab === 'plan' ? (
+          <>
+            <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+              내 기준: {criteriaLabel(criteria)}
+            </ThemedText>
           {/* 날짜별 장소 — 날짜마다 접기·펼치기 (7일 × 5곳이어도 화면이 길어지지 않게) */}
           {days.length > 1 ? (
             <Pressable
@@ -335,23 +404,44 @@ function TripBody({
             />
           ) : null}
 
-          <ThemedText type="small" themeColor="textSecondary">
-            {outlook ? `${freshnessLine(outlook.data_status)} · ` : ''}해황·물때는 참고 자료예요. 출조 전 특보를 꼭
-            확인하세요.
-          </ThemedText>
-          {owner ? (
-            <Pressable accessibilityRole="button" onPress={confirmDelete} hitSlop={8} style={styles.deleteLink}>
-              <ThemedText type="small" themeColor="danger">
-                계획 지우기
-              </ThemedText>
-            </Pressable>
-          ) : null}
-        </>
-      ) : null}
+          </>
+        ) : null}
 
-      {tab === 'members' ? <TripMembers trip={trip} run={run} /> : null}
+        {tab === 'members' ? <TripMembers trip={trip} run={run} /> : null}
 
-      {tab === 'checklist' ? <Checklist trip={trip} run={run} /> : null}
+        {tab === 'checklist' ? <Checklist trip={trip} run={run} /> : null}
+
+        {owner && (tab === 'overview' || tab === 'plan') ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={confirmDelete}
+            style={({ pressed }) => [styles.deleteBtn, { backgroundColor: theme.dangerSoft, borderColor: theme.danger }, pressed && styles.pressed]}>
+            <ThemedText type="smallBold" themeColor="danger">
+              계획 지우기
+            </ThemedText>
+          </Pressable>
+        ) : null}
+      </ScrollView>
+
+      {/* 아래 고정: 계획 수정 · 기록 작성 */}
+      <View style={[styles.footer, { backgroundColor: theme.background, borderTopColor: theme.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
+        {owner ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push({ pathname: '/trip/new', params: { id: String(trip.id) } })}
+            style={({ pressed }) => [styles.footBtn, styles.footPrimary, pressed && styles.pressed]}>
+            <UiIcon name="edit" size={18} color="#FFFFFF" />
+            <Text style={styles.footPrimaryText}>계획 수정</Text>
+          </Pressable>
+        ) : null}
+        <Pressable
+          accessibilityRole="button"
+          onPress={writeRecord}
+          style={({ pressed }) => [styles.footBtn, { borderColor: Brand.navy, borderWidth: 1.5, backgroundColor: theme.backgroundElement }, pressed && styles.pressed]}>
+          <UiIcon name="camera" size={18} color={theme.text} />
+          <ThemedText type="smallBold">기록 작성</ThemedText>
+        </Pressable>
+      </View>
 
       <PlacePicker
         visible={pickingDay !== null}
@@ -374,7 +464,137 @@ function TripBody({
           run(() => api.updateTripStop(trip.id, s.id, patch));
         }}
       />
-    </StackScreen>
+    </ThemedView>
+  );
+}
+
+function formatIssued(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function HeroMeta({ icon, text }: { icon: 'calendar' | 'pin' | 'fish'; text: string }) {
+  return (
+    <View style={styles.heroMetaItem}>
+      <UiIcon name={icon} size={16} color="#FFFFFF" />
+      <Text style={styles.heroMetaText} numberOfLines={1}>
+        {text}
+      </Text>
+    </View>
+  );
+}
+
+/** 개요 한 줄: 아이콘 · 이름 · 값 · (오른쪽 동작 또는 ›) */
+function OverviewRow({
+  icon,
+  label,
+  value,
+  onPress,
+  action,
+  divider,
+  children,
+}: {
+  icon: 'pin' | 'check' | 'people' | 'memo';
+  label: string;
+  value: string;
+  onPress?: () => void;
+  action?: { label: string; onPress: () => void };
+  divider?: boolean;
+  children?: React.ReactNode;
+}) {
+  const theme = useTheme();
+  const body = (
+    <>
+      <UiIcon name={icon} size={22} color={theme.text} />
+      <View style={styles.flex}>
+        <ThemedText type="smallBold">{label}</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
+          {value}
+        </ThemedText>
+        {children}
+      </View>
+      {action ? (
+        <Pressable accessibilityRole="button" hitSlop={8} onPress={action.onPress} style={styles.rowAction}>
+          <ThemedText type="smallBold" themeColor="tint">
+            {action.label} +
+          </ThemedText>
+        </Pressable>
+      ) : onPress ? (
+        <UiIcon name="chevron" size={18} color={theme.textSecondary} />
+      ) : null}
+    </>
+  );
+  const style = [styles.ovRow, divider && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }];
+  return onPress && !action ? (
+    <Pressable accessibilityRole="button" accessibilityLabel={`${label} ${value}`} onPress={onPress} style={({ pressed }) => [style, pressed && styles.pressed]}>
+      {body}
+    </Pressable>
+  ) : (
+    <View style={style}>{body}</View>
+  );
+}
+
+/** 해황 4칸 (파고 · 풍속 · 물때 · 특보). 값이 없으면 「발표 전」·「자료 없음」 — 만들지 않는다 */
+function SeaTiles({
+  stop,
+  o,
+  lastDay,
+  criteria,
+}: {
+  stop: TripStop;
+  o: StopOutlook | undefined;
+  lastDay: string | null;
+  criteria: ReturnType<typeof useCriteria>[0];
+}) {
+  const theme = useTheme();
+  const line = outlookLine(o, criteria, lastDay);
+  const ok = o?.forecast_status === 'available';
+  const pending = o?.forecast_status === 'pending';
+  const val = (v: { v: number } | null | undefined, unit: string) => (ok ? (v ? `${v.v}${unit}` : '자료 없음') : pending ? '발표 전' : '–');
+  const warn = !o
+    ? { text: '확인 중', tone: 'textSecondary' as const }
+    : o.warning_level == null || o.warning_level === 'unknown'
+      ? { text: '확인 불가', tone: 'warning' as const }
+      : !o.warning_is_current
+        ? { text: '발표 전', tone: 'textSecondary' as const }
+        : o.warning_level === 'warning'
+          ? { text: '특보 발효', tone: 'danger' as const }
+          : o.warning_level === 'none'
+            ? { text: '특보 없음', tone: 'success' as const }
+            : { text: '인근 특보', tone: 'warning' as const };
+  const tiles = [
+    { icon: 'wave' as const, label: '파고', value: val(o?.wave_fc_max, 'm') },
+    { icon: 'wind' as const, label: '풍속', value: val(o?.wind_fc_max, 'm/s') },
+    { icon: 'moon' as const, label: '물때', value: o?.mulddae ?? '–' },
+  ];
+  return (
+    <Card style={styles.sea}>
+      <ThemedText type="caption" themeColor="textSecondary" numberOfLines={1}>
+        {stop.place.name} · {dayLabel(stop.day)}
+      </ThemedText>
+      <View style={styles.tiles}>
+        {tiles.map((t) => (
+          <View key={t.label} style={styles.tile}>
+            <UiIcon name={t.icon} size={20} color={Brand.teal} />
+            <ThemedText type="caption" themeColor="textSecondary">
+              {t.label}
+            </ThemedText>
+            <ThemedText type="smallBold" numberOfLines={1} adjustsFontSizeToFit>
+              {t.value}
+            </ThemedText>
+          </View>
+        ))}
+        <View style={[styles.warnPill, { backgroundColor: warn.tone === 'danger' ? theme.dangerSoft : warn.tone === 'success' ? theme.tintSoft : theme.warningSoft }]}>
+          <ThemedText type="smallBold" themeColor={warn.tone} style={styles.center}>
+            {warn.text}
+          </ThemedText>
+        </View>
+      </View>
+      <ThemedText type="caption" themeColor={line.tone} numberOfLines={2}>
+        {line.text}
+        {line.fit ? ` · ${line.fit.label}` : ''}
+      </ThemedText>
+    </Card>
   );
 }
 
@@ -429,7 +649,7 @@ function StopCard({
         </Pressable>
       </View>
       <CoordNote place={stop.place} compact />
-      <View style={[styles.sea, { backgroundColor: theme.background }]}>
+      <View style={[styles.stopSea, { backgroundColor: theme.background }]}>
         <ThemedText type="small" themeColor={line.tone}>
           {line.text}
         </ThemedText>
@@ -728,6 +948,28 @@ export default function TripScreen() {
 }
 
 const styles = StyleSheet.create({
+  content: { padding: 16, paddingTop: 0, gap: 12, paddingBottom: 32 },
+  center: { textAlign: 'center' },
+  hero: { marginHorizontal: -16, paddingHorizontal: 20, paddingBottom: 20, gap: 8, overflow: 'hidden', backgroundColor: Brand.navy },
+  heroShade: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(8, 28, 50, 0.5)' },
+  heroSub: { color: Brand.onNavySecondary, fontSize: 14, fontWeight: '600' },
+  heroTitle: { color: '#FFFFFF', fontSize: 26, lineHeight: 33, fontWeight: '800', letterSpacing: -0.4 },
+  heroMeta: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 14, rowGap: 4 },
+  heroMetaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  heroMetaText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
+  overview: { paddingVertical: 2, gap: 0 },
+  ovRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 64, paddingVertical: 10 },
+  rowAction: { minHeight: 36, justifyContent: 'center' },
+  bar: { height: 6, borderRadius: 3, overflow: 'hidden', marginTop: 6, maxWidth: 220 },
+  barFill: { height: 6, borderRadius: 3, backgroundColor: Brand.teal },
+  seaHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  tiles: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  tile: { flex: 1, alignItems: 'center', gap: 2, paddingVertical: 4 },
+  warnPill: { flex: 1, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
+  footer: { flexDirection: 'row', gap: 10, paddingTop: 10, paddingHorizontal: 16, borderTopWidth: StyleSheet.hairlineWidth },
+  footBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 50, borderRadius: 12 },
+  footPrimary: { backgroundColor: Brand.navy },
+  footPrimaryText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   speciesArt: {
     width: 52,
@@ -746,8 +988,8 @@ const styles = StyleSheet.create({
   headTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   onNavy: { color: Brand.onNavy },
   onNavySub: { color: Brand.onNavySecondary },
-  dday: { backgroundColor: Brand.orange, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2 },
-  ddayText: { color: '#fff' },
+  dday: { alignSelf: 'flex-start', backgroundColor: Brand.orange, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 3 },
+  ddayText: { color: '#fff', fontSize: 14, fontWeight: '800' },
   editBtn: {
     alignSelf: 'flex-start',
     marginTop: 6,
@@ -773,7 +1015,7 @@ const styles = StyleSheet.create({
   toggleAll: { alignSelf: 'flex-end', minHeight: 32, justifyContent: 'center' },
   dayBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   dayActions: { flexDirection: 'row', gap: 8 },
-  tabs: { flexDirection: 'row', borderWidth: 1, borderRadius: 12, padding: 4, gap: 4 },
+  tabs: { flexDirection: 'row', borderWidth: 1, borderRadius: 14, padding: 4, gap: 4, marginTop: -4 },
   tab: {
     flex: 1,
     minHeight: 40,
@@ -782,6 +1024,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 4,
   },
+  deleteBtn: { minHeight: 48, borderRadius: 12, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
   deleteLink: { alignSelf: 'center', paddingVertical: 8, minHeight: 44, justifyContent: 'center' },
   small: {
     flex: 1,
@@ -796,7 +1039,8 @@ const styles = StyleSheet.create({
   stop: { gap: 8 },
   stopHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   link: { minHeight: 32, justifyContent: 'center', paddingHorizontal: 4 },
-  sea: { borderRadius: 8, padding: 8, gap: 2 },
+  sea: { gap: 10 },
+  stopSea: { borderRadius: 8, padding: 8, gap: 2 },
   stopActions: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
   sheet: { flex: 1, padding: 20, gap: 14 },
   check: { gap: 2 },
