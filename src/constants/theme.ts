@@ -1,5 +1,5 @@
 /**
- * 앱 색상 (라이트/다크). 네이비·틸 바탕 + 주황 포인트.
+ * 앱 색상 (라이트/다크). 2026-11-17 레퍼런스 디자인 시스템: 메인 #0B2D4D · 보조 #0F766E · 포인트 #F97316 · 배경 #F3F6F9. 네이비·틸 바탕 + 주황 포인트.
  * 의미 전달은 색상만으로 하지 않고 항상 텍스트를 함께 표시한다 (NFR-05).
  */
 
@@ -9,10 +9,10 @@ import { Platform } from 'react-native';
 
 /** 배너·탭바 등 테마와 무관하게 고정인 브랜드 색 */
 export const Brand = {
-  navy: '#0F2C4A',
-  navyDeep: '#0A1F36',
-  teal: '#0E5C63',
-  orange: '#F28C28',
+  navy: '#0B2D4D',
+  navyDeep: '#08223B',
+  teal: '#0F766E',
+  orange: '#F97316',
   /** 상단 배너 그라데이션: 밤바다 → 노을 */
   hero: ['#0A1F36', '#123A5E', '#2C5D7C', '#C98654'] as const,
   onNavy: '#FFFFFF',
@@ -22,18 +22,18 @@ export const Brand = {
 
 export const Colors = {
   light: {
-    text: '#13263A',
-    background: '#EEF2F6',
+    text: '#0F2236',
+    background: '#F3F6F9',
     backgroundElement: '#FFFFFF',
     backgroundSelected: '#E2E8F0',
     border: '#E1E7EE',
     textSecondary: '#5B6B7C',
-    tint: '#0E5C63',
+    tint: '#0F766E',
     onTint: '#FFFFFF',
-    accent: '#EE8424',
+    accent: '#F97316',
     onAccent: '#FFFFFF',
-    accentSoft: '#FDEBD8',
-    tintSoft: '#DCEFEF',
+    accentSoft: '#FFEDD5',
+    tintSoft: '#DDF1EE',
     danger: '#C62828',
     warning: '#A86200',
     success: '#2E7D32',

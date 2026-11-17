@@ -9,6 +9,8 @@ export type ThemedTextProps = TextProps & {
     | 'title'
     | 'small'
     | 'smallBold'
+    | 'caption'
+    | 'bodyBold'
     | 'subtitle'
     | 'sectionTitle'
     | 'value'
@@ -47,10 +49,20 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontWeight: 700,
   },
+  caption: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: 500,
+  },
   default: {
     fontSize: 16,
     lineHeight: 23,
     fontWeight: 500,
+  },
+  bodyBold: {
+    fontSize: 16,
+    lineHeight: 23,
+    fontWeight: 700,
   },
   title: {
     fontSize: 48,
