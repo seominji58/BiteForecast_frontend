@@ -235,16 +235,19 @@ export default function PostScreen() {
 
       {/* 아래 고정 댓글 입력줄 (키보드가 올라오면 함께 올라간다) */}
       {replyTo ? (
-        <View style={[styles.replyBanner, { backgroundColor: theme.tintSoft, borderTopColor: theme.border }]}>
+        // 배너 줄 전체가 취소 버튼 (✕ 글자만으로는 키보드가 떠 있을 때 누르기 어려움)
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${replyTo.nickname}님에게 답글 작성 취소`}
+          onPressIn={() => setReplyTo(null)}
+          style={[styles.replyBanner, { backgroundColor: theme.tintSoft, borderTopColor: theme.border }]}>
           <ThemedText type="small" themeColor="tint" style={styles.flex} numberOfLines={1}>
             ↳ {replyTo.nickname}님에게 답글 작성 중
           </ThemedText>
-          <Pressable accessibilityRole="button" accessibilityLabel="답글 취소" hitSlop={10} onPress={() => setReplyTo(null)}>
-            <ThemedText type="smallBold" themeColor="tint">
-              ✕
-            </ThemedText>
-          </Pressable>
-        </View>
+          <ThemedText type="smallBold" themeColor="tint">
+            취소 ✕
+          </ThemedText>
+        </Pressable>
       ) : null}
       <View style={[styles.inputBar, { backgroundColor: theme.backgroundElement, borderTopColor: theme.border, paddingBottom: Math.max(insets.bottom, 10) }]}>
         {signedIn ? (
@@ -362,7 +365,7 @@ const styles = StyleSheet.create({
   reply: { flexDirection: 'row', gap: 4, paddingLeft: 30 },
   replyArrow: { paddingTop: 10 },
   replyBtn: { alignSelf: 'flex-start', marginTop: 4, minHeight: 24, justifyContent: 'center' },
-  replyBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth },
+  replyBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, minHeight: 44, borderTopWidth: StyleSheet.hairlineWidth },
   deletedText: { paddingVertical: 12, fontStyle: 'italic' },
   shrink: { flexShrink: 1 },
   content: { padding: 16, gap: 12, paddingBottom: 24 },
