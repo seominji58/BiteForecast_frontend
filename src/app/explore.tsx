@@ -4,6 +4,7 @@ import { ActivityIndicator, Keyboard, Modal, Pressable, ScrollView, StyleSheet, 
 
 import { useCatchSummary, useDateRange, useGeoSearch, useFishingIndex, usePlaces, usePlacesSummary, useSpecies } from '@/api/queries';
 import type { CatchSummary, Place, PlaceSummary } from '@/api/types';
+import { AddToTripButton } from '@/components/add-to-trip';
 import { AppIcon } from '@/components/app-icon';
 import { Dropdown, type DropdownOption } from '@/components/dropdown';
 import { AppMap, type AppMapHandle, type MapMarker, type MapRegion } from '@/components/map/app-map';
@@ -27,6 +28,7 @@ import { type Coords, getCurrentCoords } from '@/lib/location';
 import { CoordNote, SameCoordSheet } from '@/components/coord-note';
 import { coordKey, distLabel, km, matches, PLACE_IMAGE, PLACE_TYPE_LABEL, recommendable, sidoOf, usableForLocation } from '@/lib/place';
 import { mergeWithApi, SPECIES } from '@/lib/species';
+import { sortByCount, speciesPlaceCounts } from '@/lib/species-rank';
 import { SearchBar } from '@/components/search-bar';
 import { useCriteria, useExploreRegion, useHomePlace } from '@/lib/prefs';
 
@@ -52,7 +54,7 @@ const GRADE_RANK: Record<string, number> = { 매우좋음: 5, 좋음: 4, 보통:
  */
 export default function ExploreScreen() {
   // pick=compare: 비교 화면에서 「지도에서 고르기」로 들어옴 (a = 이미 고른 A)
-  const params = useLocalSearchParams<{ near?: string; mode?: string; pick?: string; a?: string; region?: string }>();
+  const params = useLocalSearchParams<{ near?: string; mode?: string; pick?: string; a?: string; region?: string; fish?: string; date?: string }>();
   const theme = useTheme();
   const places = usePlaces();
   const range = useDateRange();
@@ -61,7 +63,8 @@ export default function ExploreScreen() {
   const [criteria, setCriteria] = useCriteria();
   // 어종 칩 (M2): 오늘 그 어종 지수를 발표한 지점 + 지점 가까운 낚시터만 지도·목록에 남긴다
   // 근거 두 가지: ① 그날 공식 낚시지수 지점(+10km 안 낚시터) ② 낚시터가 알린 대상 어종(공공데이터 원문). 둘 다 조황은 아니다
-  const [fish, setFish] = useState<string | null>(null);
+  // 홈에서 어종을 고르고 「지도에서 찾기」로 오면 그 어종으로 시작 (?fish=우럭)
+  const [fish, setFish] = useState<string | null>(params.fish ?? null);
   const [fishSheet, setFishSheet] = useState(false);
   const speciesApi = useSpecies();
   const allSpecies = useMemo(() => mergeWithApi(speciesApi.data), [speciesApi.data]);
@@ -225,6 +228,25 @@ export default function ExploreScreen() {
     return list;
   }, [places.data, byId, origin, criteria, onlyMatching, stale, region, seaOf, fishPlaces]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // 어종 칩 순서: 지금 지역에서 지도에 많이 찍히는 어종 먼저 (공식 지수 지점 · 이용자 조황 · 공공데이터 대상 어종).
+  // 칩 순서는 오늘 지수 기준 — 어종을 고르기 전에도 셀 수 있게 지수를 따로 받는다
+  const fiAll = useFishingIndex(range.data?.today);
+  const fishCounts = useMemo(
+    () =>
+      places.data && summary.data
+        ? speciesPlaceCounts(allSpecies, {
+            places: places.data.filter(usableForLocation),
+            day: fiAll.data,
+            catches: catches.data,
+            scope: inRegion,
+          })
+        : null,
+    [places.data, summary.data, allSpecies, fiAll.data, catches.data, region, seaOf], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const fishChips = useMemo(
+    () => sortByCount(allSpecies, fishCounts).filter((x) => !fishCounts || (fishCounts.get(x.code) ?? 0) > 0 || x.name === fish),
+    [allSpecies, fishCounts, fish],
+  );
   const selected = rows.find((r) => r.place.id === selectedId) ?? null;
   // 같은 좌표를 쓰는 낚시터는 핀 하나로 묶고, 누르면 목록으로 펼친다
   const pins = useMemo(() => {
@@ -519,9 +541,13 @@ export default function ExploreScreen() {
                 <Chip label="기준 바꾸기" selected={false} onPress={() => setEditCriteria(true)} />
               </>
             ) : null}
-            {fish && !INDEX_SPECIES.includes(fish) ? <Chip label={fish} selected onPress={() => setFish(null)} /> : null}
-            {INDEX_SPECIES.map((name) => (
-              <Chip key={name} label={name} selected={fish === name} onPress={() => setFish(fish === name ? null : name)} />
+            {fishChips.map((x) => (
+              <Chip
+                key={x.code}
+                label={fishCounts ? `${x.name} ${fishCounts.get(x.code) ?? 0}` : x.name}
+                selected={fish === x.name}
+                onPress={() => setFish(fish === x.name ? null : x.name)}
+              />
             ))}
             <Chip label="+ 다른 어종" selected={false} onPress={() => setFishSheet(true)} />
           </ScrollView>
@@ -556,6 +582,16 @@ export default function ExploreScreen() {
             grade={fish && fishGrade.get(selected.place.id) ? { fish, ...fishGrade.get(selected.place.id)! } : null}
             homeId={homeId}
             pick={params.pick === 'compare' ? { a: params.a ? Number(params.a) : null } : null}
+            // 출조계획에 추가: 홈에서 고른 날짜(없으면 오늘)·지도에서 고른 어종·그 낚시터의 바다를 함께 넘긴다
+            plan={
+              range.data
+                ? {
+                    date: params.date ?? range.data.today,
+                    species: fishItem?.code,
+                    region: selected.s?.sea_group ?? undefined,
+                  }
+                : null
+            }
             onClose={() => setSelectedId(null)}
           />
         </View>
@@ -659,6 +695,7 @@ function SelectedCard({
   grade,
   homeId,
   pick,
+  plan,
   onClose,
 }: {
   place: Place;
@@ -672,6 +709,8 @@ function SelectedCard({
   homeId: number | null;
   /** 비교 화면에서 고르러 온 경우: 이미 고른 A (없으면 이 곳이 A) */
   pick: { a: number | null } | null;
+  /** 「출조계획에 추가」에 함께 넘길 날짜·어종 코드·바다 */
+  plan: { date: string; species?: string; region?: string } | null;
   onClose: () => void;
 }) {
   const w = s ? WARNING_SHORT[s.warning_level] : null;
@@ -760,7 +799,21 @@ function SelectedCard({
           }
         />
       ) : (
-        <Button label="상세 보기" onPress={openDetail} />
+        <View style={styles.cardActions}>
+          <View style={styles.flex}>
+            <Button label="상세 보기" variant="secondary" onPress={openDetail} />
+          </View>
+          {plan ? (
+            <View style={styles.flex}>
+              <AddToTripButton
+                placeId={place.id}
+                placeName={place.name}
+                date={plan.date}
+                extra={{ species: plan.species, region: plan.region }}
+              />
+            </View>
+          ) : null}
+        </View>
       )}
     </Card>
   );
@@ -773,6 +826,7 @@ function daysAgo(iso: string): string {
 }
 
 const styles = StyleSheet.create({
+  cardActions: { flexDirection: 'row', gap: 8, alignItems: 'stretch' },
   caught: { backgroundColor: 'rgba(242,140,40,0.12)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
   caughtText: { color: '#B8641A' },
   flex: { flex: 1 },

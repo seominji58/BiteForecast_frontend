@@ -377,23 +377,47 @@ function Empty({ text }: { text: string }) {
 }
 
 /** 레퍼런스의 두 버튼 */
-export function HomeActions({ onMap, onPlan }: { onMap: () => void; onPlan: () => void }) {
+export function HomeActions({
+  onMap,
+  onPlan,
+  speciesName,
+  summary,
+}: {
+  onMap: () => void;
+  onPlan: () => void;
+  /** 고른 어종이 있으면 버튼에 이름을 보여준다 (지도·계획에 그대로 넘어감을 알 수 있게) */
+  speciesName?: string | null;
+  /** 지금 고른 조건 한 줄 (예: 11/17 (화) · 서해 · 망둥어) */
+  summary?: string;
+}) {
   const theme = useTheme();
   return (
-    <View style={styles.actions}>
-      <Pressable accessibilityRole="button" onPress={onMap} style={({ pressed }) => [styles.action, { backgroundColor: theme.tint }, pressed && styles.pressed]}>
-        <AppIcon name="find-map" size={22} />
-        <ThemedText type="smallBold" themeColor="onTint">
-          지도에서 찾기 ›
+    <View style={styles.col}>
+      <View style={styles.actions}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={speciesName ? `${speciesName} 낚시터 지도에서 보기` : '지도에서 찾기'}
+          onPress={onMap}
+          style={({ pressed }) => [styles.action, { backgroundColor: theme.tint }, pressed && styles.pressed]}>
+          <AppIcon name="find-map" size={22} />
+          <ThemedText type="smallBold" themeColor="onTint" numberOfLines={1}>
+            {speciesName ? `${speciesName} 지도 ›` : '지도에서 찾기 ›'}
+          </ThemedText>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`이 조건으로 출조계획 만들기${summary ? `, ${summary}` : ''}`}
+          onPress={onPlan}
+          style={({ pressed }) => [styles.action, { backgroundColor: theme.accentSoft, borderColor: Brand.orange, borderWidth: 1 }, pressed && styles.pressed]}>
+          <AppIcon name="trips" size={22} />
+          <ThemedText type="smallBold">출조계획 ›</ThemedText>
+        </Pressable>
+      </View>
+      {summary ? (
+        <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
+          {summary} 그대로 지도·출조계획에 넘어가요
         </ThemedText>
-      </Pressable>
-      <Pressable
-        accessibilityRole="button"
-        onPress={onPlan}
-        style={({ pressed }) => [styles.action, { backgroundColor: theme.accentSoft, borderColor: Brand.orange, borderWidth: 1 }, pressed && styles.pressed]}>
-        <AppIcon name="trips" size={22} />
-        <ThemedText type="smallBold">출조계획 ›</ThemedText>
-      </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -551,6 +575,7 @@ const styles = StyleSheet.create({
   flex1: { flex: 1 },
   flex: { flex: 1 },
   col: { gap: 8 },
+  center: { textAlign: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   bold: { fontWeight: '700' },
   pressed: { opacity: 0.75 },

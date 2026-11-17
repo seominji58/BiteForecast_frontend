@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Image, Keyboard, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { useDateRange } from '@/api/queries';
+import { useCatchSummary, useDateRange } from '@/api/queries';
 import type { Place } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { HomeActions, SeaLine } from '@/components/home-explore';
@@ -19,8 +19,9 @@ import { useTheme } from '@/hooks/use-theme';
 import { dayLabel, dayList } from '@/lib/compare';
 import { freshnessLine } from '@/lib/criteria';
 import { useExplore } from '@/lib/explore';
-import { matches, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
-import { type Region, REGIONS } from '@/lib/prefs';
+import { matches, PLACE_IMAGE, PLACE_TYPE_LABEL, usableForLocation } from '@/lib/place';
+import { sortByCount, speciesPlaceCounts } from '@/lib/species-rank';
+import { type Region, REGIONS, SEA_GROUPS } from '@/lib/prefs';
 import { josa } from '@/lib/species';
 import { SPECIES_IMAGES } from '@/lib/species-images';
 
@@ -51,7 +52,25 @@ export default function HomeScreen() {
   const [hero, setHero] = useState({ w: 0, h: 0 });
   const [sheet, setSheet] = useState<'date' | 'region' | null>(null);
 
-  const railSpecies = useMemo(() => x.allSpecies.filter((s) => SPECIES_IMAGES[s.code]), [x.allSpecies]);
+  // 어종 순서: 지금 고른 지역·날짜에서 지도에 많이 찍히는 어종 먼저 (공식 지수 지점 · 이용자 조황 · 공공데이터 대상 어종 낚시터 수).
+  // 공식 지수가 없는 어종도 자료가 많으면 앞에 온다. 앱이 점수를 만들지 않고 낚시터 수만 센다
+  const catches = useCatchSummary(14);
+  const speciesCounts = useMemo(
+    () =>
+      x.places.data && x.summary.isSuccess && !(x.near && !x.gps.coords)
+        ? speciesPlaceCounts(x.allSpecies, {
+            places: x.places.data.filter(usableForLocation),
+            day: x.day,
+            catches: catches.data,
+            scope: x.inScope,
+          })
+        : null,
+    [x.places.data, x.summary.isSuccess, x.near, x.gps.coords, x.allSpecies, x.day, catches.data, x.inScope],
+  );
+  const railSpecies = useMemo(
+    () => sortByCount(x.allSpecies.filter((s) => SPECIES_IMAGES[s.code]), speciesCounts),
+    [x.allSpecies, speciesCounts],
+  );
   const results = query.trim() ? (x.places.data ?? []).filter((p) => matches(p, query)).slice(0, 5) : [];
   const speciesHits = query.trim()
     ? x.allSpecies.filter((s) => s.name.includes(query.trim()) || (s.alias ?? '').includes(query.trim())).slice(0, 3)
@@ -67,14 +86,24 @@ export default function HomeScreen() {
     Keyboard.dismiss();
     router.push({ pathname: '/place/[id]', params: { id: String(p.id) } });
   };
+  // 홈에서 고른 날짜·해역·어종을 출조계획에 그대로 넘긴다 (내 주변·전국은 해역이 아니라 넘기지 않음)
+  const sea = (SEA_GROUPS as readonly string[]).includes(x.region) ? x.region : null;
   const plan = () =>
-    router.push({ pathname: '/trip/new', params: { ...(date ? { date } : {}), ...(x.species ? { species: x.species.code } : {}) } });
+    router.push({
+      pathname: '/trip/new',
+      params: { ...(date ? { date } : {}), ...(x.species ? { species: x.species.code } : {}), ...(sea ? { region: sea } : {}) },
+    });
   const points = () => router.push({ pathname: '/points', params: date ? { date } : {} });
   // 지도는 홈에서 고른 지역 그대로 연다: 내 주변 → 현재 위치, 해역 → 그 해역 전체, 전국 → 전국
+  // 고른 어종이 있으면 지도도 그 어종 관련 낚시터만 보여준다 (?fish=), 날짜는 「출조계획에 추가」로 이어진다
   const openMap = () =>
     router.push({
       pathname: '/explore',
-      params: x.region === '내 주변' ? { near: '1' } : { region: x.region === '전국' ? 'all' : `sea:${x.region}` },
+      params: {
+        ...(x.region === '내 주변' ? { near: '1' } : { region: x.region === '전국' ? 'all' : `sea:${x.region}` }),
+        ...(x.species ? { fish: x.species.name } : {}),
+        ...(date ? { date } : {}),
+      },
     });
 
   const qc = useQueryClient();
@@ -83,8 +112,12 @@ export default function HomeScreen() {
 
   // 미리보기 아래 한 줄: 고른 어종의 공식 지수 제공 여부 (등급은 추천 낚시터에서)
   const n = x.species?.indexName ? x.indexCount(x.species.indexName) : null;
+  // 자료(해황 요약·공식 지수)를 다 불러오기 전에는 「지점이 없어요」로 단정하지 않는다
+  const ready = x.summary.isSuccess && (!x.species?.indexName || x.fi.isSuccess);
   const speciesLine = !x.species
     ? null
+    : !ready
+      ? `${x.species.name} 정보를 불러오는 중이에요…`
     : x.species.indexName
       ? n
         ? `${x.species.name} 공식 낚시지수 · ${x.scopeName} ${n}곳 발표`
@@ -198,7 +231,12 @@ export default function HomeScreen() {
       />
 
       {/* 지도 · 출조계획 */}
-      <HomeActions onMap={openMap} onPlan={plan} />
+      <HomeActions
+        onMap={openMap}
+        onPlan={plan}
+        speciesName={x.species?.name}
+        summary={[date ? dayLabel(date) : null, x.near ? '내 주변' : x.region, x.species?.name].filter(Boolean).join(' · ')}
+      />
 
       {/* 바다 한 줄 (4칸 → 1줄, 서비스 개선 v2 H-B). 누르면 지도 */}
       {x.near && (x.gps.loading || x.gps.error) ? (

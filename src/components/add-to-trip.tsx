@@ -19,12 +19,23 @@ import { periodLabel } from '@/lib/trip';
  * - 로그인 전: 계획 만들기 화면으로 (로그인 후 장소·날짜가 그대로 채워짐)
  * - 로그인 후: 그 날짜가 들어 있는 다가오는 계획에 넣거나, 새 계획 만들기
  */
-export function AddToTripButton({ placeId, placeName, date }: { placeId: number; placeName: string; date: string }) {
+export function AddToTripButton({
+  placeId,
+  placeName,
+  date,
+  extra,
+}: {
+  placeId: number;
+  placeName: string;
+  date: string;
+  /** 새 계획으로 갈 때 함께 채울 값 (지도·홈에서 고른 어종 코드, 해역) */
+  extra?: { species?: string; region?: string };
+}) {
   const { signedIn } = useAuth();
   const [open, setOpen] = useState(false);
   const theme = useTheme();
   const go = () =>
-    signedIn ? setOpen(true) : router.push({ pathname: '/trip/new', params: { place: String(placeId), date } });
+    signedIn ? setOpen(true) : router.push({ pathname: '/trip/new', params: { place: String(placeId), date, ...clean(extra) } });
   return (
     <>
       <Pressable
@@ -38,14 +49,26 @@ export function AddToTripButton({ placeId, placeName, date }: { placeId: number;
       </Pressable>
       {signedIn ? (
         <Modal visible={open} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setOpen(false)}>
-          {open ? <Sheet placeId={placeId} placeName={placeName} date={date} onClose={() => setOpen(false)} /> : null}
+          {open ? <Sheet placeId={placeId} placeName={placeName} date={date} extra={extra} onClose={() => setOpen(false)} /> : null}
         </Modal>
       ) : null}
     </>
   );
 }
 
-function Sheet({ placeId, placeName, date, onClose }: { placeId: number; placeName: string; date: string; onClose: () => void }) {
+function Sheet({
+  placeId,
+  placeName,
+  date,
+  extra,
+  onClose,
+}: {
+  placeId: number;
+  placeName: string;
+  date: string;
+  extra?: { species?: string; region?: string };
+  onClose: () => void;
+}) {
   const theme = useTheme();
   const trips = useTrips('upcoming');
   const add = useTripMutation((v: { tripId: number; has: boolean }) =>
@@ -99,7 +122,7 @@ function Sheet({ placeId, placeName, date, onClose }: { placeId: number; placeNa
         label="이 날짜로 새 계획 만들기"
         onPress={() => {
           onClose();
-          router.push({ pathname: '/trip/new', params: { place: String(placeId), date } });
+          router.push({ pathname: '/trip/new', params: { place: String(placeId), date, ...clean(extra) } });
         }}
       />
       <Button label="닫기" variant="secondary" onPress={onClose} />
@@ -122,3 +145,11 @@ const styles = StyleSheet.create({
   sheet: { flex: 1, padding: 20, gap: 12 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, padding: 12, minHeight: 56 },
 });
+
+/** 값이 있는 것만 경로 값으로 */
+function clean(extra?: { species?: string; region?: string }): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (extra?.species) out.species = extra.species;
+  if (extra?.region) out.region = extra.region;
+  return out;
+}
