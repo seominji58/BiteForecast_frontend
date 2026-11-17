@@ -173,7 +173,7 @@ function AccountSection() {
       { text: '취소', style: 'cancel' },
       { text: '로그아웃', onPress: () => signOut() },
     ]);
-  return <Button label="로그아웃" variant="secondary" onPress={confirmSignOut} />;
+  return <Button label="로그아웃" variant="navy" onPress={confirmSignOut} />;
 }
 
 function Stat({ icon, label, value, sub }: { icon: AppIconName; label: string; value: string; sub?: string }) {

@@ -415,8 +415,8 @@ function TripBody({
           <Pressable
             accessibilityRole="button"
             onPress={confirmDelete}
-            style={({ pressed }) => [styles.deleteBtn, { backgroundColor: theme.dangerSoft, borderColor: theme.danger }, pressed && styles.pressed]}>
-            <ThemedText type="smallBold" themeColor="danger">
+            style={({ pressed }) => [styles.deleteBtn, { backgroundColor: theme.danger }, pressed && styles.pressed]}>
+            <ThemedText type="smallBold" style={styles.onNavy}>
               계획 지우기
             </ThemedText>
           </Pressable>
@@ -1024,7 +1024,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 4,
   },
-  deleteBtn: { minHeight: 48, borderRadius: 12, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  deleteBtn: { minHeight: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
   deleteLink: { alignSelf: 'center', paddingVertical: 8, minHeight: 44, justifyContent: 'center' },
   small: {
     flex: 1,

@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, TextInput, View, type TextInputProps } from 'rea
 import { AppIcon } from '@/components/app-icon';
 import { ThemedText } from '@/components/themed-text';
 import type { AppIconName } from '@/constants/icons';
-import { Spacing } from '@/constants/theme';
+import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export function Field({ label, required, children }: { label: string; required?: boolean; children: ReactNode }) {
@@ -65,16 +65,18 @@ type ButtonProps = {
   label: string;
   onPress: () => void;
   disabled?: boolean;
-  /** primary = 주황(주요 동작), secondary = 틸, danger = 빨강 */
-  variant?: 'primary' | 'secondary' | 'danger';
+  /** primary = 주황(주요 동작), secondary = 틸 테두리, danger = 빨강(삭제), navy = 네이비(로그아웃 등 중립 동작). 색이 꽉 찬 버튼은 글자가 흰색 */
+  variant?: 'primary' | 'secondary' | 'danger' | 'navy';
   icon?: AppIconName;
 };
 
 export function Button({ label, onPress, disabled, variant = 'primary', icon }: ButtonProps) {
   const theme = useTheme();
   const outline = variant === 'secondary';
-  const bg = variant === 'danger' ? theme.danger : outline ? 'transparent' : theme.accent;
+  const bg = variant === 'danger' ? theme.danger : variant === 'navy' ? Brand.navy : outline ? 'transparent' : theme.accent;
   const fg = variant === 'primary' ? 'onAccent' : outline ? 'tint' : 'onTint';
+  // 빨강·네이비 꽉 찬 버튼은 다크 모드에서도 흰 글자 (onTint 는 다크에서 어두운색이라 안 보임)
+  const white = variant === 'danger' || variant === 'navy';
   return (
     <Pressable
       accessibilityRole="button"
@@ -87,7 +89,7 @@ export function Button({ label, onPress, disabled, variant = 'primary', icon }: 
         outline && { borderWidth: 1.5, borderColor: theme.tint },
       ]}>
       {icon ? <AppIcon name={icon} size={22} badge /> : null}
-      <ThemedText type="smallBold" themeColor={fg}>
+      <ThemedText type="smallBold" themeColor={fg} style={white ? styles.white : undefined}>
         {label}
       </ThemedText>
     </Pressable>
@@ -95,6 +97,7 @@ export function Button({ label, onPress, disabled, variant = 'primary', icon }: 
 }
 
 const styles = StyleSheet.create({
+  white: { color: '#FFFFFF' },
   field: { gap: Spacing.two },
   input: {
     borderWidth: 1,
