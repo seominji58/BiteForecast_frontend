@@ -93,6 +93,8 @@ export const KakaoMap = forwardRef<AppMapHandle, AppMapProps>(function KakaoMap(
 ) {
   const [sdkReady, setSdkReady] = useState(false);
   const [failed, setFailed] = useState(false);
+  // 카카오맵은 처음에 자체 기본 위치(판교)를 잠깐 그린다 → 준비되고 우리 위치로 옮긴 뒤에 보여준다
+  const [shown, setShown] = useState(false);
   const map = useRef<import('@react-native-kakao/map').KakaoMapViewRef>(null);
   const fallback = useRef<AppMapHandle>(null);
 
@@ -226,7 +228,7 @@ export const KakaoMap = forwardRef<AppMapHandle, AppMapProps>(function KakaoMap(
   return (
     <KakaoMapView
       ref={map}
-      style={style}
+      style={[style, !shown && styles.hidden]}
       initialCamera={{
         latitude: initialRegion.latitude,
         longitude: initialRegion.longitude,
@@ -234,7 +236,20 @@ export const KakaoMap = forwardRef<AppMapHandle, AppMapProps>(function KakaoMap(
       }}
       options={{ poi: { visible: true, clickable: false } }}
       labels={scene}
-      onMapReady={onReady}
+      onMapReady={() => {
+        void map.current
+          ?.moveCamera(
+            {
+              latitude: initialRegion.latitude,
+              longitude: initialRegion.longitude,
+              zoomLevel: deltaToZoom(initialRegion.latitudeDelta),
+            },
+            { duration: 0 },
+          )
+          .catch(() => undefined)
+          .finally(() => setTimeout(() => setShown(true), 120));
+        onReady?.();
+      }}
       onError={(e) => {
         if (__DEV__) console.warn('[카카오맵]', e.code, e.message);
         setFailed(true);
@@ -250,4 +265,5 @@ export const KakaoMap = forwardRef<AppMapHandle, AppMapProps>(function KakaoMap(
 
 const styles = StyleSheet.create({
   empty: { backgroundColor: '#E6ECF1' },
+  hidden: { opacity: 0 },
 });
