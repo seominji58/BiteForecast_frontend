@@ -1,22 +1,25 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { useHeaderHeight } from 'expo-router/react-navigation';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAddComment, useDeleteComment, useDeletePost, usePost, useSetLike } from '@/api/queries';
 import type { PostComment } from '@/api/types';
 import { usePhotoSource } from '@/api/upload';
 import { AppIcon } from '@/components/app-icon';
-import { Button, TextField } from '@/components/form';
 import { AuthorLine, Tag, VerifiedBadge } from '@/components/post-card';
 import { ReportSheet } from '@/components/report-sheet';
 import { Card, ErrorView, Loading, StackScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { UiIcon } from '@/components/ui-icon';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { CATEGORY } from '@/lib/community';
-import { formatDateTime } from '@/lib/format';
+import { formatDateTime, timeAgo } from '@/lib/format';
 
 // 커뮤니티 글 상세: 본문, 좋아요, 댓글, 신고, 내 글 수정·삭제
 export default function PostScreen() {
@@ -30,6 +33,8 @@ export default function PostScreen() {
   const theme = useTheme();
   const source = usePhotoSource();
   const { signedIn } = useAuth();
+  const insets = useSafeAreaInsets();
+  const headerHeight = useHeaderHeight();
   const needLogin = () => router.push('/login');
 
   const [comment, setComment] = useState('');
@@ -70,7 +75,9 @@ export default function PostScreen() {
   };
 
   return (
-    <StackScreen>
+    <ThemedView style={styles.flex}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={headerHeight}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
       <Card>
         <View style={styles.badges}>
           {p.verified ? <VerifiedBadge /> : null}
@@ -163,51 +170,98 @@ export default function PostScreen() {
         </Pressable>
       </Card>
 
-      <ThemedText type="sectionTitle">댓글 {p.comment_count}</ThemedText>
-      {p.comments.map((c) => (
-        <Card key={c.id}>
-          <AuthorLine
-            author={c.author}
-            createdAt={c.created_at}
-            right={
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={c.mine ? '댓글 삭제' : '댓글 신고'}
-                hitSlop={8}
-                onPress={() =>
-                  c.mine
-                    ? confirmDeleteComment(c)
-                    : signedIn
-                      ? setReportTarget({ type: 'comment', id: c.id })
-                      : needLogin()
-                }>
-                {c.mine ? (
-                  <ThemedText type="small" themeColor="danger">
-                    삭제
+      {/* 댓글: 글(카드)과 구분되게 — 작은 프로필 · 이름·시간 한 줄 · 본문, 구분선으로 이어지는 목록 */}
+      <View style={[styles.comments, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+        <View style={styles.commentsHead}>
+          <UiIcon name="chat" size={18} color={theme.text} />
+          <ThemedText type="smallBold">댓글 {p.comment_count}</ThemedText>
+        </View>
+        {p.comments.length === 0 ? (
+          <ThemedText type="small" themeColor="textSecondary" style={styles.noComment}>
+            아직 댓글이 없어요. 첫 댓글을 남겨 보세요.
+          </ThemedText>
+        ) : (
+          p.comments.map((c) => (
+            <View key={c.id} style={[styles.comment, { borderTopColor: theme.border }]}>
+              <View style={[styles.cAvatar, { backgroundColor: theme.tintSoft }]}>
+                <AppIcon name="tab-me-active" size={14} tint={theme.tint} />
+              </View>
+              <View style={styles.flex}>
+                <View style={styles.cHead}>
+                  <ThemedText type="smallBold" numberOfLines={1} style={styles.shrink}>
+                    {c.author.nickname}
                   </ThemedText>
-                ) : (
-                  <AppIcon name="report" size={20} />
-                )}
-              </Pressable>
-            }
-          />
-          <ThemedText>{c.body}</ThemedText>
-        </Card>
-      ))}
+                  {c.author.nickname === p.author.nickname ? (
+                    <View style={[styles.writer, { borderColor: theme.tint }]}>
+                      <ThemedText type="caption" themeColor="tint" style={styles.writerText}>
+                        작성자
+                      </ThemedText>
+                    </View>
+                  ) : null}
+                  <ThemedText type="caption" themeColor="textSecondary">
+                    {timeAgo(c.created_at)}
+                  </ThemedText>
+                  <View style={styles.flex} />
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={c.mine ? '댓글 삭제' : '댓글 신고'}
+                    hitSlop={10}
+                    onPress={() =>
+                      c.mine
+                        ? confirmDeleteComment(c)
+                        : signedIn
+                          ? setReportTarget({ type: 'comment', id: c.id })
+                          : needLogin()
+                    }>
+                    <ThemedText type="caption" themeColor="textSecondary">
+                      {c.mine ? '삭제' : '신고'}
+                    </ThemedText>
+                  </Pressable>
+                </View>
+                <ThemedText type="small" style={styles.cBody}>
+                  {c.body}
+                </ThemedText>
+              </View>
+            </View>
+          ))
+        )}
+      </View>
+    </ScrollView>
 
-      {signedIn ? (
-        <Card>
-          <TextField value={comment} onChangeText={setComment} placeholder="댓글을 입력하세요" maxLength={500} multiline />
-          <Button
-            label={addComment.isPending ? '등록 중…' : '댓글 등록'}
-            variant="secondary"
-            onPress={sendComment}
-            disabled={addComment.isPending || !comment.trim()}
-          />
-        </Card>
-      ) : (
-        <Button label="로그인하고 댓글 쓰기" variant="secondary" onPress={needLogin} />
-      )}
+      {/* 아래 고정 댓글 입력줄 (키보드가 올라오면 함께 올라간다) */}
+      <View style={[styles.inputBar, { backgroundColor: theme.backgroundElement, borderTopColor: theme.border, paddingBottom: Math.max(insets.bottom, 10) }]}>
+        {signedIn ? (
+          <>
+            <TextInput
+              value={comment}
+              onChangeText={setComment}
+              placeholder="댓글을 입력하세요"
+              placeholderTextColor={theme.textSecondary}
+              maxLength={500}
+              multiline
+              maxFontSizeMultiplier={1.4}
+              style={[styles.input, { color: theme.text, backgroundColor: theme.background, borderColor: theme.border }]}
+            />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="댓글 등록"
+              disabled={addComment.isPending || !comment.trim()}
+              onPress={sendComment}
+              style={[styles.send, { backgroundColor: comment.trim() ? Brand.orange : theme.backgroundSelected }]}>
+              <ThemedText type="smallBold" style={{ color: comment.trim() ? '#FFFFFF' : theme.textSecondary }}>
+                {addComment.isPending ? '…' : '등록'}
+              </ThemedText>
+            </Pressable>
+          </>
+        ) : (
+          <Pressable accessibilityRole="button" onPress={needLogin} style={[styles.input, styles.loginBar, { backgroundColor: theme.background, borderColor: theme.border }]}>
+            <ThemedText type="small" themeColor="textSecondary">
+              로그인하고 댓글 쓰기
+            </ThemedText>
+          </Pressable>
+        )}
+      </View>
+      </KeyboardAvoidingView>
 
       <ReportSheet
         target={reportTarget}
@@ -215,11 +269,27 @@ export default function PostScreen() {
         // 글쓴이를 차단하면 이 글도 더 이상 보이지 않으므로 목록으로 돌아간다
         onBlocked={(t) => t.type === 'post' && router.back()}
       />
-    </StackScreen>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
+  shrink: { flexShrink: 1 },
+  content: { padding: 16, gap: 12, paddingBottom: 24 },
+  comments: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 4 },
+  commentsHead: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingBottom: 10 },
+  noComment: { paddingBottom: 12 },
+  comment: { flexDirection: 'row', gap: 10, paddingVertical: 12, borderTopWidth: StyleSheet.hairlineWidth },
+  cAvatar: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  cHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  cBody: { marginTop: 3, lineHeight: 21 },
+  writer: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 4 },
+  writerText: { fontSize: 11, lineHeight: 15, fontWeight: '700' },
+  inputBar: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingHorizontal: 12, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth },
+  input: { flex: 1, minHeight: 42, maxHeight: 120, borderWidth: 1, borderRadius: 21, paddingHorizontal: 16, paddingTop: 11, paddingBottom: 11, fontSize: 15 },
+  loginBar: { justifyContent: 'center' },
+  send: { minHeight: 42, minWidth: 56, borderRadius: 21, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14 },
   mineActions: { flexDirection: 'row', gap: 14 },
   bold: { fontWeight: '700' },
   dim: { opacity: 0.45 },
