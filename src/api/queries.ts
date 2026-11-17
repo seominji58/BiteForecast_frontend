@@ -204,7 +204,12 @@ export function useDeletePost() {
 
 export function useAddComment(postId: number) {
   const invalidate = useInvalidateCommunity();
-  return useMutation({ mutationFn: (body: string) => api.addComment(postId, body), onSuccess: invalidate });
+  // 문자열이면 원댓글, { body, parentId } 면 그 댓글에 다는 답글
+  return useMutation({
+    mutationFn: (v: string | { body: string; parentId?: number | null }) =>
+      typeof v === 'string' ? api.addComment(postId, v) : api.addComment(postId, v.body, v.parentId),
+    onSuccess: invalidate,
+  });
 }
 
 export function useDeleteComment() {

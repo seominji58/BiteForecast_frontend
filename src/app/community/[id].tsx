@@ -1,8 +1,8 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useHeaderHeight } from 'expo-router/react-navigation';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View, type TextInputInstance } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAddComment, useDeleteComment, useDeletePost, usePost, useSetLike } from '@/api/queries';
@@ -38,6 +38,9 @@ export default function PostScreen() {
   const needLogin = () => router.push('/login');
 
   const [comment, setComment] = useState('');
+  // 답글 쓰는 중이면 그 원댓글 (입력줄 위에 「○○님에게 답글」)
+  const [replyTo, setReplyTo] = useState<{ id: number; nickname: string } | null>(null);
+  const inputRef = useRef<TextInputInstance>(null);
   const [reportTarget, setReportTarget] = useState<{ type: 'post' | 'comment'; id: number } | null>(null);
 
   if (post.isPending) return <StackScreen><Loading /></StackScreen>;
@@ -68,8 +71,11 @@ export default function PostScreen() {
 
   const sendComment = () => {
     if (!comment.trim()) return;
-    addComment.mutate(comment.trim(), {
-      onSuccess: () => setComment(''),
+    addComment.mutate(replyTo ? { body: comment.trim(), parentId: replyTo.id } : comment.trim(), {
+      onSuccess: () => {
+        setComment('');
+        setReplyTo(null);
+      },
       onError: (e) => Alert.alert('댓글을 등록하지 못했습니다', e.message),
     });
   };
@@ -181,61 +187,73 @@ export default function PostScreen() {
             아직 댓글이 없어요. 첫 댓글을 남겨 보세요.
           </ThemedText>
         ) : (
-          p.comments.map((c) => (
-            <View key={c.id} style={[styles.comment, { borderTopColor: theme.border }]}>
-              <View style={[styles.cAvatar, { backgroundColor: theme.tintSoft }]}>
-                <AppIcon name="tab-me-active" size={14} tint={theme.tint} />
-              </View>
-              <View style={styles.flex}>
-                <View style={styles.cHead}>
-                  <ThemedText type="smallBold" numberOfLines={1} style={styles.shrink}>
-                    {c.author.nickname}
-                  </ThemedText>
-                  {c.author.nickname === p.author.nickname ? (
-                    <View style={[styles.writer, { borderColor: theme.tint }]}>
-                      <ThemedText type="caption" themeColor="tint" style={styles.writerText}>
-                        작성자
+          // 원댓글 → 그 아래 답글(들여쓰기). 답글은 원댓글에만 한 단계
+          p.comments
+            .filter((c) => !c.parent_id)
+            .map((root) => (
+              <View key={root.id} style={[styles.thread, { borderTopColor: theme.border }]}>
+                <CommentRow
+                  c={root}
+                  isWriter={root.author.nickname === p.author.nickname}
+                  onReply={
+                    root.deleted
+                      ? undefined
+                      : () => {
+                          if (!signedIn) return needLogin();
+                          setReplyTo({ id: root.id, nickname: root.author.nickname });
+                          setTimeout(() => inputRef.current?.focus(), 50);
+                        }
+                  }
+                  onMenu={() =>
+                    root.mine ? confirmDeleteComment(root) : signedIn ? setReportTarget({ type: 'comment', id: root.id }) : needLogin()
+                  }
+                />
+                {p.comments
+                  .filter((r) => r.parent_id === root.id)
+                  .map((r) => (
+                    <View key={r.id} style={styles.reply}>
+                      <ThemedText type="small" themeColor="textSecondary" style={styles.replyArrow}>
+                        ↳
                       </ThemedText>
+                      <View style={styles.flex}>
+                        <CommentRow
+                          c={r}
+                          small
+                          isWriter={r.author.nickname === p.author.nickname}
+                          onMenu={() =>
+                            r.mine ? confirmDeleteComment(r) : signedIn ? setReportTarget({ type: 'comment', id: r.id }) : needLogin()
+                          }
+                        />
+                      </View>
                     </View>
-                  ) : null}
-                  <ThemedText type="caption" themeColor="textSecondary">
-                    {timeAgo(c.created_at)}
-                  </ThemedText>
-                  <View style={styles.flex} />
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={c.mine ? '댓글 삭제' : '댓글 신고'}
-                    hitSlop={10}
-                    onPress={() =>
-                      c.mine
-                        ? confirmDeleteComment(c)
-                        : signedIn
-                          ? setReportTarget({ type: 'comment', id: c.id })
-                          : needLogin()
-                    }>
-                    <ThemedText type="caption" themeColor="textSecondary">
-                      {c.mine ? '삭제' : '신고'}
-                    </ThemedText>
-                  </Pressable>
-                </View>
-                <ThemedText type="small" style={styles.cBody}>
-                  {c.body}
-                </ThemedText>
+                  ))}
               </View>
-            </View>
-          ))
+            ))
         )}
       </View>
     </ScrollView>
 
       {/* 아래 고정 댓글 입력줄 (키보드가 올라오면 함께 올라간다) */}
+      {replyTo ? (
+        <View style={[styles.replyBanner, { backgroundColor: theme.tintSoft, borderTopColor: theme.border }]}>
+          <ThemedText type="small" themeColor="tint" style={styles.flex} numberOfLines={1}>
+            ↳ {replyTo.nickname}님에게 답글 작성 중
+          </ThemedText>
+          <Pressable accessibilityRole="button" accessibilityLabel="답글 취소" hitSlop={10} onPress={() => setReplyTo(null)}>
+            <ThemedText type="smallBold" themeColor="tint">
+              ✕
+            </ThemedText>
+          </Pressable>
+        </View>
+      ) : null}
       <View style={[styles.inputBar, { backgroundColor: theme.backgroundElement, borderTopColor: theme.border, paddingBottom: Math.max(insets.bottom, 10) }]}>
         {signedIn ? (
           <>
             <TextInput
+              ref={inputRef}
               value={comment}
               onChangeText={setComment}
-              placeholder="댓글을 입력하세요"
+              placeholder={replyTo ? '답글을 입력하세요' : '댓글을 입력하세요'}
               placeholderTextColor={theme.textSecondary}
               maxLength={500}
               multiline
@@ -244,7 +262,7 @@ export default function PostScreen() {
             />
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="댓글 등록"
+              accessibilityLabel={replyTo ? '답글 등록' : '댓글 등록'}
               disabled={addComment.isPending || !comment.trim()}
               onPress={sendComment}
               style={[styles.send, { backgroundColor: comment.trim() ? Brand.orange : theme.backgroundSelected }]}>
@@ -273,15 +291,86 @@ export default function PostScreen() {
   );
 }
 
+/** 댓글 한 줄: 작은 프로필 · 이름(작성자 표시)·시간 · 오른쪽 삭제/신고 · 본문 · (원댓글이면) 답글 */
+function CommentRow({
+  c,
+  isWriter,
+  small,
+  onReply,
+  onMenu,
+}: {
+  c: PostComment;
+  isWriter: boolean;
+  small?: boolean;
+  onReply?: () => void;
+  onMenu: () => void;
+}) {
+  const theme = useTheme();
+  if (c.deleted) {
+    return (
+      <ThemedText type="small" themeColor="textSecondary" style={styles.deletedText}>
+        삭제되었거나 볼 수 없는 댓글이에요
+      </ThemedText>
+    );
+  }
+  const size = small ? 24 : 28;
+  return (
+    <View style={styles.comment}>
+      <View style={[styles.cAvatar, { width: size, height: size, borderRadius: size / 2, backgroundColor: theme.tintSoft }]}>
+        <AppIcon name="tab-me-active" size={small ? 12 : 14} tint={theme.tint} />
+      </View>
+      <View style={styles.flex}>
+        <View style={styles.cHead}>
+          <ThemedText type="smallBold" numberOfLines={1} style={styles.shrink}>
+            {c.author.nickname}
+          </ThemedText>
+          {isWriter ? (
+            <View style={[styles.writer, { borderColor: theme.tint }]}>
+              <ThemedText type="caption" themeColor="tint" style={styles.writerText}>
+                작성자
+              </ThemedText>
+            </View>
+          ) : null}
+          <ThemedText type="caption" themeColor="textSecondary">
+            {timeAgo(c.created_at)}
+          </ThemedText>
+          <View style={styles.flex} />
+          <Pressable accessibilityRole="button" accessibilityLabel={c.mine ? '댓글 삭제' : '댓글 신고'} hitSlop={10} onPress={onMenu}>
+            <ThemedText type="caption" themeColor="textSecondary">
+              {c.mine ? '삭제' : '신고'}
+            </ThemedText>
+          </Pressable>
+        </View>
+        <ThemedText type="small" style={styles.cBody}>
+          {c.body}
+        </ThemedText>
+        {onReply ? (
+          <Pressable accessibilityRole="button" accessibilityLabel={`${c.author.nickname}님 댓글에 답글 달기`} hitSlop={8} onPress={onReply} style={styles.replyBtn}>
+            <ThemedText type="caption" themeColor="textSecondary" style={styles.bold}>
+              답글
+            </ThemedText>
+          </Pressable>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  thread: { borderTopWidth: StyleSheet.hairlineWidth, paddingVertical: 4 },
+  reply: { flexDirection: 'row', gap: 4, paddingLeft: 30 },
+  replyArrow: { paddingTop: 10 },
+  replyBtn: { alignSelf: 'flex-start', marginTop: 4, minHeight: 24, justifyContent: 'center' },
+  replyBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth },
+  deletedText: { paddingVertical: 12, fontStyle: 'italic' },
   shrink: { flexShrink: 1 },
   content: { padding: 16, gap: 12, paddingBottom: 24 },
   comments: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 4 },
   commentsHead: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingBottom: 10 },
   noComment: { paddingBottom: 12 },
-  comment: { flexDirection: 'row', gap: 10, paddingVertical: 12, borderTopWidth: StyleSheet.hairlineWidth },
-  cAvatar: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  comment: { flexDirection: 'row', gap: 10, paddingVertical: 8 },
+  cAvatar: { alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   cHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   cBody: { marginTop: 3, lineHeight: 21 },
   writer: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 4 },

@@ -133,8 +133,12 @@ export const api = {
     ),
   catchSummary: (days = 14) => request<CatchSummary[]>(`/community/catch-summary?days=${days}`, { auth: true }),
   deletePost: (id: number) => request<void>(`/community/posts/${id}`, { method: 'DELETE', auth: true }),
-  addComment: (postId: number, body: string) =>
-    request<PostDetail>(`/community/posts/${postId}/comments`, { method: 'POST', body: { body }, auth: true }),
+  addComment: (postId: number, body: string, parentId?: number | null) =>
+    request<PostDetail>(`/community/posts/${postId}/comments`, {
+      method: 'POST',
+      body: parentId ? { body, parent_id: parentId } : { body },
+      auth: true,
+    }),
   deleteComment: (id: number) => request<void>(`/community/comments/${id}`, { method: 'DELETE', auth: true }),
   setLike: (postId: number, liked: boolean) =>
     request<{ liked: boolean; like_count: number }>(`/community/posts/${postId}/like`, {

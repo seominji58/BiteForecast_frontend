@@ -437,7 +437,17 @@ export type PostSummary = {
   catch: PostCatch | null;
 };
 
-export type PostComment = { id: number; body: string; author: Author; mine: boolean; created_at: string };
+export type PostComment = {
+  id: number;
+  body: string;
+  author: Author;
+  mine: boolean;
+  created_at: string;
+  /** 대댓글이면 원댓글 id (한 단계만) */
+  parent_id?: number | null;
+  /** 원댓글이 지워졌지만 답글이 남아 있을 때의 자리표시 (본문·작성자 비어 있음) */
+  deleted?: boolean;
+};
 export type PostCatch = {
   fished_at: string;
   species_name: string | null;
