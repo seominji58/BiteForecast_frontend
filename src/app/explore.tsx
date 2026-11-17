@@ -697,6 +697,11 @@ function SelectedCard({
           {seaLine}
         </ThemedText>
       ) : null}
+      {s?.zone_notes?.length ? (
+        <ThemedText type="small" themeColor={s.zone_notes[0].startsWith('출입통제') ? 'danger' : 'warning'} numberOfLines={1}>
+          ⚠ {s.zone_notes.join(' · ')}
+        </ThemedText>
+      ) : null}
       {s?.sunrise ? (
         <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
           일출 {s.sunrise} · 일몰 {s.sunset ?? '–'}

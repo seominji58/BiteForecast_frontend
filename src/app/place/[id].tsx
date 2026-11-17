@@ -6,6 +6,7 @@ import { useConditions, useDateRange, useFavorites, usePlaces, usePlacesSummary,
 import { AddToTripButton } from '@/components/add-to-trip';
 import { CatchStrip } from '@/components/catch-strip';
 import { CoordNote } from '@/components/coord-note';
+import { ZoneNotice } from '@/components/zone-notice';
 import { AppIcon } from '@/components/app-icon';
 import { Button } from '@/components/form';
 import { MarineWarningBanner } from '@/components/marine-warning-banner';
@@ -98,6 +99,9 @@ export default function PlaceDetailScreen() {
 
       {pc ? (
         <>
+          {/* 출입통제구역·연안사고 위험구역 (해양경찰청 공간정보, 판정 아님) */}
+          <ZoneNotice regulation={pc.regulation} />
+
           {/* ① 이용자 조황을 맨 위에 (서비스 개선 v2 P-A). 예보·지수와 제목·문구로 구분, 없으면 칸을 숨김 */}
           <CatchStrip
             title="이 낚시터 이용자 조황"

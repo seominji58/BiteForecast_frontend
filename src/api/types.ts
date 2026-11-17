@@ -221,7 +221,7 @@ export type Regulation = {
   status: RegulationStatus;
   stale: boolean;
   items: {
-    restriction_type: 'fishing' | 'access' | 'other';
+    restriction_type: 'fishing' | 'access' | 'other' | 'coastal_danger';
     status: RegulationStatus;
     authority: string | null;
     notice_no: string | null;
@@ -229,6 +229,11 @@ export type Regulation = {
     valid_from: string | null;
     valid_to: string | null;
     verified_at: string | null;
+    /** 구역 이름·거리 (예: 「구봉도 주변 해상 (연안해역) · 안에 있음 · …」) */
+    remarks?: string | null;
+    /** 자료 기준일 (해양경찰청 공간정보) */
+    published_at?: string | null;
+    geometry_source?: string | null;
   }[];
 };
 
@@ -360,6 +365,8 @@ export type PlaceSummary = {
   sunset?: string | null;
   /** 가장 센 바람 시각의 풍향 (16방위, 바람이 불어오는 쪽. 예: 북서) */
   wind_dir_fc?: string | null;
+  /** 출입통제구역·연안사고 위험구역 짧은 안내 (금지 판정 아님) */
+  zone_notes?: string[];
 };
 /** 자료별 마지막 수집 시각. stale 이면 출조 탐색 판단에 쓰지 않는다 */
 export type DataStatus = {
