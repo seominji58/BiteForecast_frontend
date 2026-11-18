@@ -4,12 +4,11 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useFavorites, usePlaces } from '@/api/queries';
 import type { Place } from '@/api/types';
-import { AppIcon } from '@/components/app-icon';
 import { SectionHeader } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
-import { IconSize } from '@/constants/theme';
+import { PlacePhoto } from '@/components/place-photo';
 import { useTheme } from '@/hooks/use-theme';
-import { PLACE_IMAGE, placeName } from '@/lib/place';
+import { placeName } from '@/lib/place';
 import { getRecent, RECENT_PLACES } from '@/lib/prefs';
 
 /** 낚시터를 가로 한 줄 카드로 (내정보가 세로로 길어지지 않게) */
@@ -28,7 +27,7 @@ function PlaceStrip({ places }: { places: Place[] }) {
             { backgroundColor: theme.backgroundElement, borderColor: theme.border },
             pressed && styles.pressed,
           ]}>
-          <AppIcon name={PLACE_IMAGE[p.type]} size={IconSize.row} />
+          <PlacePhoto place={p} size="thumb" style={styles.thumb} />
           <View style={styles.flex}>
             <ThemedText type="smallBold" numberOfLines={1}>
               {placeName(p)}
@@ -90,5 +89,6 @@ const styles = StyleSheet.create({
     minHeight: 60,
   },
   flex: { flex: 1 },
+  thumb: { width: 44, height: 44, borderRadius: 8 },
   pressed: { opacity: 0.7 },
 });

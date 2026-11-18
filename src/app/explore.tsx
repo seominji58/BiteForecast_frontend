@@ -30,6 +30,7 @@ import { coordKey, distLabel, km, matches, PLACE_IMAGE, PLACE_TYPE_LABEL, placeK
 import { mergeWithApi, SPECIES } from '@/lib/species';
 import { sortByCount, speciesPlaceCounts } from '@/lib/species-rank';
 import { SearchBar } from '@/components/search-bar';
+import { PlacePhoto } from '@/components/place-photo';
 import { useCriteria, useExploreRegion, useHomePlace } from '@/lib/prefs';
 
 const KOREA: MapRegion = { latitude: 36.0, longitude: 127.8, latitudeDelta: 6.5, longitudeDelta: 6.5 };
@@ -738,6 +739,7 @@ function SelectedCard({
   return (
     <Card style={styles.selected}>
       <View style={styles.between}>
+        <PlacePhoto place={place} size="thumb" style={styles.thumb} label={placeName(place)} />
         <View style={styles.flex}>
           <ThemedText type="sectionTitle" numberOfLines={1}>
             {placeName(place)}
@@ -832,6 +834,7 @@ function daysAgo(iso: string): string {
 
 const styles = StyleSheet.create({
   cardActions: { flexDirection: 'row', gap: 8, alignItems: 'stretch' },
+  thumb: { width: 64, height: 64, borderRadius: 10, marginRight: 10 },
   caught: { backgroundColor: 'rgba(242,140,40,0.12)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
   caughtText: { color: '#B8641A' },
   flex: { flex: 1 },

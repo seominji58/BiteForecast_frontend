@@ -20,11 +20,12 @@ import { ThemedView } from '@/components/themed-view';
 import { UiIcon } from '@/components/ui-icon';
 import { CatchStrip } from '@/components/catch-strip';
 import { ownerName, participants, TripMembers } from '@/components/trip-members';
-import { Brand, IconSize } from '@/constants/theme';
+import { PlacePhoto } from '@/components/place-photo';
+import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { dayLabel } from '@/lib/compare';
 import { criteriaLabel, freshnessLine } from '@/lib/criteria';
-import { PLACE_IMAGE, PLACE_TYPE_LABEL, placeName, sidoOf } from '@/lib/place';
+import { PLACE_TYPE_LABEL, placeName, sidoOf } from '@/lib/place';
 import { useCriteria } from '@/lib/prefs';
 import { speciesForRecord } from '@/lib/species';
 import { dday, hmToDate, outlookLine, periodLabel, timeRange, toHm, tripDays } from '@/lib/trip';
@@ -626,7 +627,7 @@ function StopCard({
   return (
     <Card style={styles.stop}>
       <View style={styles.stopHead}>
-        <AppIcon name={PLACE_IMAGE[stop.place.type]} size={IconSize.row} />
+        <PlacePhoto place={stop.place} size="thumb" style={styles.stopThumb} />
         <View style={styles.flex}>
           <ThemedText type="smallBold" numberOfLines={1}>
             {placeName(stop.place)}{' '}
@@ -1038,6 +1039,7 @@ const styles = StyleSheet.create({
   },
   stop: { gap: 8 },
   stopHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  stopThumb: { width: 48, height: 48, borderRadius: 10 },
   link: { minHeight: 32, justifyContent: 'center', paddingHorizontal: 4 },
   sea: { gap: 10 },
   stopSea: { borderRadius: 8, padding: 8, gap: 2 },

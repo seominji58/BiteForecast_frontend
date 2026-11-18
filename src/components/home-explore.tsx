@@ -11,13 +11,14 @@ import type { FishingIndexDay, IndexPoint, Place, PlaceSummary, PlaceType } from
 import { AppIcon } from '@/components/app-icon';
 import { SpeciesImage } from '@/components/species';
 import { ThemedText } from '@/components/themed-text';
+import { PlacePhoto } from '@/components/place-photo';
 import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { WARNING_SHORT } from '@/lib/criteria';
 import { seaState, windName } from '@/lib/describe';
 import { formatForecastWave } from '@/lib/format';
 import { type TermKey, tideWord } from '@/lib/glossary';
-import { distLabel, PLACE_IMAGE, PLACE_TYPE_LABEL, placeName } from '@/lib/place';
+import { distLabel, PLACE_TYPE_LABEL, placeName } from '@/lib/place';
 import { GRADE_RANK, GRADE_TONE, INDEX_DISCLAIMER, josa, type SpeciesItem } from '@/lib/species';
 
 export const SHOW = 3;
@@ -114,7 +115,7 @@ export function PointCard({
       style={({ pressed }) => [styles.card, { backgroundColor: theme.backgroundElement, borderColor: theme.border }, pressed && styles.pressed]}>
       <View style={styles.row}>
         {/* 어종 그림은 공식 지수 지점에만 — 근처 일반 낚시터에 붙이면 그 어종이 있는 곳처럼 보인다 */}
-        {species && !index?.via ? <SpeciesImage code={species.code} size={40} /> : <AppIcon name={PLACE_IMAGE[place.type]} size={36} />}
+        {species && !index?.via ? <SpeciesImage code={species.code} size={40} /> : <PlacePhoto place={place} size="thumb" style={styles.thumb} />}
         <View style={styles.flex}>
           <ThemedText type="smallBold" numberOfLines={1}>
             {placeName(place)}
@@ -580,6 +581,7 @@ const styles = StyleSheet.create({
   bold: { fontWeight: '700' },
   pressed: { opacity: 0.75 },
   card: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 6 },
+  thumb: { width: 48, height: 48, borderRadius: 10 },
   indexRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
   grade: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 1 },
   gradeText: { fontSize: 12, lineHeight: 17, fontWeight: '700' },

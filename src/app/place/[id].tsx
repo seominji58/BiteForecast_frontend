@@ -14,6 +14,7 @@ import { MarineWarningBanner } from '@/components/marine-warning-banner';
 import { Card, ErrorView, Loading, SectionHeader, StackScreen } from '@/components/screen';
 import { DataBasis, FishingIndexCard, MetricTable, NearbyPlaces, TideCard, WeatherForecastCard } from '@/components/sea-detail';
 import { ThemedText } from '@/components/themed-text';
+import { PlacePhoto } from '@/components/place-photo';
 import { dayLabel, timeLabel } from '@/lib/compare';
 import { nearby, PLACE_IMAGE, PLACE_TYPE_LABEL, placeKindNote, placeName } from '@/lib/place';
 import { Brand } from '@/constants/theme';
@@ -50,6 +51,18 @@ export default function PlaceDetailScreen() {
 
       {place ? (
         <Card>
+          {/* 위성 사진 (실제 위치 모습). 위치가 의심스러우면 그리지 않는다 */}
+          {place.lat != null && !place.location_suspect ? (
+            <View style={styles.heroWrap}>
+              <PlacePhoto
+                place={place}
+                size="hero"
+                style={styles.hero}
+                label={placeName(place)}
+                caption="위성 사진 · 주황 핀이 등록된 위치"
+              />
+            </View>
+          ) : null}
           <View style={styles.row}>
             <AppIcon name={PLACE_IMAGE[place.type]} size={32} />
             <View style={styles.flex}>
@@ -217,4 +230,6 @@ const styles = StyleSheet.create({
   moreBtn: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
   flex: { flex: 1 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  heroWrap: { marginTop: -12, marginHorizontal: -12, marginBottom: 4 },
+  hero: { width: '100%', aspectRatio: 2, borderTopLeftRadius: 12, borderTopRightRadius: 12 },
 });
