@@ -79,3 +79,23 @@ export function matches(p: Place, query: string): boolean {
   const hay = `${p.name} ${p.region_name} ${p.address ?? ''}`.toLowerCase();
   return words.every((w) => hay.includes(w));
 }
+
+/**
+ * 장소 표시 이름 (2026-11-18, 주변 플레이스 설계 1차). 원본 이름은 그대로 두고 화면에서만 바꾼다.
+ * 국립해양조사원 바다낚시지수 「선상」 지점은 「목포북항서측(53km)」처럼 항구 기준 바다 위 좌표라
+ * 사람이 가는 낚시터처럼 보이지 않게 「목포북항 서쪽 53km 바다」로 보여준다.
+ */
+const SEA_POINT = /^(.+?항)(북북동|북북서|남남동|남남서|동북동|동남동|서북서|서남서|북동|북서|남동|남서|북|남|동|서)(측)?\((\d+(?:\.\d+)?)km\)$/;
+
+export function placeName(p: Pick<Place, 'name' | 'type'>): string {
+  if (p.type !== 'boat') return p.name;
+  const m = SEA_POINT.exec(p.name.trim());
+  return m ? `${m[1]} ${m[2]}쪽 ${m[4]}km 바다` : p.name;
+}
+
+/** 장소 종류 안내 한 줄 (지수 지점만). 낚시터와 섞여 보이지 않게 */
+export function placeKindNote(p: Pick<Place, 'type'>): string | null {
+  if (p.type === 'boat') return '배를 타고 가는 바다 위 지점 · 공식 낚시지수 기준점';
+  if (p.type === 'point') return '섬·해역 단위 지점 · 공식 낚시지수 기준점';
+  return null;
+}

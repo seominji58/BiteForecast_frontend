@@ -19,7 +19,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { dayLabel, dayList } from '@/lib/compare';
 import { freshnessLine } from '@/lib/criteria';
 import { useExplore } from '@/lib/explore';
-import { matches, PLACE_IMAGE, PLACE_TYPE_LABEL, usableForLocation } from '@/lib/place';
+import { matches, PLACE_IMAGE, PLACE_TYPE_LABEL, placeName, usableForLocation } from '@/lib/place';
 import { sortByCount, speciesPlaceCounts } from '@/lib/species-rank';
 import { type Region, REGIONS, SEA_GROUPS } from '@/lib/prefs';
 import { josa } from '@/lib/species';
@@ -196,7 +196,7 @@ export default function HomeScreen() {
               <AppIcon name={PLACE_IMAGE[p.type]} size={IconSize.row} />
               <View style={styles.flex}>
                 <ThemedText type="smallBold" numberOfLines={1}>
-                  {p.name}
+                  {placeName(p)}
                 </ThemedText>
                 <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
                   {p.region_name} · {PLACE_TYPE_LABEL[p.type]}

@@ -17,7 +17,7 @@ import { WARNING_SHORT } from '@/lib/criteria';
 import { seaState, windName } from '@/lib/describe';
 import { formatForecastWave } from '@/lib/format';
 import { type TermKey, tideWord } from '@/lib/glossary';
-import { distLabel, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
+import { distLabel, PLACE_IMAGE, PLACE_TYPE_LABEL, placeName } from '@/lib/place';
 import { GRADE_RANK, GRADE_TONE, INDEX_DISCLAIMER, josa, type SpeciesItem } from '@/lib/species';
 
 export const SHOW = 3;
@@ -117,7 +117,7 @@ export function PointCard({
         {species && !index?.via ? <SpeciesImage code={species.code} size={40} /> : <AppIcon name={PLACE_IMAGE[place.type]} size={36} />}
         <View style={styles.flex}>
           <ThemedText type="smallBold" numberOfLines={1}>
-            {place.name}
+            {placeName(place)}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
             {where}

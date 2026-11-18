@@ -26,7 +26,7 @@ import {
 } from '@/lib/criteria';
 import { type Coords, getCurrentCoords } from '@/lib/location';
 import { CoordNote, SameCoordSheet } from '@/components/coord-note';
-import { coordKey, distLabel, km, matches, PLACE_IMAGE, PLACE_TYPE_LABEL, recommendable, sidoOf, usableForLocation } from '@/lib/place';
+import { coordKey, distLabel, km, matches, PLACE_IMAGE, PLACE_TYPE_LABEL, placeKindNote, placeName, recommendable, sidoOf, usableForLocation } from '@/lib/place';
 import { mergeWithApi, SPECIES } from '@/lib/species';
 import { sortByCount, speciesPlaceCounts } from '@/lib/species-rank';
 import { SearchBar } from '@/components/search-bar';
@@ -492,7 +492,7 @@ export default function ExploreScreen() {
                   <Pressable key={p.id} accessibilityRole="button" onPress={() => pickPlace(p)} style={styles.hit}>
                     <AppIcon name={PLACE_IMAGE[p.type]} size={IconSize.inline + 4} />
                     <ThemedText type="smallBold" numberOfLines={1} style={styles.flex}>
-                      {p.name}
+                      {placeName(p)}
                     </ThemedText>
                     <ThemedText type="small" themeColor="textSecondary">
                       {p.region_name}
@@ -740,12 +740,17 @@ function SelectedCard({
       <View style={styles.between}>
         <View style={styles.flex}>
           <ThemedText type="sectionTitle" numberOfLines={1}>
-            {place.name}
+            {placeName(place)}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
             {place.region_name} · {PLACE_TYPE_LABEL[place.type]}
             {distLabel(dist, place) ? ` · ${distLabel(dist, place)}` : ''}
           </ThemedText>
+          {placeKindNote(place) ? (
+            <ThemedText type="small" themeColor="tint" numberOfLines={1}>
+              {placeKindNote(place)}
+            </ThemedText>
+          ) : null}
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel="선택 닫기" hitSlop={10} onPress={onClose}>
           <ThemedText type="smallBold" themeColor="textSecondary">

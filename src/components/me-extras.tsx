@@ -9,7 +9,7 @@ import { SectionHeader } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { IconSize } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { PLACE_IMAGE } from '@/lib/place';
+import { PLACE_IMAGE, placeName } from '@/lib/place';
 import { getRecent, RECENT_PLACES } from '@/lib/prefs';
 
 /** 낚시터를 가로 한 줄 카드로 (내정보가 세로로 길어지지 않게) */
@@ -21,7 +21,7 @@ function PlaceStrip({ places }: { places: Place[] }) {
         <Pressable
           key={p.id}
           accessibilityRole="button"
-          accessibilityLabel={`${p.name}, ${p.region_name}`}
+          accessibilityLabel={`${placeName(p)}, ${p.region_name}`}
           onPress={() => router.push({ pathname: '/place/[id]', params: { id: String(p.id) } })}
           style={({ pressed }) => [
             styles.tile,
@@ -31,7 +31,7 @@ function PlaceStrip({ places }: { places: Place[] }) {
           <AppIcon name={PLACE_IMAGE[p.type]} size={IconSize.row} />
           <View style={styles.flex}>
             <ThemedText type="smallBold" numberOfLines={1}>
-              {p.name}
+              {placeName(p)}
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
               {p.region_name}

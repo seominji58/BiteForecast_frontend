@@ -9,7 +9,7 @@ import { IconSize } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { Breakdown, Criteria } from '@/lib/criteria';
 import { freshnessLine, WARNING_SHORT } from '@/lib/criteria';
-import { distLabel, km, PLACE_IMAGE, recommendable } from '@/lib/place';
+import { distLabel, km, PLACE_IMAGE, placeName, recommendable } from '@/lib/place';
 
 /**
  * 「조건으로 찾기」 결과 세 가지 상태 (사용자 피드백 2026-11-09).
@@ -132,7 +132,7 @@ export function CriteriaResult({
           <AppIcon name={PLACE_IMAGE[p.type]} size={IconSize.row} />
           <View style={styles.flex}>
             <ThemedText type="smallBold" numberOfLines={1}>
-              {p.name}
+              {placeName(p)}
               <ThemedText type="small" themeColor="textSecondary">
                 {`  ${distLabel(d, p) ?? p.region_name}`}
               </ThemedText>

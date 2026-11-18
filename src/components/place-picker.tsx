@@ -5,7 +5,7 @@ import type { Place } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { SearchSelect } from '@/components/search-select';
 import { ThemedText } from '@/components/themed-text';
-import { PLACE_IMAGE, PLACE_TYPE_LABEL, sidoOf } from '@/lib/place';
+import { PLACE_IMAGE, PLACE_TYPE_LABEL, placeName, sidoOf } from '@/lib/place';
 import { RECENT_PLACES } from '@/lib/prefs';
 
 type Props = {
@@ -30,7 +30,7 @@ export function PlacePicker({ visible, title, selectedId, disabledId, initialSid
       loading={places.isPending}
       error={places.isError ? { message: places.error.message, retry: () => places.refetch() } : null}
       keyOf={(p) => String(p.id)}
-      searchText={(p) => `${p.name} ${p.region_name} ${p.address ?? ''}`}
+      searchText={(p) => `${placeName(p)} ${p.region_name} ${p.address ?? ''}`}
       shortLabel={(p) => p.name}
       filterOf={sidoOf}
       initialFilter={initialSido ?? null}
@@ -52,7 +52,7 @@ export function PlacePicker({ visible, title, selectedId, disabledId, initialSid
           </View>
           <View style={styles.flex}>
             <ThemedText type="smallBold" numberOfLines={1}>
-              {p.name}
+              {placeName(p)}
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
               {p.region_name} · {PLACE_TYPE_LABEL[p.type]}

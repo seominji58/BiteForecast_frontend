@@ -24,7 +24,7 @@ import { Brand, IconSize } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { dayLabel } from '@/lib/compare';
 import { criteriaLabel, freshnessLine } from '@/lib/criteria';
-import { PLACE_IMAGE, PLACE_TYPE_LABEL, sidoOf } from '@/lib/place';
+import { PLACE_IMAGE, PLACE_TYPE_LABEL, placeName, sidoOf } from '@/lib/place';
 import { useCriteria } from '@/lib/prefs';
 import { speciesForRecord } from '@/lib/species';
 import { dday, hmToDate, outlookLine, periodLabel, timeRange, toHm, tripDays } from '@/lib/trip';
@@ -570,7 +570,7 @@ function SeaTiles({
   return (
     <Card style={styles.sea}>
       <ThemedText type="caption" themeColor="textSecondary" numberOfLines={1}>
-        {stop.place.name} · {dayLabel(stop.day)}
+        {placeName(stop.place)} · {dayLabel(stop.day)}
       </ThemedText>
       <View style={styles.tiles}>
         {tiles.map((t) => (
@@ -629,7 +629,7 @@ function StopCard({
         <AppIcon name={PLACE_IMAGE[stop.place.type]} size={IconSize.row} />
         <View style={styles.flex}>
           <ThemedText type="smallBold" numberOfLines={1}>
-            {stop.place.name}{' '}
+            {placeName(stop.place)}{' '}
             <ThemedText type="small" themeColor={stop.role === 'main' ? 'tint' : 'textSecondary'}>
               {stop.role === 'main' ? '주 장소' : '예비'}
             </ThemedText>
@@ -728,7 +728,7 @@ function StopEditorBody({
   const bad = !!start && !!end && toHm(end) < toHm(start);
   return (
     <ThemedView style={styles.sheet}>
-      <ThemedText type="sectionTitle">{stop.place.name}</ThemedText>
+      <ThemedText type="sectionTitle">{placeName(stop.place)}</ThemedText>
       <Field label="낚시 시간 (선택)">
         <View style={styles.row}>
           <PickerField mode="time" a11y="시작 시간" value={start} onChange={setStart} placeholder="시작" />

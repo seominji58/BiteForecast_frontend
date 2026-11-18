@@ -14,7 +14,7 @@ import { Card, ErrorView, Loading, SectionHeader, StackScreen } from '@/componen
 import { DataBasis, FishingIndexCard, MetricTable, NearbyPlaces, TideCard, WeatherForecastCard } from '@/components/sea-detail';
 import { ThemedText } from '@/components/themed-text';
 import { dayLabel, timeLabel } from '@/lib/compare';
-import { nearby, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
+import { nearby, PLACE_IMAGE, PLACE_TYPE_LABEL, placeKindNote, placeName } from '@/lib/place';
 import { Brand } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
 import { pushRecentPlace, useHomePlace } from '@/lib/prefs';
@@ -40,7 +40,7 @@ export default function PlaceDetailScreen() {
 
   return (
     <StackScreen>
-      <Stack.Screen options={{ title: place?.name ?? '상세 해황' }} />
+      <Stack.Screen options={{ title: place ? placeName(place) : '상세 해황' }} />
       {places.isPending || (place && cond.isPending) ? <Loading /> : null}
       {places.isSuccess && !place ? (
         <ErrorView message="지원하지 않는 낚시터예요." onRetry={() => places.refetch()} />
@@ -52,11 +52,16 @@ export default function PlaceDetailScreen() {
           <View style={styles.row}>
             <AppIcon name={PLACE_IMAGE[place.type]} size={32} />
             <View style={styles.flex}>
-              <ThemedText type="sectionTitle">{place.name}</ThemedText>
+              <ThemedText type="sectionTitle">{placeName(place)}</ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
                 {place.region_name} · {PLACE_TYPE_LABEL[place.type]}
                 {place.address ? ` · ${place.address}` : ''}
               </ThemedText>
+              {placeKindNote(place) ? (
+                <ThemedText type="small" themeColor="tint">
+                  {placeKindNote(place)}
+                </ThemedText>
+              ) : null}
             </View>
             <FavoriteStar placeId={place.id} />
           </View>

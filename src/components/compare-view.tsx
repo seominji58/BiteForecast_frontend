@@ -22,6 +22,7 @@ import {
   sourceLine,
   timeLabel,
 } from '@/lib/compare';
+import { placeName } from '@/lib/place';
 
 /** 지수 등급은 색과 함께 항상 텍스트로 표시 (NFR-05) */
 export const LEVEL_COLOR: Record<FishingIndexLevel, 'success' | 'text' | 'warning' | 'danger'> = {
@@ -122,7 +123,7 @@ export function CompareView({
         {places.map((p, i) => (
           <View key={p.place.id} style={styles.summaryLine}>
             <ThemedText type="smallBold" themeColor="tint">
-              {i === 0 ? 'A' : 'B'} {p.place.name}
+              {i === 0 ? 'A' : 'B'} {placeName(p.place)}
             </ThemedText>
             <ThemedText type="small">{describeShort(p, kinds)}</ThemedText>
           </View>
@@ -392,7 +393,7 @@ function SourceList({ places }: { places: PlaceCompare[] }) {
         return (
           <View key={p.place.id} style={styles.cellStack}>
             <ThemedText type="small">
-              {i === 0 ? 'A' : 'B'} · {p.region_name} {p.place.name}
+              {i === 0 ? 'A' : 'B'} · {p.region_name} {placeName(p.place)}
             </ThemedText>
             {lines.map((l) => (
               <Muted key={l}>{l}</Muted>
