@@ -14,8 +14,18 @@ export type MapMarker = {
   count?: number;
   /** 접근성·제목 */
   label?: string;
-  /** 어종 그림 핀 (어종 코드, 예: rockfish). 고른 어종 공식 지수 좋음 이상인 낚시터 하나짜리 핀에만 */
+  /**
+   * 어종 그림 핀 (어종 코드, 예: rockfish). 어종을 고르면 남은 핀이 모두 어종 그림이 된다 (지도 핀 설계 1단계, 2026-11-18)
+   * 테두리 색(ring) = 고른 어종 공식 낚시지수: good 좋음 이상 · normal 보통/정보 없음 · bad 나쁨 이하 또는 해상특보
+   */
   fish?: string;
+  ring?: 'good' | 'normal' | 'bad';
+  /** 최근 14일 이용자 조황이 있음 → 핀 오른쪽 위 주황 점 */
+  caught?: boolean;
+  /** 고른 핀: 색을 바꾸지 않고 크게 (주황은 「조황」 표시와 겹치므로 쓰지 않는다) */
+  selected?: boolean;
+  /** 핀 아래 글자 (어종 묶음의 「좋음 12」 등) */
+  caption?: string;
 };
 
 export type MapRegion = { latitude: number; longitude: number; latitudeDelta: number; longitudeDelta: number };

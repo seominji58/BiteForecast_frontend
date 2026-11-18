@@ -5,6 +5,7 @@ import { ActivityIndicator, Keyboard, Modal, Pressable, ScrollView, StyleSheet, 
 import { useCatchSummary, useDateRange, useGeoSearch, useFishingIndex, usePlaces, usePlacesSummary, useSpecies } from '@/api/queries';
 import type { CatchSummary, Place, PlaceSummary } from '@/api/types';
 import { AddToTripButton } from '@/components/add-to-trip';
+import { PIN } from '@/components/map/pin-assets';
 import { AppIcon } from '@/components/app-icon';
 import { Dropdown, type DropdownOption } from '@/components/dropdown';
 import { AppMap, type AppMapHandle, type MapMarker, type MapRegion } from '@/components/map/app-map';
@@ -301,7 +302,7 @@ export default function ExploreScreen() {
   }, [fishKey, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const tone = (r: (typeof rows)[number]): MapMarker['tone'] => {
-    if (r.place.id === selectedId) return 'selected';
+    // 고른 핀은 색을 바꾸지 않고 크게만 (selected 플래그) — 주황은 「최근 조황」과 겹친다
     if (r.s?.warning_level === 'warning') return 'danger';
     if (!stale && (onlyMatching || params.mode === 'criteria')) return r.check.status === 'meets' ? 'teal' : 'gray';
     // 순서: 이용자 조황(실제 글) → 공식 지수 좋음 이상 → 지수 나쁨 → 그 외
@@ -348,6 +349,22 @@ export default function ExploreScreen() {
     return [...merged, ...alone.map((g) => ({ key: '', groups: [g] }))];
   }, [pins, view?.latitudeDelta, selectedId]);
 
+  // 지도 핀 설계 1단계 (2026-11-18): 어종을 고르면 남은 핀이 모두 그 어종 그림.
+  // 테두리 색 = 공식 낚시지수 등급(초록 좋음 이상 · 회색 보통/정보 없음 · 빨강 나쁨 이하 또는 해상특보),
+  // 오른쪽 위 주황 점 = 최근 14일 이용자 조황, 묶음은 핀 아래 「좋음 N곳」
+  const pinFish = fishItem && PIN[fishItem.code] ? fishItem.code : undefined;
+  const ringOf = (r: (typeof rows)[number]): 'good' | 'normal' | 'bad' =>
+    r.s?.warning_level === 'warning' || badGrade(r.place.id) ? 'bad' : goodGrade(r.place.id) ? 'good' : 'normal';
+  const fishGroup = (all: (typeof rows)[number][]) => {
+    const good = all.filter((x) => ringOf(x) === 'good').length;
+    return {
+      fish: pinFish,
+      ring: good ? ('good' as const) : all.every((x) => ringOf(x) === 'bad') ? ('bad' as const) : ('normal' as const),
+      caught: all.some((x) => catchById.has(x.place.id)),
+      caption: good ? `좋음 ${good}곳` : `${all.length}곳`,
+    };
+  };
+
   // 지도 마커: 낚시터 하나는 점, 같은 좌표 여러 곳·가까운 곳 묶음은 숫자 원 (특보 발효 곳이 있으면 빨강)
   const markers: MapMarker[] = clusters.map(({ key, groups }) => {
     if (groups.length > 1) {
@@ -362,6 +379,7 @@ export default function ExploreScreen() {
         tone: warn ? 'danger' : caught ? 'catch' : good ? 'good' : 'navy',
         count: all.length,
         label: `가까운 낚시터 ${all.length}곳, 눌러서 확대`,
+        ...(pinFish ? fishGroup(all) : {}),
       };
     }
     const group = groups[0];
@@ -373,8 +391,8 @@ export default function ExploreScreen() {
         lon: r.place.lon!,
         tone: tone(r),
         label: r.place.name,
-        // 고른 어종의 오늘 공식 지수가 좋음 이상이면 그 어종 그림 핀 (조황 아님 — 바다 조건)
-        fish: tone(r) === 'good' ? fishItem?.code : undefined,
+        selected: r.place.id === selectedId,
+        ...(pinFish ? { fish: pinFish, ring: ringOf(r), caught: catchById.has(r.place.id) } : {}),
       };
     const warn = group.some((x) => x.s?.warning_level === 'warning');
     const caught = group.some((x) => catchById.has(x.place.id));
@@ -386,6 +404,8 @@ export default function ExploreScreen() {
       tone: warn ? 'danger' : caught ? 'catch' : good ? 'good' : 'navy',
       count: group.length,
       label: `같은 좌표의 낚시터 ${group.length}곳`,
+      selected: group.some((x) => x.place.id === selectedId),
+      ...(pinFish ? fishGroup(group) : {}),
     };
   });
   // 핀을 고르면 지금 확대 그대로 그 핀을 지도 가운데로 (가장자리·아래 카드에 가리지 않게)
@@ -559,6 +579,23 @@ export default function ExploreScreen() {
               </ThemedText>
             </View>
           ) : null}
+          {/* 범례: 어종을 골랐을 때 핀 색의 뜻 (지수는 바다 조건이지 조과 보장이 아니다) */}
+          {pinFish ? (
+            <View style={[styles.legend, { backgroundColor: theme.background }]}>
+              {fishIsIndex ? (
+                <>
+                  <LegendDot color="#16A34A" text="지수 좋음" />
+                  <LegendDot color="#64748B" text="보통·정보 없음" />
+                  <LegendDot color="#DC2626" text="나쁨·특보" />
+                </>
+              ) : (
+                <ThemedText type="small" themeColor="textSecondary">
+                  공식 지수 없는 어종 · 낚시터가 알린 대상 어종 기준
+                </ThemedText>
+              )}
+              <LegendDot color="#F97316" text="최근 조황" small />
+            </View>
+          ) : null}
         </View>
 
         <Pressable
@@ -683,6 +720,17 @@ function CriteriaEditor({ c, onChange }: { c: Criteria; onChange: (c: Criteria) 
           <Chip key={v ?? 'none'} label={v ? `${v} 이상` : '조건 없음'} selected={c.minIndex === v} onPress={() => onChange({ ...c, minIndex: v })} />
         ))}
       </View>
+    </View>
+  );
+}
+
+function LegendDot({ color, text, small }: { color: string; text: string; small?: boolean }) {
+  return (
+    <View style={styles.legendItem}>
+      <View style={[small ? styles.legendDotSmall : styles.legendRing, small ? { backgroundColor: color } : { borderColor: color }]} />
+      <ThemedText type="small" themeColor="textSecondary">
+        {text}
+      </ThemedText>
     </View>
   );
 }
@@ -842,6 +890,10 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.8 },
   top: { position: 'absolute', top: 8, left: 0, right: 0, gap: 6 },
   chipRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: Layout.screenPadding },
+  legend: { marginHorizontal: Layout.screenPadding, alignSelf: 'flex-start', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 10, rowGap: 2, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, marginTop: 4 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  legendRing: { width: 12, height: 12, borderRadius: 6, borderWidth: 3, backgroundColor: '#FFFFFF' },
+  legendDotSmall: { width: 9, height: 9, borderRadius: 5 },
   notePill: { marginHorizontal: Layout.screenPadding, alignSelf: 'flex-start', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
   gpsBtn: {
     position: 'absolute',

@@ -10,6 +10,7 @@ import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState }
 import { Image, StyleSheet, View } from 'react-native';
 
 import { RnMapsMap } from '@/components/map/provider-rnmaps';
+import { BADGE_CATCH, PIN, type PinRing } from '@/components/map/pin-assets';
 import type { AppMapHandle, AppMapProps, MarkerTone } from '@/components/map/types';
 
 type KakaoMapModule = typeof import('@react-native-kakao/map');
@@ -72,7 +73,7 @@ const GROUP: Record<MarkerTone, number> = {
   good: require('@/assets/map/group-good.png'),
 };
 const ME = require('@/assets/map/me.png');
-/** 어종 그림 핀 (공식 지수 8종, 초록 테두리) */
+/** (예전) 어종 그림 핀 — 공식 지수 8종, 초록 테두리. 새 핀은 PIN (scripts/make_map_pins.py) */
 const FISH: Record<string, number> = {
   rockfish: require('@/assets/map/fish-rockfish.png'),
   black_porgy: require('@/assets/map/fish-black_porgy.png'),
@@ -168,21 +169,45 @@ export const KakaoMap = forwardRef<AppMapHandle, AppMapProps>(function KakaoMap(
         id: `fish-${code}`,
         levels: [{ level: 0, image: asset(src, 44), anchor: { x: 0.5, y: 0.5 } }],
       })),
+      // 어종 핀 × 테두리 색. 묶음이면 핀 아래에 「좋음 12」 글자
+      ...Object.entries(PIN).flatMap(([code, rings]) =>
+        (Object.keys(rings) as PinRing[]).map((ring) => ({
+          id: `pin-${code}-${ring}`,
+          levels: [
+            {
+              level: 0,
+              image: asset(rings[ring], 40),
+              anchor: { x: 0.5, y: 0.5 },
+              textLayout: 'bottom' as const,
+              textLines: [{ fontSize: 12, color: '#0B2D4D', strokeColor: '#FFFFFF', strokeWidth: 3 }],
+            },
+          ],
+        })),
+      ),
       {
         id: 'me',
         levels: [{ level: 0, image: asset(ME, 30), anchor: { x: 0.5, y: 0.5 } }],
       },
     ];
-    const labels = markers.map((m) => ({
-      id: m.id,
-      layerId: LAYER,
-      styleId: m.count && m.count > 1 ? `group-${m.tone}` : m.fish && FISH[m.fish] ? `fish-${m.fish}` : `dot-${m.tone}`,
-      coordinate: { latitude: m.lat, longitude: m.lon },
-      text: m.count && m.count > 1 ? [{ value: String(m.count) }] : undefined,
-      // 선택한 곳이 맨 위에 오게
-      rank: m.tone === 'selected' ? 1000 : m.tone === 'danger' ? 100 : m.fish ? 60 : m.tone === 'catch' ? 50 : 1,
-      clickable: true,
-    }));
+    const catchBadge = { id: 'catch', image: asset(BADGE_CATCH, 14), offset: { x: 0.9, y: 0.1 }, zOrder: 1 };
+    const labels: import('@react-native-kakao/map').MapLabel[] = markers.map((m) => {
+      const pin = m.fish && PIN[m.fish] ? `pin-${m.fish}-${m.ring ?? 'normal'}` : null;
+      const styleId = pin ?? (m.count && m.count > 1 ? `group-${m.tone}` : m.fish && FISH[m.fish] ? `fish-${m.fish}` : `dot-${m.tone}`);
+      const text = pin ? (m.caption ? [{ value: m.caption }] : undefined) : m.count && m.count > 1 ? [{ value: String(m.count) }] : undefined;
+      return {
+        id: m.id,
+        layerId: LAYER,
+        styleId,
+        coordinate: { latitude: m.lat, longitude: m.lon },
+        text,
+        // 고른 곳 → 좋음 → 특보 → 조황 순으로 위에
+        rank: m.selected || m.tone === 'selected' ? 1000 : m.ring === 'good' ? 80 : m.tone === 'danger' ? 100 : m.fish ? 60 : m.tone === 'catch' ? 50 : 1,
+        clickable: true,
+        // 고른 핀은 색을 바꾸지 않고 크게
+        scale: m.selected ? { x: 1.3, y: 1.3 } : undefined,
+        badges: m.caught ? [catchBadge] : undefined,
+      };
+    });
     if (userLocation)
       labels.push({
         id: '__me__',
