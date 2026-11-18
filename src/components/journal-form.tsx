@@ -10,6 +10,7 @@ import { Button, Chip, Field, TextField } from '@/components/form';
 import { PhotoPicker, usePhotoUploads } from '@/components/photo-picker';
 import { PlaceField } from '@/components/place-field';
 import { Card } from '@/components/screen';
+import { checkCatch } from '@/lib/journal-check';
 import { SpeciesField, type SpeciesValue } from '@/components/species-field';
 import { ThemedText } from '@/components/themed-text';
 
@@ -52,7 +53,8 @@ export function JournalForm({
     etc: initial?.species_etc ?? null,
   });
   const [skunk, setSkunk] = useState(initial?.count === 0);
-  const [count, setCount] = useState(initial?.count != null ? String(initial.count) : '');
+  // 새 기록은 1마리로 시작 (0 은 「못 잡았어요」로만), 예전 기록은 저장된 값 그대로
+  const [count, setCount] = useState(initial ? (initial.count != null && initial.count > 0 ? String(initial.count) : '') : '1');
   const [length, setLength] = useState(initial?.max_length_cm != null ? String(initial.max_length_cm) : '');
   const [bait, setBait] = useState(initial?.bait ?? '');
   const [rig, setRig] = useState(initial?.rig ?? '');
@@ -65,10 +67,15 @@ export function JournalForm({
   const canRequestAfterSave = status === 'none' || status === 'rejected';
   const hasPhoto = photos.photoIds.length > 0;
   const hasSpecies = !skunk && !!(species.code || species.etc);
+  const speciesRequired = !initial || !!(initial.species_code || initial.species_etc);
+  const countRequired = !initial || (initial.count != null && initial.count > 0);
 
   const submit = (requestVerification: boolean) => {
     if (photos.uploading) return setError('사진을 올리는 중이에요. 잠시 후 다시 눌러 주세요.');
     if (photos.failed) return setError('올리지 못한 사진이 있어요. 눌러서 다시 시도하거나 ✕로 빼 주세요.');
+    // 조과 검증: 잡았는데 0마리·어종 없음 저장 금지 (예전 기록의 빈 칸은 그대로 둔다)
+    const bad = checkCatch({ skunk, speciesRequired, countRequired, hasSpecies, count });
+    if (bad) return setError(bad.text);
     if (requestVerification && !hasSpecies) return setError('인증 신청에는 어종이 필요해요.');
     const result = buildInput(
       skunk
@@ -102,13 +109,13 @@ export function JournalForm({
           </ThemedText>
         ) : (
           <>
-            <Field label="어종">
+            <Field label="어종" required={speciesRequired}>
               <SpeciesField value={species} onChange={setSpecies} />
             </Field>
             <View style={styles.row}>
               <View style={styles.flex}>
-                <Field label="마릿수">
-                  <TextField value={count} onChangeText={setCount} keyboardType="number-pad" placeholder="0" maxLength={3} />
+                <Field label="마릿수" required={countRequired}>
+                  <TextField value={count} onChangeText={setCount} keyboardType="number-pad" placeholder="1" maxLength={3} />
                 </Field>
               </View>
               <View style={styles.flex}>
