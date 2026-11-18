@@ -18,8 +18,15 @@ export const queryKeys = {
 
 export const useHealth = () => useQuery({ queryKey: queryKeys.health, queryFn: api.health });
 
+/** 공공데이터 이름에 「(폐업)」이 붙은 낚시터는 앱 어디에도 보이지 않게 뺀다 (2026-11-18) */
+const isClosed = (name: string) => /\((폐업|휴업|폐쇄)\)/.test(name);
+
 export const usePlaces = (q?: string, regionId?: number) =>
-  useQuery({ queryKey: queryKeys.places(q, regionId), queryFn: () => api.places({ q, regionId }) });
+  useQuery({
+    queryKey: queryKeys.places(q, regionId),
+    queryFn: () => api.places({ q, regionId }),
+    select: (list) => list.filter((p) => !isClosed(p.name)),
+  });
 
 export const useSpecies = () =>
   useQuery({ queryKey: queryKeys.species, queryFn: api.species, staleTime: Infinity });
