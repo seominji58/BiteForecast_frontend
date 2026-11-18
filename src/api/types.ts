@@ -689,3 +689,24 @@ export type FishingIndexDay = {
   points: IndexPoint[];
   disclaimer: string;
 };
+
+/** 낚시터 근처 낚시점·낚시배 (카카오 로컬 반경 검색, 2026-11-18) */
+export type NearbyShop = {
+  name: string;
+  kind: 'shop' | 'boat';
+  category: string | null;
+  phone: string | null;
+  address: string;
+  lat: number;
+  lon: number;
+  distance_m: number;
+  kakao_url: string | null;
+};
+export type NearbyShops = {
+  shops: NearbyShop[];
+  boats: NearbyShop[];
+  source: string;
+  fetched_at: string;
+  /** 검색하지 않은 이유 (좌표 없음·의심) */
+  skipped: string | null;
+};

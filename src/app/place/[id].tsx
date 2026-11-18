@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useConditions, useDateRange, useFavorites, usePlaces, usePlacesSummary, useSetFavorite } from '@/api/queries';
 import { AddToTripButton } from '@/components/add-to-trip';
+import { NearbyShops } from '@/components/nearby-shops';
 import { CatchStrip } from '@/components/catch-strip';
 import { CoordNote } from '@/components/coord-note';
 import { ZoneNotice } from '@/components/zone-notice';
@@ -163,6 +164,14 @@ export default function PlaceDetailScreen() {
                 currentId={place.id}
                 onPress={(p) => router.replace({ pathname: '/place/[id]', params: { id: String(p.id) } })}
               />
+            </>
+          ) : null}
+
+          {/* 근처 낚시점·낚시배 (카카오 로컬, 네이버 지도로 연결) — 주변 플레이스 설계 2차 */}
+          {place ? (
+            <>
+              <SectionHeader title="근처 낚시점·낚시배" />
+              <NearbyShops placeId={place.id} area={place.region_name} />
             </>
           ) : null}
 

@@ -13,6 +13,7 @@ const NAMES = {
   calendar: 'calendar-outline',
   pin: 'location-outline',
   map: 'map-outline',
+  phone: 'call-outline',
   fish: 'fish-outline',
   people: 'people-outline',
   check: 'checkbox-outline',

@@ -194,6 +194,15 @@ export function useUpdatePost(id: number) {
 export const useGeoSearch = (q: string) =>
   useQuery({ queryKey: ['geo', q], queryFn: () => api.geoSearch(q), enabled: q.trim().length >= 2, staleTime: 10 * 60_000 });
 
+/** 낚시터 근처 낚시점·낚시배 (서버가 1시간 캐시, 앱도 30분 보관) */
+export const useNearbyShops = (placeId: number | null) =>
+  useQuery({
+    queryKey: ['nearby-shops', placeId],
+    queryFn: () => api.nearbyShops(placeId!),
+    enabled: placeId != null && Number.isFinite(placeId),
+    staleTime: 30 * 60_000,
+  });
+
 export const useCatchSummary = (days = 14) =>
   useQuery({ queryKey: ['community', 'catch-summary', days], queryFn: () => api.catchSummary(days), staleTime: 5 * 60_000 });
 
