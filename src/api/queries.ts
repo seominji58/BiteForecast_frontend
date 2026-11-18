@@ -201,6 +201,20 @@ export function useUpdatePost(id: number) {
 export const useGeoSearch = (q: string) =>
   useQuery({ queryKey: ['geo', q], queryFn: () => api.geoSearch(q), enabled: q.trim().length >= 2, staleTime: 10 * 60_000 });
 
+/** 낚시터 실제 사진 목록용 썸네일 (사진 있는 곳만, 하루 동안 다시 받지 않음) */
+export const usePlacePhotoIndex = () =>
+  useQuery({ queryKey: ['place-photos'], queryFn: api.placePhotoIndex, staleTime: 24 * 3600_000, retry: false });
+
+/** 낚시터 실제 사진 (상세). 사진이 없으면 404 → 재시도하지 않는다 */
+export const usePlacePhotos = (placeId: number | null, enabled = true) =>
+  useQuery({
+    queryKey: ['place-photos', placeId],
+    queryFn: () => api.placePhotos(placeId!),
+    enabled: enabled && placeId != null,
+    staleTime: 24 * 3600_000,
+    retry: false,
+  });
+
 /** 낚시터 근처 낚시점·낚시배 (서버가 1시간 캐시, 앱도 30분 보관) */
 export const useNearbyShops = (placeId: number | null) =>
   useQuery({

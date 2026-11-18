@@ -20,7 +20,7 @@ import { ThemedView } from '@/components/themed-view';
 import { UiIcon } from '@/components/ui-icon';
 import { CatchStrip } from '@/components/catch-strip';
 import { ownerName, participants, TripMembers } from '@/components/trip-members';
-import { PlacePhoto } from '@/components/place-photo';
+import { PlaceThumb } from '@/components/place-photo';
 import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { dayLabel } from '@/lib/compare';
@@ -627,7 +627,7 @@ function StopCard({
   return (
     <Card style={styles.stop}>
       <View style={styles.stopHead}>
-        <PlacePhoto place={stop.place} size="thumb" style={styles.stopThumb} />
+        <PlaceThumb place={stop.place} style={styles.stopThumb} />
         <View style={styles.flex}>
           <ThemedText type="smallBold" numberOfLines={1}>
             {placeName(stop.place)}{' '}

@@ -6,7 +6,7 @@ import { useFavorites, usePlaces } from '@/api/queries';
 import type { Place } from '@/api/types';
 import { SectionHeader } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
-import { PlacePhoto } from '@/components/place-photo';
+import { PlaceThumb } from '@/components/place-photo';
 import { useTheme } from '@/hooks/use-theme';
 import { placeName } from '@/lib/place';
 import { getRecent, RECENT_PLACES } from '@/lib/prefs';
@@ -27,7 +27,7 @@ function PlaceStrip({ places }: { places: Place[] }) {
             { backgroundColor: theme.backgroundElement, borderColor: theme.border },
             pressed && styles.pressed,
           ]}>
-          <PlacePhoto place={p} size="thumb" style={styles.thumb} />
+          <PlaceThumb place={p} style={styles.thumb} />
           <View style={styles.flex}>
             <ThemedText type="smallBold" numberOfLines={1}>
               {placeName(p)}

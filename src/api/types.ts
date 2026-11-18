@@ -710,3 +710,7 @@ export type NearbyShops = {
   /** 검색하지 않은 이유 (좌표 없음·의심) */
   skipped: string | null;
 };
+
+/** 낚시터 실제 사진 (한국관광공사 TourAPI 매칭, 공공누리 제3유형 — 출처 표시·변경 금지) */
+export type PlacePhotos = { title: string; source: string; license: string; images: { url: string; thumb: string }[] };
+export type PlacePhotoIndex = { source: string; license: string; thumbs: Record<string, string> };

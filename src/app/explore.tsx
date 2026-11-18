@@ -32,7 +32,7 @@ import { coordKey, distLabel, km, matches, PLACE_IMAGE, PLACE_TYPE_LABEL, placeK
 import { mergeWithApi, SPECIES } from '@/lib/species';
 import { sortByCount, speciesPlaceCounts } from '@/lib/species-rank';
 import { SearchBar } from '@/components/search-bar';
-import { PlacePhoto } from '@/components/place-photo';
+import { PlaceThumb } from '@/components/place-photo';
 import { useCriteria, useExploreRegion, useHomePlace } from '@/lib/prefs';
 
 const KOREA: MapRegion = { latitude: 36.0, longitude: 127.8, latitudeDelta: 6.5, longitudeDelta: 6.5 };
@@ -706,7 +706,7 @@ export default function ExploreScreen() {
                     }}
                     style={({ pressed }) => [styles.listRow, { borderTopColor: theme.border }, pressed && styles.pressed]}>
                     <View>
-                      <PlacePhoto place={r.place} size="thumb" style={styles.listThumb} />
+                      <PlaceThumb place={r.place} style={styles.listThumb} />
                       <View style={[styles.ringDot, { backgroundColor: RING_COLOR[ring] }]} />
                     </View>
                     <View style={styles.flex}>
@@ -884,7 +884,7 @@ function SelectedCard({
   return (
     <Card style={styles.selected}>
       <View style={styles.between}>
-        <PlacePhoto place={place} size="thumb" style={styles.thumb} label={placeName(place)} />
+        <PlaceThumb place={place} style={styles.thumb} />
         <View style={styles.flex}>
           <ThemedText type="sectionTitle" numberOfLines={1}>
             {placeName(place)}
