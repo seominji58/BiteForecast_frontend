@@ -15,6 +15,7 @@ import { Card, ErrorView, Loading, SectionHeader, StackScreen } from '@/componen
 import { DataBasis, FishingIndexCard, MetricTable, NearbyPlaces, TideCard, WeatherForecastCard } from '@/components/sea-detail';
 import { ThemedText } from '@/components/themed-text';
 import { PlaceGallery } from '@/components/place-photo';
+import { PlaceNavigate } from '@/components/place-navigate';
 import { dayLabel, timeLabel } from '@/lib/compare';
 import { nearby, PLACE_IMAGE, PLACE_TYPE_LABEL, placeKindNote, placeName } from '@/lib/place';
 import { Brand } from '@/constants/theme';
@@ -89,6 +90,7 @@ export default function PlaceDetailScreen() {
               />
             </View>
           </View>
+          <PlaceNavigate place={place} name={placeName(place)} />
           {place.id !== homeId ? (
             <Pressable
               accessibilityRole="button"
