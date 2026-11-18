@@ -5,6 +5,7 @@ import { ActivityIndicator, Keyboard, Modal, Pressable, ScrollView, StyleSheet, 
 import { useCatchSummary, useDateRange, useGeoSearch, useFishingIndex, usePlaces, usePlacesSummary, useSpecies } from '@/api/queries';
 import type { CatchSummary, Place, PlaceSummary } from '@/api/types';
 import { AddToTripButton } from '@/components/add-to-trip';
+import { dayLabel } from '@/lib/compare';
 import { PIN } from '@/components/map/pin-assets';
 import { AppIcon } from '@/components/app-icon';
 import { Dropdown, type DropdownOption } from '@/components/dropdown';
@@ -46,6 +47,8 @@ const SEA_ORDER = ['서해', '남해', '동해', '제주'] as const;
 /** 지도 어종 칩: 공식 바다낚시지수 어종을 앞에, 나머지는 「+ 다른 어종」에서 */
 const INDEX_SPECIES = SPECIES.filter((x) => x.indexName).map((x) => x.indexName!);
 /** 공식 낚시지수 등급 순서 (높을수록 바다 조건이 그 어종에 맞음) */
+/** 범례·목록의 등급 색 (핀 테두리와 같은 색) */
+const RING_COLOR = { good: '#16A34A', normal: '#64748B', bad: '#DC2626' } as const;
 const GRADE_RANK: Record<string, number> = { 매우좋음: 5, 좋음: 4, 보통: 3, 나쁨: 2, 매우나쁨: 1 };
 
 /**
@@ -60,7 +63,10 @@ export default function ExploreScreen() {
   const theme = useTheme();
   const places = usePlaces();
   const range = useDateRange();
-  const summary = usePlacesSummary(range.data?.today);
+  // 홈에서 고른 날짜(?date)의 해황·지수로 본다. 없거나 지난 날짜면 오늘
+  const today = range.data?.today;
+  const day = params.date && today && params.date >= today && params.date <= (range.data?.max ?? params.date) ? params.date : today;
+  const summary = usePlacesSummary(day);
   const [homeId, , homeLoaded] = useHomePlace();
   const [criteria, setCriteria] = useCriteria();
   // 어종 칩 (M2): 오늘 그 어종 지수를 발표한 지점 + 지점 가까운 낚시터만 지도·목록에 남긴다
@@ -72,7 +78,11 @@ export default function ExploreScreen() {
   const allSpecies = useMemo(() => mergeWithApi(speciesApi.data), [speciesApi.data]);
   const fishItem = allSpecies.find((x) => x.name === fish) ?? null;
   const fishIsIndex = !!fish && INDEX_SPECIES.includes(fish);
-  const fi = useFishingIndex(fishIsIndex ? range.data?.today : undefined);
+  const fi = useFishingIndex(fishIsIndex ? day : undefined);
+  // 시간대: null = 하루 중 가장 좋은 등급, 「오전」 등 = 그 시간대 등급만
+  const [periodSel, setPeriod] = useState<string | null>(null);
+  const periods = fi.data?.periods ?? [];
+  const period = periodSel && periods.includes(periodSel) ? periodSel : null;
   // 최근 14일 이용자 조황 (낚시터 이름까지 공개한 조황 글만) — 핀 강조·어종 칩 첫째 근거·핀 카드
   const catches = useCatchSummary(14);
   const catchById = useMemo(() => new Map((catches.data ?? []).map((c) => [c.place_id, c])), [catches.data]);
@@ -102,7 +112,7 @@ export default function ExploreScreen() {
     for (const pt of fi.data.points) {
       const sp = pt.species.find((x) => x.species === fish);
       if (!sp) continue;
-      const grades = fi.data.periods.map((per) => sp.grades[per]).filter((g): g is string => !!g);
+      const grades = (period ? [period] : fi.data.periods).map((per) => sp.grades[per]).filter((g): g is string => !!g);
       if (!grades.length) continue;
       const best = grades.reduce((a, b) => ((GRADE_RANK[b] ?? 0) > (GRADE_RANK[a] ?? 0) ? b : a));
       const text = fi.data.periods
@@ -117,7 +127,7 @@ export default function ExploreScreen() {
       }
     }
     return m;
-  }, [fish, fishIsIndex, fi.data]);
+  }, [fish, fishIsIndex, fi.data, period]);
   const goodGrade = (id: number) => (GRADE_RANK[fishGrade.get(id)?.best ?? ''] ?? 0) >= 4;
   const badGrade = (id: number) => {
     const r = GRADE_RANK[fishGrade.get(id)?.best ?? ''];
@@ -138,6 +148,8 @@ export default function ExploreScreen() {
     error: null,
   });
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  // 아래 「좋은 곳 목록」 펼침 (어종을 골랐고 핀을 고르지 않았을 때)
+  const [listOpen, setListOpen] = useState(false);
   // 낚시터 이름·지역 검색 (목록을 늘어놓지 않고, 고르면 지도에서 그곳으로)
   const [query, setQuery] = useState('');
   const mapRef = useRef<AppMapHandle>(null);
@@ -232,7 +244,7 @@ export default function ExploreScreen() {
 
   // 어종 칩 순서: 지금 지역에서 지도에 많이 찍히는 어종 먼저 (공식 지수 지점 · 이용자 조황 · 공공데이터 대상 어종).
   // 칩 순서는 오늘 지수 기준 — 어종을 고르기 전에도 셀 수 있게 지수를 따로 받는다
-  const fiAll = useFishingIndex(range.data?.today);
+  const fiAll = useFishingIndex(day);
   const fishCounts = useMemo(
     () =>
       places.data && summary.data
@@ -365,6 +377,21 @@ export default function ExploreScreen() {
     };
   };
 
+  // 좋은 곳 목록 순서: 좋음 → 보통 → 등급 정보 없음 → 나쁨·특보, 같으면 공식 등급 → 거리 → 이름 (앱이 점수를 만들지 않는다)
+  const listOrder = (r: (typeof rows)[number]) => {
+    const ring = ringOf(r);
+    return ring === 'good' ? 0 : ring === 'bad' ? 3 : fishGrade.has(r.place.id) ? 1 : 2;
+  };
+  const ranked = pinFish
+    ? [...rows].sort(
+        (a, b) =>
+          listOrder(a) - listOrder(b) ||
+          (GRADE_RANK[fishGrade.get(b.place.id)?.best ?? ''] ?? 0) - (GRADE_RANK[fishGrade.get(a.place.id)?.best ?? ''] ?? 0) ||
+          (a.dist ?? 0) - (b.dist ?? 0) ||
+          a.place.name.localeCompare(b.place.name, 'ko'),
+      )
+    : [];
+
   // 지도 마커: 낚시터 하나는 점, 같은 좌표 여러 곳·가까운 곳 묶음은 숫자 원 (특보 발효 곳이 있으면 빨강)
   const markers: MapMarker[] = clusters.map(({ key, groups }) => {
     if (groups.length > 1) {
@@ -454,7 +481,7 @@ export default function ExploreScreen() {
                 : rows.length === 0
                   ? `${fish}: 이 지역엔 표시할 곳이 없어요`
                   : fishIsIndex
-                    ? `${fish} · 🐟 오늘 지수 좋음 ${rows.filter((r) => goodGrade(r.place.id)).length}곳 (바다 조건)`
+                    ? `${fish} · ${day === today ? '오늘' : day ? dayLabel(day) : ''}${period ? ` ${period}` : ''} 지수 좋음 ${rows.filter((r) => goodGrade(r.place.id)).length}곳 (바다 조건)`
                     : `${fish} · 낚시터가 알린 대상 어종 ${rows.length}곳`,
             color: 'textSecondary' as const,
           }
@@ -596,6 +623,15 @@ export default function ExploreScreen() {
               <LegendDot color="#F97316" text="최근 조황" small />
             </View>
           ) : null}
+          {/* 시간대: 하루 중 가장 좋은 등급 / 그 시간대 등급 */}
+          {pinFish && fishIsIndex && periods.length > 1 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.periodRow}>
+              <Chip label="하루 중 최고" selected={period == null} onPress={() => setPeriod(null)} />
+              {periods.map((per) => (
+                <Chip key={per} label={per} selected={period === per} onPress={() => setPeriod(per)} />
+              ))}
+            </ScrollView>
+          ) : null}
         </View>
 
         <Pressable
@@ -624,7 +660,7 @@ export default function ExploreScreen() {
             plan={
               range.data
                 ? {
-                    date: params.date ?? range.data.today,
+                    date: day ?? range.data.today,
                     species: fishItem?.code,
                     region: selected.s?.sea_group ?? undefined,
                   }
@@ -632,6 +668,67 @@ export default function ExploreScreen() {
             }
             onClose={() => setSelectedId(null)}
           />
+        </View>
+      ) : pinFish && ranked.length ? (
+        // 좋은 곳 목록 (지도 핀 설계 2단계): 좋음 → 보통·정보 없음 → 나쁨·특보, 같으면 등급 → 거리 → 이름
+        <View style={[styles.panel, { backgroundColor: theme.background, borderColor: theme.border }]}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: listOpen }}
+            onPress={() => setListOpen((v) => !v)}
+            style={styles.listHead}>
+            <View style={[styles.grabber, { backgroundColor: theme.border }]} />
+            <View style={styles.listHeadRow}>
+              <ThemedText type="smallBold" style={styles.flex} numberOfLines={1}>
+                {fish} 낚시터 {ranked.length}곳
+                {fishIsIndex ? ` · 좋음 ${ranked.filter((r) => ringOf(r) === 'good').length}` : ''}
+              </ThemedText>
+              <ThemedText type="smallBold" themeColor="tint">
+                {listOpen ? '접기 ▾' : '목록 보기 ▴'}
+              </ThemedText>
+            </View>
+          </Pressable>
+          {listOpen ? (
+            <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
+              {ranked.slice(0, 30).map((r) => {
+                const ring = ringOf(r);
+                const g = fishGrade.get(r.place.id);
+                const wave = r.s?.wave_fc_max?.v;
+                return (
+                  <Pressable
+                    key={r.place.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${placeName(r.place)}, ${g ? `${fish} 지수 ${g.text}` : '공식 지수 없음'}, 지도에서 보기`}
+                    onPress={() => {
+                      setListOpen(false);
+                      setSelectedId(r.place.id);
+                      focusPlace(r.place);
+                    }}
+                    style={({ pressed }) => [styles.listRow, { borderTopColor: theme.border }, pressed && styles.pressed]}>
+                    <View>
+                      <PlacePhoto place={r.place} size="thumb" style={styles.listThumb} />
+                      <View style={[styles.ringDot, { backgroundColor: RING_COLOR[ring] }]} />
+                    </View>
+                    <View style={styles.flex}>
+                      <ThemedText type="smallBold" numberOfLines={1}>
+                        {placeName(r.place)}
+                      </ThemedText>
+                      <ThemedText type="small" themeColor={ring === 'good' ? 'success' : ring === 'bad' ? 'danger' : 'textSecondary'} numberOfLines={1}>
+                        {g ? g.text : fishIsIndex ? '공식 지수 지점과 멀어요' : '공식 지수 없음 · 낚시터가 알린 대상 어종'}
+                        {r.s?.warning_level === 'warning' ? ' · 특보 발효' : ''}
+                      </ThemedText>
+                      <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                        {[r.place.region_name, wave != null ? `파고 ${wave}m` : null, catchById.has(r.place.id) ? '최근 조황 있음' : null, distLabel(r.dist, r.place)]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </ThemedText>
+                    </View>
+                    <ThemedText themeColor="textSecondary">›</ThemedText>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          ) : null}
         </View>
       ) : null}
 
@@ -910,6 +1007,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
   },
+  periodRow: { gap: 6, paddingHorizontal: Layout.screenPadding, paddingTop: 6 },
+  listHead: { gap: 6 },
+  grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2 },
+  listHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 36 },
+  list: { maxHeight: 340 },
+  listRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth },
+  listThumb: { width: 52, height: 52, borderRadius: 10 },
+  ringDot: { position: 'absolute', right: -3, top: -3, width: 14, height: 14, borderRadius: 7, borderWidth: 2, borderColor: '#FFFFFF' },
   panel: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: Layout.screenPadding, paddingTop: 6, paddingBottom: 26, gap: 8 },
   searchWrap: { marginHorizontal: Layout.screenPadding, gap: 4 },
   hits: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4 },
