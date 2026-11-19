@@ -75,7 +75,7 @@ const openInMap = (p: RockPoint) => {
 export function RockCard({ point, source, onClose }: { point: RockPoint; source: string; onClose: () => void }) {
   const theme = useTheme();
   const facts = [
-    point.depth ? `수심 ${point.depth}m` : null,
+    point.depth ? `수심 ${point.depth.replace(/m$/i, '')}m` : null,
     point.bottom ? `바닥 ${point.bottom}` : null,
     point.tide ? `물때 ${point.tide}` : null,
   ].filter(Boolean);
