@@ -10,7 +10,7 @@ import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState }
 import { Image, StyleSheet, View } from 'react-native';
 
 import { RnMapsMap } from '@/components/map/provider-rnmaps';
-import { BADGE_CATCH, PIN, type PinRing } from '@/components/map/pin-assets';
+import { BADGE_CATCH, BADGE_WARN, PIN, type PinRing } from '@/components/map/pin-assets';
 import type { AppMapHandle, AppMapProps, MarkerTone } from '@/components/map/types';
 
 type KakaoMapModule = typeof import('@react-native-kakao/map');
@@ -190,6 +190,7 @@ export const KakaoMap = forwardRef<AppMapHandle, AppMapProps>(function KakaoMap(
       },
     ];
     const catchBadge = { id: 'catch', image: asset(BADGE_CATCH, 14), offset: { x: 0.9, y: 0.1 }, zOrder: 1 };
+    const warnBadge = { id: 'warn', image: asset(BADGE_WARN, 16), offset: { x: 0.1, y: 0.1 }, zOrder: 2 };
     const labels: import('@react-native-kakao/map').MapLabel[] = markers.map((m) => {
       const pin = m.fish && PIN[m.fish] ? `pin-${m.fish}-${m.ring ?? 'normal'}` : null;
       const styleId = pin ?? (m.count && m.count > 1 ? `group-${m.tone}` : m.fish && FISH[m.fish] ? `fish-${m.fish}` : `dot-${m.tone}`);
@@ -200,12 +201,12 @@ export const KakaoMap = forwardRef<AppMapHandle, AppMapProps>(function KakaoMap(
         styleId,
         coordinate: { latitude: m.lat, longitude: m.lon },
         text,
-        // 고른 곳 → 좋음 → 특보 → 조황 순으로 위에
-        rank: m.selected || m.tone === 'selected' ? 1000 : m.ring === 'good' ? 80 : m.tone === 'danger' ? 100 : m.fish ? 60 : m.tone === 'catch' ? 50 : 1,
+        // 고른 곳 → 특보 → 좋음 → 조황 순으로 위에
+        rank: m.selected || m.tone === 'selected' ? 1000 : m.warn || m.tone === 'danger' ? 100 : m.ring === 'good' ? 80 : m.fish ? 60 : m.tone === 'catch' ? 50 : 1,
         clickable: true,
         // 고른 핀은 색을 바꾸지 않고 크게
         scale: m.selected ? { x: 1.3, y: 1.3 } : undefined,
-        badges: m.caught ? [catchBadge] : undefined,
+        badges: m.fish && (m.caught || m.warn) ? [...(m.warn ? [warnBadge] : []), ...(m.caught ? [catchBadge] : [])] : undefined,
       };
     });
     if (userLocation)

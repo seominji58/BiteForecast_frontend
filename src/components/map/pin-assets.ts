@@ -122,3 +122,6 @@ export const PIN: Record<string, Record<PinRing, number>> = {
 
 /** 최근 이용자 조황 주황 점 (핀 오른쪽 위 배지) */
 export const BADGE_CATCH: number = require('@/assets/map/badge-catch.png');
+
+/** 해상특보 발효 (핀 왼쪽 위 배지, 지수 테두리와 따로) */
+export const BADGE_WARN: number = require('@/assets/map/badge-warn.png');

@@ -3,9 +3,10 @@
 어종 그림(assets/species/*.png)마다 테두리 색 3가지 핀을 만든다.
   - good   : 초록  — 고른 어종 공식 낚시지수 「좋음」 이상
   - normal : 회색  — 「보통」 또는 지수 정보 없음
-  - bad    : 빨강  — 「나쁨」 이하 또는 해상특보 발효
+  - bad    : 빨강  — 「나쁨」 이하 (해상특보는 테두리가 아니라 ⚠ 배지로 따로)
 그리고 핀 오른쪽 위에 붙는 표시:
   - badge-catch.png : 주황 점 (최근 14일 이용자 조황) — 카카오 라벨 배지로 붙인다
+  - badge-warn.png  : 빨간 원 + 흰 「!」 (해상특보 발효) — 핀 왼쪽 위. 테두리 색(지수)과 따로 본다 (2026-11-19)
 묶음 개수(「좋음 12」)는 그림이 아니라 카카오 라벨 글자(핀 아래)로 쓴다.
 결과: assets/map/pins/<code>-<ring>.png, assets/map/badge-catch.png, src/components/map/pin-assets.ts
 
@@ -51,6 +52,17 @@ def badge_catch() -> Image.Image:
     return big.resize((n, n), Image.LANCZOS)
 
 
+def badge_warn() -> Image.Image:
+    s, n = 4, 52
+    big = Image.new("RGBA", (n * s, n * s), (0, 0, 0, 0))
+    d = ImageDraw.Draw(big)
+    d.ellipse([3 * s, 3 * s, (n - 3) * s, (n - 3) * s], fill=(220, 38, 38, 255), outline=(255, 255, 255, 255), width=5 * s)
+    cx, w = n * s // 2, 6 * s
+    d.rounded_rectangle([cx - w // 2, 13 * s, cx + w // 2, 31 * s], radius=w // 2, fill=(255, 255, 255, 255))
+    d.ellipse([cx - w // 2, 35 * s, cx + w // 2, 35 * s + w], fill=(255, 255, 255, 255))
+    return big.resize((n, n), Image.LANCZOS)
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     codes = sorted(p.stem for p in SPECIES.glob("*.png"))
@@ -59,6 +71,7 @@ def main() -> None:
         for ring, rgb in RINGS.items():
             pin(fish, rgb).save(OUT / f"{code}-{ring}.png", optimize=True)
     badge_catch().save(OUT.parent / "badge-catch.png", optimize=True)
+    badge_warn().save(OUT.parent / "badge-warn.png", optimize=True)
 
     lines = [
         "/* 자동 생성: scripts/make_map_pins.py — 직접 고치지 말 것 */",
@@ -77,6 +90,9 @@ def main() -> None:
         "",
         "/** 최근 이용자 조황 주황 점 (핀 오른쪽 위 배지) */",
         "export const BADGE_CATCH: number = require('@/assets/map/badge-catch.png');",
+        "",
+        "/** 해상특보 발효 (핀 왼쪽 위 배지, 지수 테두리와 따로) */",
+        "export const BADGE_WARN: number = require('@/assets/map/badge-warn.png');",
         "",
     ]
     TS.write_text("\n".join(lines), encoding="utf-8")

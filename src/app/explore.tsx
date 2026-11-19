@@ -362,23 +362,27 @@ export default function ExploreScreen() {
   }, [pins, view?.latitudeDelta, selectedId]);
 
   // 지도 핀 설계 1단계 (2026-11-18): 어종을 고르면 남은 핀이 모두 그 어종 그림.
-  // 테두리 색 = 공식 낚시지수 등급(초록 좋음 이상 · 회색 보통/정보 없음 · 빨강 나쁨 이하 또는 해상특보),
+  // 테두리 색 = 공식 낚시지수 등급(초록 좋음 이상 · 회색 보통/정보 없음 · 빨강 나쁨 이하), 왼쪽 위 빨간 ! = 해상특보,
   // 오른쪽 위 주황 점 = 최근 14일 이용자 조황, 묶음은 핀 아래 「좋음 N곳」
   const pinFish = fishItem && PIN[fishItem.code] ? fishItem.code : undefined;
+  // 테두리 = 공식 지수만. 해상특보는 ⚠ 배지로 따로 (잘 잡히는지와 위험한지는 다른 이야기, 2026-11-19)
   const ringOf = (r: (typeof rows)[number]): 'good' | 'normal' | 'bad' =>
-    r.s?.warning_level === 'warning' || badGrade(r.place.id) ? 'bad' : goodGrade(r.place.id) ? 'good' : 'normal';
+    badGrade(r.place.id) ? 'bad' : goodGrade(r.place.id) ? 'good' : 'normal';
+  const isWarn = (r: (typeof rows)[number]) => r.s?.warning_level === 'warning';
   const fishGroup = (all: (typeof rows)[number][]) => {
     const good = all.filter((x) => ringOf(x) === 'good').length;
     return {
       fish: pinFish,
       ring: good ? ('good' as const) : all.every((x) => ringOf(x) === 'bad') ? ('bad' as const) : ('normal' as const),
       caught: all.some((x) => catchById.has(x.place.id)),
+      warn: all.some(isWarn),
       caption: good ? `좋음 ${good}곳` : `${all.length}곳`,
     };
   };
 
-  // 좋은 곳 목록 순서: 좋음 → 보통 → 등급 정보 없음 → 나쁨·특보, 같으면 공식 등급 → 거리 → 이름 (앱이 점수를 만들지 않는다)
+  // 좋은 곳 목록 순서: 좋음 → 보통 → 등급 정보 없음 → 나쁨 → 특보 발효(지수와 상관없이 맨 아래), 같으면 공식 등급 → 거리 → 이름
   const listOrder = (r: (typeof rows)[number]) => {
+    if (isWarn(r)) return 4;
     const ring = ringOf(r);
     return ring === 'good' ? 0 : ring === 'bad' ? 3 : fishGrade.has(r.place.id) ? 1 : 2;
   };
@@ -419,7 +423,7 @@ export default function ExploreScreen() {
         tone: tone(r),
         label: r.place.name,
         selected: r.place.id === selectedId,
-        ...(pinFish ? { fish: pinFish, ring: ringOf(r), caught: catchById.has(r.place.id) } : {}),
+        ...(pinFish ? { fish: pinFish, ring: ringOf(r), caught: catchById.has(r.place.id), warn: isWarn(r) } : {}),
       };
     const warn = group.some((x) => x.s?.warning_level === 'warning');
     const caught = group.some((x) => catchById.has(x.place.id));
@@ -613,13 +617,14 @@ export default function ExploreScreen() {
                 <>
                   <LegendDot color="#16A34A" text="지수 좋음" />
                   <LegendDot color="#64748B" text="보통·정보 없음" />
-                  <LegendDot color="#DC2626" text="나쁨·특보" />
+                  <LegendDot color="#DC2626" text="지수 나쁨" />
                 </>
               ) : (
                 <ThemedText type="small" themeColor="textSecondary">
                   공식 지수 없는 어종 · 낚시터가 알린 대상 어종 기준
                 </ThemedText>
               )}
+              <LegendDot color="#DC2626" text="⚠ 해상특보" small />
               <LegendDot color="#F97316" text="최근 조황" small />
             </View>
           ) : null}
@@ -715,8 +720,12 @@ export default function ExploreScreen() {
                       </ThemedText>
                       <ThemedText type="small" themeColor={ring === 'good' ? 'success' : ring === 'bad' ? 'danger' : 'textSecondary'} numberOfLines={1}>
                         {g ? g.text : fishIsIndex ? '공식 지수 지점과 멀어요' : '공식 지수 없음 · 낚시터가 알린 대상 어종'}
-                        {r.s?.warning_level === 'warning' ? ' · 특보 발효' : ''}
                       </ThemedText>
+                      {isWarn(r) ? (
+                        <ThemedText type="smallBold" themeColor="danger" numberOfLines={1}>
+                          ⚠ 해상특보 발효 중 · 출조 자제
+                        </ThemedText>
+                      ) : null}
                       <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
                         {[r.place.region_name, wave != null ? `파고 ${wave}m` : null, catchById.has(r.place.id) ? '최근 조황 있음' : null, distLabel(r.dist, r.place)]
                           .filter(Boolean)
