@@ -34,23 +34,26 @@ const MAX_STOPS_PER_DAY = 5;
 
 /** 출조계획 상세 (설계안 §5-3): 날짜별 장소 + 그날 해황 · 두 곳 비교 · 준비물 · 기록 남기기 */
 function TripDetail() {
-  const id = Number(useLocalSearchParams<{ id: string }>().id);
+  const params = useLocalSearchParams<{ id: string; tab?: string }>();
+  const id = Number(params.id);
   const q = useTrip(id);
   const outlook = useTripOutlook(id);
   const range = useDateRange();
   if (q.isPending || !range.data) return <Loading />;
   if (q.isError) return <ErrorView message={q.error.message} onRetry={() => q.refetch()} />;
-  return <TripBody trip={q.data} outlook={outlook.data} today={range.data.today} />;
+  return <TripBody trip={q.data} outlook={outlook.data} today={range.data.today} initialTab={params.tab} />;
 }
 
 function TripBody({
   trip,
   outlook,
   today,
+  initialTab,
 }: {
   trip: Trip;
   outlook: ReturnType<typeof useTripOutlook>['data'];
   today: string;
+  initialTab?: string;
 }) {
   const theme = useTheme();
   const [criteria] = useCriteria();
@@ -62,7 +65,10 @@ function TripBody({
     () => new Set(days.length <= 2 ? days : [days.find((d) => d >= today) ?? days[0]]),
   );
   // 한 화면에 모든 것을 늘어놓지 않게 탭으로 나눈다: 장소 · 함께 · 준비물
-  const [tab, setTab] = useState<'overview' | 'plan' | 'members' | 'checklist'>('overview');
+  // ?tab=members 로 열면 동행 탭부터 (계획을 만든 직후 「친구 초대」)
+  const [tab, setTab] = useState<'overview' | 'plan' | 'members' | 'checklist'>(() =>
+    initialTab === 'members' || initialTab === 'plan' || initialTab === 'checklist' ? initialTab : 'overview',
+  );
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const [scrolled, setScrolled] = useState(false);
@@ -195,7 +201,13 @@ function TripBody({
                   <View style={[styles.barFill, { width: `${trip.checklist.length ? (done / trip.checklist.length) * 100 : 0}%` }]} />
                 </View>
               </OverviewRow>
-              <OverviewRow icon="people" label="동행" value={`${people}명`} onPress={() => setTab('members')} divider />
+              <OverviewRow
+                icon="people"
+                label="동행"
+                value={trip.my_role === 'owner' ? `${people}명 · 친구 초대` : `${people}명`}
+                onPress={() => setTab('members')}
+                divider
+              />
               {trip.memo ? <OverviewRow icon="memo" label="메모" value={trip.memo} divider /> : null}
             </Card>
 

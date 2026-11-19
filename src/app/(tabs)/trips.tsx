@@ -125,6 +125,9 @@ function TripList() {
           <UiIcon name="qr" size={16} color={theme.text} />
           <ThemedText type="smallBold">초대 코드로 참여</ThemedText>
         </Pressable>
+        <ThemedText type="small" themeColor="textSecondary" style={styles.joinHint} numberOfLines={1}>
+          내가 초대하려면 계획 › 동행 › 친구 초대
+        </ThemedText>
       </View>
       <View style={[styles.seg, { backgroundColor: theme.backgroundSelected }]}>
         {(
@@ -320,7 +323,8 @@ const styles = StyleSheet.create({
   onNavy: { color: Brand.onNavy },
   newBtn: { flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: Brand.orange, borderRadius: 999, paddingLeft: 10, paddingRight: 14, minHeight: 34 },
   newBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-  joinRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: -4, marginBottom: -4 },
+  joinRow: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: -4, marginBottom: -4 },
+  joinHint: { flexShrink: 1 },
   join: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36 },
   seg: { flexDirection: 'row', borderRadius: 999, padding: 4, gap: 4 },
   segItem: { flex: 1, minHeight: 40, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },

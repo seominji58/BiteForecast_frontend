@@ -154,7 +154,14 @@ function TripForm({
         onSuccess: (t) => {
           if (!initial) setTripDraft(null);
           if (initial) router.back();
-          else router.replace({ pathname: '/trip/[id]', params: { id: String(t.id) } });
+          else {
+            router.replace({ pathname: '/trip/[id]', params: { id: String(t.id) } });
+            // 새 계획을 만든 직후가 친구를 부르기 가장 좋은 때 — 초대 코드는 계획 › 동행에서 만든다
+            Alert.alert('계획을 만들었어요', '같이 갈 친구가 있으면 초대 코드를 보내 보세요.', [
+              { text: '나중에', style: 'cancel' },
+              { text: '친구 초대', onPress: () => router.replace({ pathname: '/trip/[id]', params: { id: String(t.id), tab: 'members' } }) },
+            ]);
+          }
         },
         onError: (e) => setError(e.message),
       },
