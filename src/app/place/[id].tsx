@@ -2,7 +2,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { useConditions, useDateRange, useFavorites, usePlaces, usePlacesSummary, useSetFavorite } from '@/api/queries';
+import { useConditions, useDateRange, useFavorites, usePlaceKakao, usePlaces, usePlacesSummary, useSetFavorite } from '@/api/queries';
 import { AddToTripButton } from '@/components/add-to-trip';
 import { NearbyShops } from '@/components/nearby-shops';
 import { CatchStrip } from '@/components/catch-strip';
@@ -40,6 +40,7 @@ export default function PlaceDetailScreen() {
   // 물때(몇 물)·일출·일몰 — 전체 요약에 들어 있는 달력 계산값 (지도와 같은 응답이라 다시 받지 않는다)
   const summary = usePlacesSummary(today);
   const cal = summary.data?.places.find((x) => x.place_id === placeId);
+  const kakao = usePlaceKakao(placeId);
 
   return (
     <StackScreen>
@@ -70,7 +71,7 @@ export default function PlaceDetailScreen() {
             </View>
             <FavoriteStar placeId={place.id} />
           </View>
-          <CoordNote place={pc?.place ?? place} />
+          <CoordNote place={pc?.place ?? place} kakaoMoved={kakao.data?.moved} />
           <ThemedText type="small" themeColor="textSecondary">
             {today ? `${dayLabel(today)} · ` : ''}
             {place.id === homeId ? '내 기준 낚시터' : '기준 낚시터 아님'}

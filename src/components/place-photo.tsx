@@ -6,12 +6,15 @@
  * - 기기 디스크에 캐시 (서버 응답 Cache-Control 하루)
  */
 import { Image } from 'expo-image';
+import { router } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { API_URL } from '@/api/client';
-import { usePlacePhotoIndex, usePlacePhotos } from '@/api/queries';
+import { usePlaceKakao, usePlacePhotoIndex, usePlacePhotos, usePosts } from '@/api/queries';
 import type { Place } from '@/api/types';
+import { usePhotoSource } from '@/api/upload';
+import { timeAgo } from '@/lib/format';
 import { AppIcon } from '@/components/app-icon';
 import { useTheme } from '@/hooks/use-theme';
 import { PLACE_IMAGE } from '@/lib/place';
@@ -147,8 +150,65 @@ export function PlaceGallery({ place, style }: { place: Place; style?: StyleProp
       </View>
     );
   }
-  if (photos.isPending || place.lat == null || place.location_suspect) return null;
-  const caption = place.type === 'boat' || place.type === 'point' ? '기관 지정 대표 지점 위치' : '신고된 주소 위치 · 실제 낚시 자리와 다를 수 있어요';
+  if (photos.isPending) return null;
+  return <UserPhotosOrMap place={place} style={style} />;
+}
+
+/**
+ * 관광공사 사진이 없으면: 이용자가 이 낚시터로 올린 글 사진 (낚시터 이름까지 공개한 글만, 신고 숨김·차단 제외는 서버 규칙)
+ * → 그것도 없으면 위성 지도. 사진마다 「이용자 사진 · 닉네임 · 언제」를 쓰고, 누르면 그 글로 간다
+ */
+function UserPhotosOrMap({ place, style }: { place: Place; style?: StyleProp<ViewStyle> }) {
+  const theme = useTheme();
+  const source = usePhotoSource();
+  const posts = usePosts(null, 'latest', { placeId: place.id }, 20);
+  const kakaoMoved = usePlaceKakao(place.id).data?.moved;
+  const [page, setPage] = useState(0);
+  const [w, setW] = useState(0);
+  const withPhoto = (posts.data ?? []).filter((x) => x.thumb).slice(0, 8);
+  if (posts.isPending) return null;
+  if (withPhoto.length) {
+    const cur = withPhoto[Math.min(page, withPhoto.length - 1)];
+    return (
+      <View style={style} onLayout={(e) => setW(e.nativeEvent.layout.width)}>
+        <ScrollView
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={(e) => w && setPage(Math.round(e.nativeEvent.contentOffset.x / w))}>
+          {withPhoto.map((x) => {
+            const src = source(x.thumb!);
+            return (
+              <Pressable
+                key={x.id}
+                accessibilityRole="button"
+                accessibilityLabel={`${x.author.nickname}님이 올린 사진, 글 보기`}
+                onPress={() => router.push({ pathname: '/community/[id]', params: { id: String(x.id) } })}>
+                {src ? (
+                  <Image source={src} style={{ width: w || 1, aspectRatio: 4 / 3, backgroundColor: '#0B2D4D' }} contentFit="cover" transition={150} />
+                ) : (
+                  <View style={{ width: w || 1, aspectRatio: 4 / 3, backgroundColor: '#0B2D4D' }} />
+                )}
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+        <View style={styles.counter}>
+          <Text style={styles.tagText}>{withPhoto.length > 1 ? `이용자 사진 ${page + 1}/${withPhoto.length}` : '이용자 사진'}</Text>
+        </View>
+        <Text style={[styles.credit, { color: theme.textSecondary }]} numberOfLines={1}>
+          이용자 사진 · {cur.author.nickname} · {timeAgo(cur.created_at)} · 누르면 글로 이동
+        </Text>
+      </View>
+    );
+  }
+  if (place.lat == null || place.location_suspect) return null;
+  const caption =
+    place.type === 'boat' || place.type === 'point'
+      ? '기관 지정 대표 지점 위치'
+      : kakaoMoved
+        ? '카카오맵 등록 위치 · 실제 낚시 자리와 다를 수 있어요'
+        : '신고된 주소 위치 · 실제 낚시 자리와 다를 수 있어요';
   return (
     <View style={style}>
       <PlacePhoto place={place} size="hero" style={styles.locMap} label={`${place.name} 위치`} caption={caption} />

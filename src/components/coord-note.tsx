@@ -15,7 +15,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
 
 /** 낚시터 위치 정확도 안내. compact 면 한 줄(카드·목록), 아니면 설명 포함(상세) */
-export function CoordNote({ place, compact }: { place: Place; compact?: boolean }) {
+export function CoordNote({ place, compact, kakaoMoved }: { place: Place; compact?: boolean; kakaoMoved?: boolean }) {
   const theme = useTheme();
   if (place.location_suspect) {
     return (
@@ -40,6 +40,19 @@ export function CoordNote({ place, compact }: { place: Place; compact?: boolean 
         📍 {c.label}
       </ThemedText>
     ) : null;
+  }
+  // 신고 주소 좌표를 카카오맵 등록 위치로 옮긴 곳 (2026-11-19, scripts/match_kakao_places.py) — 등급은 그대로
+  if (kakaoMoved && !compact && !c.recommend_hold) {
+    return (
+      <View style={[styles.box, { backgroundColor: theme.warningSoft }]}>
+        <ThemedText type="smallBold" themeColor="warning">
+          위치 정확도 · 카카오맵 등록 위치 기준
+        </ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">
+          신고된 주소가 실제 장소와 멀어서, 카카오맵에 업체가 등록한 위치로 옮겼어요. 실제 좌대·포인트 위치인지는 확인하지 않았어요.
+        </ThemedText>
+      </View>
+    );
   }
   const detail = c.recommend_hold
     ? '등록된 주소와 좌표가 서로 다른 시·군을 가리켜요. 추가 검증 전까지 출조 후보·가까운 곳 추천에서 빼고, 좌표로 연결한 파고·풍속·물때는 판단을 보류해요. 특보는 등록 주소 기준으로만 보여드려요. 거리는 대략이에요.'
