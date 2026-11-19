@@ -363,6 +363,9 @@ export type PlaceSummary = {
   /** 일출·일몰 (KST HH:MM, 좌표로 계산) */
   sunrise?: string | null;
   sunset?: string | null;
+  /** 출처: 「한국천문연구원」 또는 「계산」 (공식 자료를 받지 못했을 때) */
+  lunar_source?: string | null;
+  sun_source?: string | null;
   /** 가장 센 바람 시각의 풍향 (16방위, 바람이 불어오는 쪽. 예: 북서) */
   wind_dir_fc?: string | null;
   /** 출입통제구역·연안사고 위험구역 짧은 안내 (금지 판정 아님) */

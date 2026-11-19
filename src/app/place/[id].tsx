@@ -126,13 +126,14 @@ export default function PlaceDetailScreen() {
           {cal?.mulddae || cal?.sunrise || cal?.wind_dir_fc ? (
             <ThemedText type="small" themeColor="textSecondary">
               {[
-                cal.mulddae ? `물때 ${cal.mulddae} (${cal.mulddae_style}, 음력 계산)` : null,
+                cal.mulddae ? `물때 ${cal.mulddae} (${cal.mulddae_style})` : null,
                 cal.wind_dir_fc && cal.wind_fc_max ? `가장 센 바람 ${cal.wind_dir_fc}풍 ${cal.wind_fc_max.v}m/s` : null,
                 cal.sunrise ? `일출 ${cal.sunrise}` : null,
                 cal.sunset ? `일몰 ${cal.sunset}` : null,
               ]
                 .filter(Boolean)
                 .join(' · ')}
+              {calendarSource(cal) ? `\n${calendarSource(cal)}` : ''}
             </ThemedText>
           ) : null}
           <MetricTable pc={pc} />
@@ -194,6 +195,15 @@ export default function PlaceDetailScreen() {
       ) : null}
     </StackScreen>
   );
+}
+
+/** 물때(음력)·일출·일몰 출처 한 줄. 한국천문연구원 자료를 못 받았으면 「계산」이라고 그대로 쓴다 */
+function calendarSource(c: { mulddae?: string | null; lunar_source?: string | null; sunrise?: string | null; sun_source?: string | null }) {
+  const parts = [
+    c.mulddae && c.lunar_source ? `음력 ${c.lunar_source}` : null,
+    c.sunrise && c.sun_source ? `일출·일몰 ${c.sun_source}` : null,
+  ].filter(Boolean);
+  return parts.length ? `출처: ${parts.join(' · ')}` : null;
 }
 
 /** 즐겨찾기 ☆ (로그인 필요, 계정에 저장) */
