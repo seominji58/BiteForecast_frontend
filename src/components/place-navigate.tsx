@@ -6,6 +6,7 @@
  * - 좌표가 신고 주소 기준(대략 위치)이면 「실제 낚시 자리와 다를 수 있어요」를 함께 쓴다
  * - 카카오 장소와 매칭된 곳은 도로명 주소와 「카카오맵에서 사진·리뷰 보기」 링크를 보여준다 (사진은 카카오맵에서)
  */
+import * as Device from 'expo-device';
 import { useState } from 'react';
 import { Alert, Linking, Platform, Pressable, Share, StyleSheet, View } from 'react-native';
 
@@ -33,7 +34,8 @@ export function PlaceNavigate({ place, name }: { place: Place; name: string }) {
       const label = NAV_APP_LABEL[app];
       const store = NAV_STORE[app][Platform.OS === 'ios' ? 0 : 1];
       Alert.alert(`${label} 앱이 없어요`, '설치하거나 다른 지도 앱으로 길안내를 받을 수 있어요.', [
-        { text: `${label} 설치하기`, onPress: () => Linking.openURL(store).catch(() => {}) },
+        // 시뮬레이터에는 앱스토어가 없어 「주소가 유효하지 않음」만 뜨므로 실제 기기에서만 보여준다
+        ...(Device.isDevice ? [{ text: `${label} 설치하기`, onPress: () => Linking.openURL(store).catch(() => {}) }] : []),
         ...(Platform.OS === 'ios'
           ? [{ text: 'Apple 지도로 열기', onPress: () => Linking.openURL(appleMapsUrl(t)).catch(() => {}) }]
           : []),
