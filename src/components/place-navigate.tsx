@@ -1,12 +1,13 @@
 /**
  * 낚시터 상세 「길안내」·「주소 공유」 (2026-11-19).
- * - 길안내: 카카오맵·네이버 지도·T맵 중 고르면 그 앱의 자동차 길안내로 바로 연다 (앱이 없으면 카카오맵 웹)
+ * - 길안내: 카카오맵·네이버 지도·T맵 중 고르면 그 앱의 자동차 길안내로 바로 연다
+ *   앱이 없으면 「설치하기」 또는 (iOS) 「Apple 지도로 열기」를 고르게 한다
  * - 주소 공유: 시스템 공유창 (복사·메시지 보내기). 주소가 없으면 이름·지역을 보낸다
  * - 좌표가 신고 주소 기준(대략 위치)이면 「실제 낚시 자리와 다를 수 있어요」를 함께 쓴다
  * - 카카오 장소와 매칭된 곳은 도로명 주소와 「카카오맵에서 사진·리뷰 보기」 링크를 보여준다 (사진은 카카오맵에서)
  */
 import { useState } from 'react';
-import { Linking, Pressable, Share, StyleSheet, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, Share, StyleSheet, View } from 'react-native';
 
 import { usePlaceKakao } from '@/api/queries';
 
@@ -14,7 +15,7 @@ import type { Place } from '@/api/types';
 import { Button } from '@/components/form';
 import { OptionSheet } from '@/components/option-sheet';
 import { ThemedText } from '@/components/themed-text';
-import { NAV_APP_LABEL, type NavApp, navTarget, navUrls } from '@/lib/navigate';
+import { appleMapsUrl, NAV_APP_LABEL, NAV_STORE, type NavApp, navTarget, navUrl } from '@/lib/navigate';
 
 export function PlaceNavigate({ place, name }: { place: Place; name: string }) {
   const [open, setOpen] = useState(false);
@@ -25,12 +26,20 @@ export function PlaceNavigate({ place, name }: { place: Place; name: string }) {
 
   const go = async (app: NavApp) => {
     if (t.kind === 'none') return;
-    const [appUrl, web] = navUrls(app, t);
     try {
-      await Linking.openURL(appUrl);
+      await Linking.openURL(navUrl(app, t));
     } catch {
-      // 앱이 설치되어 있지 않으면 웹 지도로
-      Linking.openURL(web).catch(() => {});
+      // 앱이 없으면: 설치 또는 기기 기본 지도 (웹 길찾기는 「앱 설치」 안내만 떠서 쓰지 않는다)
+      const label = NAV_APP_LABEL[app];
+      const store = NAV_STORE[app][Platform.OS === 'ios' ? 0 : 1];
+      Alert.alert(`${label} 앱이 없어요`, '설치하거나 다른 지도 앱으로 길안내를 받을 수 있어요.', [
+        { text: `${label} 설치하기`, onPress: () => Linking.openURL(store).catch(() => {}) },
+        ...(Platform.OS === 'ios'
+          ? [{ text: 'Apple 지도로 열기', onPress: () => Linking.openURL(appleMapsUrl(t)).catch(() => {}) }]
+          : []),
+        { text: '다른 앱 고르기', onPress: () => setTimeout(() => setOpen(true), 300) },
+        { text: '취소', style: 'cancel' as const },
+      ]);
     }
   };
   const share = () =>
@@ -87,7 +96,6 @@ export function PlaceNavigate({ place, name }: { place: Place; name: string }) {
         options={(Object.keys(NAV_APP_LABEL) as NavApp[]).map((a) => ({
           value: a,
           label: NAV_APP_LABEL[a],
-          sub: a === 'kakao' ? '앱이 없으면 웹 지도로 열려요' : undefined,
         }))}
         value={null}
         onPick={go}
