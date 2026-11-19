@@ -2,7 +2,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Keyboard, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { useCatchSummary, useDateRange, useGeoSearch, useFishingIndex, usePlaces, usePlacesSummary, useSpecies } from '@/api/queries';
+import { useCatchSummary, useDateRange, useGeoSearch, useFishingIndex, usePlaces, usePlacesSummary, useRockPoints, useSpecies } from '@/api/queries';
 import type { CatchSummary, Place, PlaceSummary } from '@/api/types';
 import { AddToTripButton } from '@/components/add-to-trip';
 import { dayLabel } from '@/lib/compare';
@@ -33,6 +33,7 @@ import { mergeWithApi, SPECIES } from '@/lib/species';
 import { sortByCount, speciesPlaceCounts } from '@/lib/species-rank';
 import { SearchBar } from '@/components/search-bar';
 import { PlaceThumb } from '@/components/place-photo';
+import { ROCK_MAX_DELTA, RockCard, rockMarkers, RockToggle } from '@/components/rock-points';
 import { useCriteria, useExploreRegion, useHomePlace } from '@/lib/prefs';
 
 const KOREA: MapRegion = { latitude: 36.0, longitude: 127.8, latitudeDelta: 6.5, longitudeDelta: 6.5 };
@@ -155,6 +156,10 @@ export default function ExploreScreen() {
   const mapRef = useRef<AppMapHandle>(null);
   // 지금 지도에 보이는 범위 (마커 묶음 계산용, 이동·확대가 멈출 때 갱신)
   const [view, setView] = useState<MapRegion | null>(null);
+  // 참고 포인트(해수부 갯바위): 켰을 때만 받고, 확대했을 때 화면 안 것만 찍는다
+  const [rockOn, setRockOn] = useState(false);
+  const [rockId, setRockId] = useState<number | null>(null);
+  const rocks = useRockPoints(rockOn);
 
   const locate = async () => {
     setGps({ loading: true, coords: null, error: null });
@@ -446,6 +451,11 @@ export default function ExploreScreen() {
     mapRef.current?.moveTo({ latitude: p.lat, longitude: p.lon, latitudeDelta: d, longitudeDelta: d }, 300);
   };
   const pressMarker = (id: string) => {
+    if (id.startsWith('r')) {
+      setSelectedId(null);
+      return setRockId(Number(id.slice(1)));
+    }
+    setRockId(null);
     if (id.startsWith('p')) {
       const r = rows.find((x) => x.place.id === Number(id.slice(1)));
       if (r) focusPlace(r.place);
@@ -527,7 +537,7 @@ export default function ExploreScreen() {
             ref={mapRef}
             style={StyleSheet.absoluteFill}
             initialRegion={initialRegion}
-            markers={markers}
+            markers={rockOn ? [...rockMarkers(rocks.data?.points, view, rockId), ...markers] : markers}
             userLocation={gps.coords}
             onMarkerPress={pressMarker}
             onCameraIdle={setView}
@@ -639,6 +649,14 @@ export default function ExploreScreen() {
           ) : null}
         </View>
 
+        <RockToggle
+          on={rockOn}
+          onPress={() => {
+            setRockOn((v) => !v);
+            setRockId(null);
+          }}
+          zoomHint={(view?.latitudeDelta ?? KOREA.latitudeDelta) > ROCK_MAX_DELTA}
+        />
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="내 위치로"
@@ -650,7 +668,15 @@ export default function ExploreScreen() {
       </View>
 
       {/* 아래에는 목록을 두지 않는다 — 핀이나 검색으로 고른 곳만 카드로 */}
-      {selected ? (
+      {rockOn && rockId != null && selectedId == null && rocks.data?.points.find((x) => x.id === rockId) ? (
+        <View style={[styles.panel, { backgroundColor: theme.background, borderColor: theme.border }]}>
+          <RockCard
+            point={rocks.data.points.find((x) => x.id === rockId)!}
+            source={`${rocks.data.source} · ${rocks.data.excluded}`}
+            onClose={() => setRockId(null)}
+          />
+        </View>
+      ) : selected ? (
         <View style={[styles.panel, { backgroundColor: theme.background, borderColor: theme.border }]}>
           <SelectedCard
             place={selected.place}

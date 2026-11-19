@@ -1,5 +1,5 @@
 import { request } from '@/api/client';
-import type { Account, Agreements, AuthConfig, AuthResult, BlockedUser, ChecklistItem, CompareResult, DataSource, DateRange, CatchSummary, FishingIndexDay, GoogleSignupNeeded, Health, Journal, JournalInput, JournalMutation, MemberStatus, MergeInfo, MyPoints, MyTitle, Place, PlaceConditions, PlacesSummary, PostCategory, PostDetail, PostFilter, PostEdit, PostInput, PostSummary, RecordSummary, Region, ReportResult, SignupNeeded, Species, Trip, TripInput, TripInvite, TripInvitePreview, TripListItem, TripOutlook, TripPatch, TripStopInput, TripStopPatch, NearbyShops, PlacePhotoIndex, PlacePhotos, PlaceKakao } from '@/api/types';
+import type { Account, Agreements, AuthConfig, AuthResult, BlockedUser, ChecklistItem, CompareResult, DataSource, DateRange, CatchSummary, FishingIndexDay, GoogleSignupNeeded, Health, Journal, JournalInput, JournalMutation, MemberStatus, MergeInfo, MyPoints, MyTitle, Place, PlaceConditions, PlacesSummary, PostCategory, PostDetail, PostFilter, PostEdit, PostInput, PostSummary, RecordSummary, Region, ReportResult, SignupNeeded, Species, Trip, TripInput, TripInvite, TripInvitePreview, TripListItem, TripOutlook, TripPatch, TripStopInput, TripStopPatch, NearbyShops, PlacePhotoIndex, PlacePhotos, PlaceKakao, RockPoints } from '@/api/types';
 
 export const api = {
   health: () => request<Health>('/health'),
@@ -90,6 +90,7 @@ export const api = {
   placePhotoIndex: () => request<PlacePhotoIndex>('/place-photos'),
   placePhotos: (placeId: number) => request<PlacePhotos>(`/places/${placeId}/photos`),
   placeKakao: (placeId: number) => request<PlaceKakao>(`/places/${placeId}/kakao`),
+  rockPoints: () => request<RockPoints>('/rock-points'),
   nearbyShops: (placeId: number) => request<NearbyShops>(`/places/${placeId}/nearby`),
   catchSummary: (days = 14) => request<CatchSummary[]>(`/community/catch-summary?days=${days}`, { auth: true }),
   deletePost: (id: number) => request<void>(`/community/posts/${id}`, { method: 'DELETE', auth: true }),

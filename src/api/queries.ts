@@ -206,6 +206,10 @@ export const usePlacePhotoIndex = () =>
   useQuery({ queryKey: ['place-photos'], queryFn: api.placePhotoIndex, staleTime: 24 * 3600_000, retry: false });
 
 /** 낚시터 실제 사진 (상세). 사진이 없으면 404 → 재시도하지 않는다 */
+/** 참고 포인트(해수부 갯바위 1,070곳): 켰을 때만 한 번 받는다 (자료가 바뀌지 않음) */
+export const useRockPoints = (enabled: boolean) =>
+  useQuery({ queryKey: ['rock-points'], queryFn: api.rockPoints, enabled, staleTime: Infinity, gcTime: Infinity });
+
 /** 카카오 장소 링크·도로명 주소 (매칭 안 된 곳은 404 → 표시 안 함) */
 export const usePlaceKakao = (placeId: number) =>
   useQuery({ queryKey: ['place-kakao', placeId], queryFn: () => api.placeKakao(placeId), staleTime: 24 * 3600_000, retry: false });

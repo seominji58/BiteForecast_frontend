@@ -720,3 +720,20 @@ export type PlaceKakao = { name: string; url: string; road_address: string; cate
 
 export type PlacePhotos = { title: string; source: string; license: string; images: { url: string; thumb: string }[] };
 export type PlacePhotoIndex = { source: string; license: string; thumbs: Record<string, string> };
+
+/** 참고 포인트: 해양수산부 갯바위낚시포인트 (2022). 낚시 허용·접근 여부는 확인되지 않은 참고 위치 */
+export type RockPoint = {
+  id: number;
+  name: string;
+  area: string;
+  admin: string;
+  lat: number;
+  lon: number;
+  depth: string | null;
+  bottom: string | null;
+  tide: string | null;
+  catches: { species: string; methods: string[] }[];
+  /** 연안사고 위험구역 100m 안이면 그 구역 설명 */
+  danger: string | null;
+};
+export type RockPoints = { source: string; excluded: string; notice: string; points: RockPoint[] };
