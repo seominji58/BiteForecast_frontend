@@ -206,6 +206,10 @@ export const usePlacePhotoIndex = () =>
   useQuery({ queryKey: ['place-photos'], queryFn: api.placePhotoIndex, staleTime: 24 * 3600_000, retry: false });
 
 /** 낚시터 실제 사진 (상세). 사진이 없으면 404 → 재시도하지 않는다 */
+/** 카카오 장소 링크·도로명 주소 (매칭 안 된 곳은 404 → 표시 안 함) */
+export const usePlaceKakao = (placeId: number) =>
+  useQuery({ queryKey: ['place-kakao', placeId], queryFn: () => api.placeKakao(placeId), staleTime: 24 * 3600_000, retry: false });
+
 export const usePlacePhotos = (placeId: number | null, enabled = true) =>
   useQuery({
     queryKey: ['place-photos', placeId],
