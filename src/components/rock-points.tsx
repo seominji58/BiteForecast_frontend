@@ -163,10 +163,10 @@ export function RockCard({ point, source, onClose }: { point: RockPoint; source:
           <View style={styles.head}>
             <View style={styles.flex}>
               <ThemedText type="sectionTitle" numberOfLines={1}>
-                {name} 근처
+                {name} 주변 낚시점·낚시배
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
-                낚시점 5km · 낚시배 15km 안 · 가까운 순
+                낚시점 5km · 낚시배 15km 안 · 가까운 순 · 카카오 등록 업체
               </ThemedText>
             </View>
             <Pressable accessibilityRole="button" accessibilityLabel="닫기" hitSlop={10} onPress={() => setShopsOpen(false)} style={styles.close}>
