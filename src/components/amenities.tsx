@@ -13,7 +13,7 @@ import { ThemedText } from '@/components/themed-text';
 import { UiIcon } from '@/components/ui-icon';
 import { useTheme } from '@/hooks/use-theme';
 
-const km = (m: number) => (m < 1000 ? `${m}m` : `${(m / 1000).toFixed(1)}km`);
+const km = (m: number) => (m < 1000 ? `${m}m` : `${Number((m / 1000).toFixed(1))}km`); // 2000 → 「2km」(「2.0km」 아님)
 const naverSearch = (q: string) => `https://map.naver.com/p/search/${encodeURIComponent(q)}`;
 
 export function Amenities({ placeId, rockId }: { placeId?: number; rockId?: number }) {
