@@ -17,6 +17,7 @@ import { ThemedText } from '@/components/themed-text';
 import { PlaceGallery } from '@/components/place-photo';
 import { PlaceNavigate } from '@/components/place-navigate';
 import { dayLabel, timeLabel } from '@/lib/compare';
+import { nearLabel } from '@/lib/navigate';
 import { nearby, PLACE_IMAGE, PLACE_TYPE_LABEL, placeKindNote, placeName } from '@/lib/place';
 import { Brand } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
@@ -61,7 +62,11 @@ export default function PlaceDetailScreen() {
               <ThemedText type="sectionTitle">{placeName(place)}</ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
                 {place.region_name} · {PLACE_TYPE_LABEL[place.type]}
-                {place.address ? ` · ${place.address}` : ''}
+                {place.address
+                  ? ` · ${place.address}`
+                  : place.near_address
+                    ? ` · ${nearLabel(place.near_address, place.near_address_kind)}`
+                    : ''}
               </ThemedText>
               {placeKindNote(place) ? (
                 <ThemedText type="small" themeColor="tint">

@@ -224,11 +224,12 @@ export const usePlacePhotos = (placeId: number | null, enabled = true) =>
   });
 
 /** 낚시터 근처 낚시점·낚시배 (서버가 1시간 캐시, 앱도 30분 보관) */
-export const useNearbyShops = (placeId: number | null) =>
+/** 낚시터(placeId) 또는 갯바위 참고 포인트(rockId) 주변 낚시점·낚시배 */
+export const useNearbyShops = (placeId: number | null, rockId: number | null = null) =>
   useQuery({
-    queryKey: ['nearby-shops', placeId],
-    queryFn: () => api.nearbyShops(placeId!),
-    enabled: placeId != null && Number.isFinite(placeId),
+    queryKey: rockId != null ? ['rock-nearby', rockId] : ['nearby-shops', placeId],
+    queryFn: () => (rockId != null ? api.rockNearby(rockId) : api.nearbyShops(placeId!)),
+    enabled: rockId != null || (placeId != null && Number.isFinite(placeId)),
     staleTime: 30 * 60_000,
   });
 

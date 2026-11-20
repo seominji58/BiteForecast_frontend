@@ -22,6 +22,9 @@ export type Place = {
   coord?: CoordQuality | null;
   /** 낚시터가 알린 대상 어종 원문 (전국낚시터정보표준데이터, 예: 「우럭+참돔+농어 등」). 조황 아님 */
   info_species?: string | null;
+  /** 주소 칸이 없는 곳의 좌표 근처 주소 (카카오 좌표→주소). region 이면 동·리 이름만 → 「근처」로 표시 */
+  near_address?: string | null;
+  near_address_kind?: 'address' | 'region' | null;
 };
 
 /** 좌표 품질 (docs/03_데이터/2026-11-09_좌표품질_검증보고서.md) */
@@ -735,5 +738,8 @@ export type RockPoint = {
   catches: { species: string; methods: string[] }[];
   /** 연안사고 위험구역 100m 안이면 그 구역 설명 */
   danger: string | null;
+  /** 좌표 근처 주소 (카카오 좌표→주소). region 이면 동·리 이름만 */
+  near_address?: string | null;
+  near_address_kind?: 'address' | 'region' | null;
 };
 export type RockPoints = { source: string; excluded: string; notice: string; points: RockPoint[] };

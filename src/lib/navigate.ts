@@ -36,6 +36,12 @@ export function navTarget(p: Place, name: string): NavTarget {
   return query ? { kind: 'search', query } : { kind: 'none', reason: '주소·위치 정보가 없어 길안내를 할 수 없어요.' };
 }
 
+/** 좌표 근처 주소 표시: 번지 없는 동·리면 「근처」를 붙인다 */
+export function nearLabel(text: string | null | undefined, kind: 'address' | 'region' | null | undefined): string | null {
+  if (!text) return null;
+  return kind === 'region' ? `${text} 근처` : `${text} 부근`;
+}
+
 /** 그 앱의 길안내(경로) 또는 검색 주소 */
 export function navUrl(app: NavApp, t: Exclude<NavTarget, { kind: 'none' }>): string {
   if (t.kind === 'search') {

@@ -92,6 +92,7 @@ export const api = {
   placeKakao: (placeId: number) => request<PlaceKakao>(`/places/${placeId}/kakao`),
   rockPoints: () => request<RockPoints>('/rock-points'),
   nearbyShops: (placeId: number) => request<NearbyShops>(`/places/${placeId}/nearby`),
+  rockNearby: (pointId: number) => request<NearbyShops>(`/rock-points/${pointId}/nearby`),
   catchSummary: (days = 14) => request<CatchSummary[]>(`/community/catch-summary?days=${days}`, { auth: true }),
   deletePost: (id: number) => request<void>(`/community/posts/${id}`, { method: 'DELETE', auth: true }),
   addComment: (postId: number, body: string, parentId?: number | null) =>
