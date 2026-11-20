@@ -11,6 +11,7 @@ import { Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { RockPoint } from '@/api/types';
+import { Amenities } from '@/components/amenities';
 import { Button } from '@/components/form';
 import type { MapMarker, MapRegion } from '@/components/map/types';
 import { NearbyShops } from '@/components/nearby-shops';
@@ -140,7 +141,7 @@ export function RockCard({ point, source, onClose }: { point: RockPoint; source:
           <Button label="길안내" variant="navy" onPress={nav.open} />
         </View>
         <View style={styles.flex}>
-          <Button label="근처 낚시점" variant="secondary" onPress={() => setShopsOpen(true)} />
+          <Button label="주변 시설" variant="secondary" onPress={() => setShopsOpen(true)} />
         </View>
       </View>
       <ThemedText type="small" themeColor="textSecondary">
@@ -163,10 +164,10 @@ export function RockCard({ point, source, onClose }: { point: RockPoint; source:
           <View style={styles.head}>
             <View style={styles.flex}>
               <ThemedText type="sectionTitle" numberOfLines={1}>
-                {name} 주변 낚시점·낚시배
+                {name} 주변
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
-                낚시점 5km · 낚시배 15km 안 · 가까운 순 · 카카오 등록 업체
+                낚시점·낚시배 · 편의점·주차장·화장실 · 카카오 등록 기준
               </ThemedText>
             </View>
             <Pressable accessibilityRole="button" accessibilityLabel="닫기" hitSlop={10} onPress={() => setShopsOpen(false)} style={styles.close}>
@@ -174,7 +175,12 @@ export function RockCard({ point, source, onClose }: { point: RockPoint; source:
             </Pressable>
           </View>
           <ScrollView style={styles.sheetList}>
-            {shopsOpen ? <NearbyShops rockId={point.id} area={point.near_address ?? point.admin} /> : null}
+            {shopsOpen ? (
+              <View style={styles.sheetBody}>
+                <NearbyShops rockId={point.id} area={point.near_address ?? point.admin} />
+                <Amenities rockId={point.id} />
+              </View>
+            ) : null}
           </ScrollView>
         </View>
       </Modal>
@@ -212,5 +218,6 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: 8, marginTop: 4 },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' },
   sheet: { padding: 16, gap: 10, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
-  sheetList: { maxHeight: 460 },
+  sheetList: { maxHeight: 520 },
+  sheetBody: { gap: 10, paddingBottom: 8 },
 });

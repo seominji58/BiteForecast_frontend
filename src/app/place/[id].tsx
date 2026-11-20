@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useConditions, useDateRange, useFavorites, usePlaceKakao, usePlaces, usePlacesSummary, useSetFavorite } from '@/api/queries';
 import { AddToTripButton } from '@/components/add-to-trip';
 import { NearbyShops } from '@/components/nearby-shops';
+import { Amenities } from '@/components/amenities';
 import { CatchStrip } from '@/components/catch-strip';
 import { CoordNote } from '@/components/coord-note';
 import { ZoneNotice } from '@/components/zone-notice';
@@ -184,6 +185,8 @@ export default function PlaceDetailScreen() {
             <>
               <SectionHeader title="근처 낚시점·낚시배" />
               <NearbyShops placeId={place.id} area={place.region_name} />
+              <SectionHeader title="주변 편의점·주차장·화장실" />
+              <Amenities placeId={place.id} />
             </>
           ) : null}
 

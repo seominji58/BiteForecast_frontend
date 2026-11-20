@@ -233,6 +233,15 @@ export const useNearbyShops = (placeId: number | null, rockId: number | null = n
     staleTime: 30 * 60_000,
   });
 
+/** 낚시터(placeId) 또는 갯바위 참고 포인트(rockId) 주변 편의점·주차장·공중화장실 */
+export const useAmenities = (placeId: number | null, rockId: number | null = null) =>
+  useQuery({
+    queryKey: rockId != null ? ['rock-amenities', rockId] : ['amenities', placeId],
+    queryFn: () => (rockId != null ? api.rockAmenities(rockId) : api.placeAmenities(placeId!)),
+    enabled: rockId != null || (placeId != null && Number.isFinite(placeId)),
+    staleTime: 6 * 3600_000,
+  });
+
 export const useCatchSummary = (days = 14) =>
   useQuery({ queryKey: ['community', 'catch-summary', days], queryFn: () => api.catchSummary(days), staleTime: 5 * 60_000 });
 
