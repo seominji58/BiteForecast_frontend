@@ -7,13 +7,16 @@ import { useDateRange, useTripOutlook, useTrips } from '@/api/queries';
 import type { TripListItem } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { LoginRequired } from '@/components/login-required';
-import { ErrorView, Loading, TabScreen } from '@/components/screen';
+import { Button } from '@/components/form';
+import { SpotsCard, WeekCard } from '@/components/home-briefing';
+import { ErrorView, Loading, SectionHeader, TabScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { UiIcon } from '@/components/ui-icon';
 import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
-import { dayLabel } from '@/lib/compare';
+import { dayLabel, dayList } from '@/lib/compare';
+import { useExplore } from '@/lib/explore';
 import { read, useCriteria, write } from '@/lib/prefs';
 import { dday, outlookLine, periodLabel } from '@/lib/trip';
 import { useTripDraft } from '@/lib/trip-draft';
@@ -42,7 +45,33 @@ export default function TripsTab() {
       }>
       <DraftCard />
       {status === 'loading' ? <Loading /> : status === 'signed-in' ? <TripList /> : <GuestIntro />}
+      <WhenToGo />
     </TabScreen>
+  );
+}
+
+/**
+ * 언제 갈까 (2026-11-23, 홈에서 옮김): 앞으로 7일 공식 낚시지수 「좋음 이상」 지점 수를 날짜별 막대로.
+ * 날짜를 누르면 그날 좋은 곳과 「이 날로 계획 만들기」. 어종·지역은 홈에서 고른 것을 그대로 쓴다
+ */
+function WhenToGo() {
+  const range = useDateRange();
+  const today = range.data?.today;
+  const [sel, setSel] = useState<string | undefined>();
+  const date = sel ?? today;
+  const x = useExplore(date, today);
+  const dates = range.data ? dayList(range.data.today, range.data.max) : [];
+  if (!today) return null;
+  return (
+    <>
+      <SectionHeader title={`언제 갈까${x.species ? ` · ${x.species.name}` : ''}`} />
+      <WeekCard x={x} dates={dates} date={date} today={today} onDate={setSel} />
+      <SpotsCard x={x} dates={dates} date={date} today={today} />
+      <Button
+        label={`${date ? dayLabel(date) : ''} 계획 만들기`}
+        onPress={() => router.push({ pathname: '/trip/new', params: { date, ...(x.species ? { species: x.species.code } : {}) } })}
+      />
+    </>
   );
 }
 
@@ -73,13 +102,11 @@ function GuestIntro() {
     <>
       <EmptyTrips
         title="출조계획을 만들어 보세요"
-        message={'날짜와 낚시터를 정해 두면 그날 파고·풍속·물때·특보를 계속 보여드려요.\n작성은 로그인 없이 시작하고, 저장할 때 로그인하면 돼요.'}
+        message={
+          '날짜와 낚시터를 정해 두면 그날 파고·풍속·물때·특보를 계속 보여드려요.\n작성은 로그인 없이 시작하고, 저장할 때 로그인하면 돼요.'
+        }
       />
-      <LoginRequired
-        title="저장한 계획을 보려면 로그인"
-        message="계획은 계정에 저장돼 다른 기기에서도 볼 수 있어요."
-        icon="trips"
-      />
+      <LoginRequired title="저장한 계획을 보려면 로그인" message="계획은 계정에 저장돼 다른 기기에서도 볼 수 있어요." icon="trips" />
     </>
   );
 }
@@ -254,7 +281,14 @@ function TripCard({ t, today }: { t: TripListItem; today: string }) {
   // 다가오는 계획만 첫 장소 해황 요약을 불러온다
   const outlook = useTripOutlook(upcoming && t.first_stop ? t.id : NaN);
   const first = t.first_stop;
-  const line = first && upcoming ? outlookLine(outlook.data?.stops.find((o) => o.stop_id === first.id), criteria, outlook.data?.forecast_last_day ?? null) : null;
+  const line =
+    first && upcoming
+      ? outlookLine(
+          outlook.data?.stops.find((o) => o.stop_id === first.id),
+          criteria,
+          outlook.data?.forecast_last_day ?? null,
+        )
+      : null;
   const tone = ddayTone(t, today);
   const [, m, d] = t.start_date.split('-').map(Number);
   const where = [t.region, first ? first.place.name : null].filter(Boolean).join(' · ') || '장소 미정';
@@ -264,7 +298,11 @@ function TripCard({ t, today }: { t: TripListItem; today: string }) {
       accessibilityRole="button"
       accessibilityLabel={`${t.title}, ${dday(t.start_date, t.end_date, today)}, ${periodLabel(t.start_date, t.end_date)}, ${where}`}
       onPress={() => router.push({ pathname: '/trip/[id]', params: { id: String(t.id) } })}
-      style={({ pressed }) => [styles.card, { borderColor: theme.border, backgroundColor: theme.backgroundElement }, pressed && styles.pressed]}>
+      style={({ pressed }) => [
+        styles.card,
+        { borderColor: theme.border, backgroundColor: theme.backgroundElement },
+        pressed && styles.pressed,
+      ]}>
       {/* 사진 대신 날짜 타일 (계획에 사진 자료가 없어 가짜 사진을 쓰지 않는다) */}
       <View style={[styles.dateTile, { backgroundColor: upcoming ? Brand.navy : theme.backgroundSelected }]}>
         <Text style={[styles.tileMonth, !upcoming && { color: theme.textSecondary }]}>{m}월</Text>
@@ -321,7 +359,16 @@ const styles = StyleSheet.create({
   center: { textAlign: 'center' },
   pressed: { opacity: 0.7 },
   onNavy: { color: Brand.onNavy },
-  newBtn: { flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: Brand.orange, borderRadius: 999, paddingLeft: 10, paddingRight: 14, minHeight: 34 },
+  newBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: Brand.orange,
+    borderRadius: 999,
+    paddingLeft: 10,
+    paddingRight: 14,
+    minHeight: 34,
+  },
   newBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
   joinRow: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: -4, marginBottom: -4 },
   joinHint: { flexShrink: 1 },
@@ -347,5 +394,14 @@ const styles = StyleSheet.create({
   barFill: { height: 6, borderRadius: 3 },
   empty: { alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 14, paddingVertical: 24, paddingHorizontal: 16 },
   emptyArt: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
-  emptyBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: Brand.orange, borderRadius: 999, paddingHorizontal: 16, minHeight: 40, marginTop: 6 },
+  emptyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Brand.orange,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    minHeight: 40,
+    marginTop: 6,
+  },
 });

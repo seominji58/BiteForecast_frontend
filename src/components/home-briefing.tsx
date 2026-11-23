@@ -16,7 +16,7 @@ import { SpeciesImage } from '@/components/species';
 import { ThemedText } from '@/components/themed-text';
 import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { dayStat, topSpots, weekHeadline } from '@/lib/briefing';
+import { dayStat, speciesRanking, topSpots, weekHeadline } from '@/lib/briefing';
 import { dayLabel } from '@/lib/compare';
 import type { useExplore } from '@/lib/explore';
 import { placeName } from '@/lib/place';
@@ -208,8 +208,91 @@ const styles = StyleSheet.create({
   pick: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
   pickText: { fontSize: 12, fontWeight: '700' },
   more: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 32 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  fishCard: { width: '48.5%', borderWidth: 1.5, borderRadius: 14, padding: 10, gap: 6 },
+  fishCardOn: { borderWidth: 2.5 },
+  fishTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  word: { fontSize: 18, lineHeight: 24, fontWeight: '800' },
+  dist: { flexDirection: 'row', height: 6, borderRadius: 3, overflow: 'hidden' },
   listCard: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 4 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
   empty: { paddingVertical: 10 },
   foot: { paddingVertical: 6, fontSize: 11 },
 });
+/**
+ * 메인의 핵심: 오늘 어종별 공식 바다낚시지수 (2026-11-23 사용자 방향 — 「시원한 바다 + 여러 물고기의 지수」).
+ * 어종마다 그림 · 그날 대표 등급(좋음 이상 비율로) · 좋음 이상 n/전체 곳 · 등급 분포 막대.
+ * 좋음 이상이 많은 순. 누르면 그 어종을 고르고 아래 「어디로 갈까」가 그 어종 기준으로 바뀐다
+ */
+export function IndexGrid({
+  x,
+  selected,
+  onSelect,
+}: {
+  x: ReturnType<typeof useExplore>;
+  selected: string | null;
+  onSelect: (code: string | null) => void;
+}) {
+  const theme = useTheme();
+  const inScopeId = useMemo(() => (id: number) => !!x.byId.get(id) && x.inScope(x.byId.get(id)!), [x]);
+  const ranks = speciesRanking(x.day, inScopeId);
+  if (x.fi.isPending) {
+    return (
+      <ThemedText type="small" themeColor="textSecondary">
+        오늘 공식 낚시지수를 불러오는 중이에요…
+      </ThemedText>
+    );
+  }
+  if (!ranks.length) {
+    return (
+      <ThemedText type="small" themeColor="textSecondary">
+        {x.scopeName}에는 오늘 공식 낚시지수 지점이 없어요. 지역을 넓혀 보세요.
+      </ThemedText>
+    );
+  }
+  return (
+    <View style={styles.grid}>
+      {ranks.map((r) => {
+        const sp = speciesByIndexName(r.species);
+        const ratio = r.total ? r.good / r.total : 0;
+        const word = r.veryGood > 0 && ratio >= 0.5 ? '매우좋음' : ratio >= 0.4 ? '좋음' : r.total && r.bad / r.total >= 0.5 ? '나쁨' : '보통';
+        const tone = word === '매우좋음' ? Brand.teal : word === '좋음' ? '#2E8B7A' : word === '나쁨' ? '#D9534F' : '#7A8794';
+        const on = !!sp && sp.code === selected;
+        const mid = r.total - r.good - r.bad;
+        return (
+          <Pressable
+            key={r.species}
+            accessibilityRole="button"
+            accessibilityState={{ selected: on }}
+            accessibilityLabel={`${r.species}, 오늘 ${word}, 좋음 이상 ${r.good}곳 / ${r.total}곳`}
+            onPress={() => sp && onSelect(on ? null : sp.code)}
+            style={({ pressed }) => [
+              styles.fishCard,
+              { backgroundColor: theme.backgroundElement, borderColor: on ? Brand.orange : theme.border },
+              on && styles.fishCardOn,
+              pressed && styles.pressed,
+            ]}>
+            <View style={styles.fishTop}>
+              {sp ? <SpeciesImage code={sp.code} size={52} /> : null}
+              <View style={styles.flex}>
+                <ThemedText type="smallBold" numberOfLines={1}>
+                  {r.species}
+                </ThemedText>
+                <Text style={[styles.word, { color: tone }]}>{word}</Text>
+              </View>
+            </View>
+            {/* 등급 분포: 좋음 이상 · 보통 · 나쁨 이하 */}
+            <View style={[styles.dist, { backgroundColor: theme.border }]}>
+              <View style={{ flex: r.good, backgroundColor: Brand.teal }} />
+              <View style={{ flex: mid, backgroundColor: '#B7C3CF' }} />
+              <View style={{ flex: r.bad, backgroundColor: '#E57373' }} />
+            </View>
+            <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+              좋음 이상 {r.good}/{r.total}곳
+            </ThemedText>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}

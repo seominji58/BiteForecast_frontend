@@ -1,33 +1,28 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Image, Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { useCatchSeasons, useCatchSummary, useDateRange, useFishingRules } from '@/api/queries';
+import { useDateRange } from '@/api/queries';
 import type { Place } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
-import { HomeActions } from '@/components/home-explore';
 import { OptionSheet } from '@/components/option-sheet';
-import { SpotsCard, WeekCard } from '@/components/home-briefing';
+import { IndexGrid, SpotsCard } from '@/components/home-briefing';
 import { RulesLine } from '@/components/rules-line';
-import { speciesRanking } from '@/lib/briefing';
 import { BottomSheet } from '@/components/bottom-sheet';
 import { SpeciesYear } from '@/components/species-year';
-import { railBadge } from '@/lib/seasons';
 import { Card, SectionHeader, TabScreen } from '@/components/screen';
 import { CatchStrip } from '@/components/catch-strip';
 import { SearchBar } from '@/components/search-bar';
-import { SpeciesImage, SpeciesRail } from '@/components/species';
+import { SpeciesImage } from '@/components/species';
 import { ThemedText } from '@/components/themed-text';
 import type { AppIconName } from '@/constants/icons';
 import { Brand, IconSize } from '@/constants/theme';
 import { dayLabel, dayList } from '@/lib/compare';
 import { freshnessLine } from '@/lib/criteria';
 import { useExplore } from '@/lib/explore';
-import { matches, PLACE_IMAGE, PLACE_TYPE_LABEL, placeName, usableForLocation } from '@/lib/place';
-import { sortByCount, speciesPlaceCounts } from '@/lib/species-rank';
-import { type Region, REGIONS, SEA_GROUPS } from '@/lib/prefs';
-import { SPECIES_IMAGES } from '@/lib/species-images';
+import { matches, PLACE_IMAGE, PLACE_TYPE_LABEL, placeName } from '@/lib/place';
+import { type Region, REGIONS } from '@/lib/prefs';
 
 const HERO_RATIO = 1672 / 941; // 배경 사진 가로/세로
 
@@ -56,58 +51,13 @@ export default function HomeScreen() {
   const [hero, setHero] = useState({ w: 0, h: 0 });
   const [sheet, setSheet] = useState<'date' | 'region' | null>(null);
 
-  // 어종 순서: 지금 고른 지역·날짜에서 지도에 많이 찍히는 어종 먼저 (공식 지수 지점 · 이용자 조황 · 공공데이터 대상 어종 낚시터 수).
-  // 공식 지수가 없는 어종도 자료가 많으면 앞에 온다. 앱이 점수를 만들지 않고 낚시터 수만 센다
-  const catches = useCatchSummary(14);
-  const speciesCounts = useMemo(
-    () =>
-      x.places.data && x.summary.isSuccess && !(x.near && !x.gps.coords)
-        ? speciesPlaceCounts(x.allSpecies, {
-            places: x.places.data.filter(usableForLocation),
-            day: x.day,
-            catches: catches.data,
-            scope: x.inScope,
-          })
-        : null,
-    [x.places.data, x.summary.isSuccess, x.near, x.gps.coords, x.allSpecies, x.day, catches.data, x.inScope],
-  );
-  // 2026-11-23 브리핑: 고른 날짜의 공식 지수 「좋음 이상」 지점 수로 먼저 줄 세운다 (공식 등급 정렬은 사용자 승인).
-  // 지수가 없는 어종은 그 뒤에 예전 순서(자료가 연결된 낚시터 수)대로
-  const ranking = useMemo(() => {
-    const inScopeId = (id: number) => !!x.byId.get(id) && x.inScope(x.byId.get(id)!);
-    return new Map(speciesRanking(x.day, inScopeId).map((r) => [r.species, r]));
-  }, [x.day, x.byId, x.inScope]); // eslint-disable-line react-hooks/exhaustive-deps
-  const railSpecies = useMemo(() => {
-    const base = sortByCount(x.allSpecies.filter((s) => SPECIES_IMAGES[s.code]), speciesCounts);
-    const good = (s: (typeof base)[number]) => (s.indexName ? (ranking.get(s.indexName)?.good ?? 0) : -1);
-    return base.map((s, i) => ({ s, i })).sort((a, b) => good(b.s) - good(a.s) || a.i - b.i).map((v) => v.s);
-  }, [x.allSpecies, speciesCounts, ranking]);
-  // 어종 카드 배지: 지금 금어기 > 이번 달 산란기 (법령·수산과학원·논문 근거)
-  // 고른 지역이 바다(서해·남해·동해·제주)면 그 바다 기준으로 「어획 많은 달」
-  const homeSea = (SEA_GROUPS as readonly string[]).includes(x.region) ? x.region : null;
-  const rulesQ = useFishingRules();
-  const catchQ = useCatchSeasons();
   const [yearOpen, setYearOpen] = useState(false);
-  const railBadges = useMemo(() => {
-    const t = range.data?.today;
-    if (!t) return undefined;
-    return Object.fromEntries(
-      railSpecies.map((s) => {
-        const b = railBadge(s.code, t, rulesQ.data, catchQ.data, homeSea);
-        // 금어기가 아니면 공식 지수 「좋음 이상 N곳」이 먼저 (그날 기준)
-        const g = s.indexName ? ranking.get(s.indexName) : undefined;
-        if (b?.tone !== 'danger' && g && g.good > 0) return [s.code, { label: `좋음 ${g.good}곳`, tone: 'success' as const }];
-        return [s.code, b];
-      }),
-    );
-  }, [railSpecies, range.data?.today, rulesQ.data, catchQ.data, homeSea, ranking]);
   const results = query.trim() ? (x.places.data ?? []).filter((p) => matches(p, query)).slice(0, 5) : [];
   const speciesHits = query.trim()
     ? x.allSpecies.filter((s) => s.name.includes(query.trim()) || (s.alias ?? '').includes(query.trim())).slice(0, 3)
     : [];
 
   const dates = range.data ? dayList(range.data.today, range.data.max) : [];
-  const dateText = date ? dayLabel(date) : '';
   const beyond = (d: string) => !!x.lastForecastDay && d > x.lastForecastDay;
 
   const openPlace = (p: Place) => {
@@ -115,13 +65,6 @@ export default function HomeScreen() {
     Keyboard.dismiss();
     router.push({ pathname: '/place/[id]', params: { id: String(p.id) } });
   };
-  // 홈에서 고른 날짜·해역·어종을 출조계획에 그대로 넘긴다 (내 주변·전국은 해역이 아니라 넘기지 않음)
-  const sea = (SEA_GROUPS as readonly string[]).includes(x.region) ? x.region : null;
-  const plan = () =>
-    router.push({
-      pathname: '/trip/new',
-      params: { ...(date ? { date } : {}), ...(x.species ? { species: x.species.code } : {}), ...(sea ? { region: sea } : {}) },
-    });
   // 지도는 홈에서 고른 지역 그대로 연다: 내 주변 → 현재 위치, 해역 → 그 해역 전체, 전국 → 전국
   // 고른 어종이 있으면 지도도 그 어종 관련 낚시터만 보여준다 (?fish=), 날짜는 「출조계획에 추가」로 이어진다
   const openMap = () =>
@@ -138,30 +81,27 @@ export default function HomeScreen() {
   const refresh = () =>
     Promise.all(['places-summary', 'fishing-index', 'conditions', 'meta'].map((k) => qc.invalidateQueries({ queryKey: [k] })));
 
-
   return (
-    <TabScreen title="오늘은 어떤 낚시를 떠나세요?" immersive onRefresh={refresh}>
+    <TabScreen title="" immersive onRefresh={refresh}>
       {/* 상단: 바다 배경 · 검색 · 내 주변 · 지도 탐색 · 날짜 */}
       <View onLayout={(e) => setHero({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })} style={styles.hero}>
         {hero.h > 0 ? (
           <Image
             source={homeBackgroundSource()}
             resizeMode="cover"
-            style={[
-              styles.heroImage,
-              { width: Math.max(hero.w, hero.h * HERO_RATIO), height: Math.max(hero.h, hero.w / HERO_RATIO) },
-            ]}
+            style={[styles.heroImage, { width: Math.max(hero.w, hero.h * HERO_RATIO), height: Math.max(hero.h, hero.w / HERO_RATIO) }]}
           />
         ) : null}
         <View pointerEvents="none" style={styles.heroShade} />
-        {/* 검색 + 지역 한 줄 (지역은 여기 한 곳에서만 고른다) */}
+        <View style={styles.heroCopy}>
+          <Text style={styles.heroTitle}>오늘은 어떤 낚시를 떠나세요?</Text>
+          <Text style={styles.heroSubtitle}>오늘 바다낚시지수로 어종과 낚시터를 골라 드려요.</Text>
+        </View>
+        <SearchBar value={query} onChangeText={setQuery} onClear={() => setQuery('')} placeholder="어종·지역·낚시터 검색" />
         <View style={styles.heroActions}>
-          <View style={styles.flex}>
-            <SearchBar value={query} onChangeText={setQuery} onClear={() => setQuery('')} placeholder="어종·낚시터 검색" />
-          </View>
           <HeroButton
             icon="find-gps"
-            label={`${x.near ? '내 주변' : x.region} ▾`}
+            label={`${x.near ? (x.nearArea ? `내 주변 · ${x.nearArea.area}` : '내 주변') : x.region} ▾`}
             onPress={() => setSheet('region')}
           />
         </View>
@@ -189,7 +129,11 @@ export default function HomeScreen() {
             </Pressable>
           ))}
           {results.map((p) => (
-            <Pressable key={p.id} accessibilityRole="button" onPress={() => openPlace(p)} style={({ pressed }) => [styles.resultRow, pressed && styles.pressed]}>
+            <Pressable
+              key={p.id}
+              accessibilityRole="button"
+              onPress={() => openPlace(p)}
+              style={({ pressed }) => [styles.resultRow, pressed && styles.pressed]}>
               <AppIcon name={PLACE_IMAGE[p.type]} size={IconSize.row} />
               <View style={styles.flex}>
                 <ThemedText type="smallBold" numberOfLines={1}>
@@ -209,18 +153,10 @@ export default function HomeScreen() {
         </Card>
       ) : null}
 
-
-      {/* ① 언제 갈까: 이번 주 날짜 막대 (날짜는 여기서만 고른다) */}
-      <WeekCard x={x} dates={dates} date={date} today={today} onDate={setDate} />
-
-      {/* ② 무엇을 노릴까: 그날 공식 지수 좋음 이상 지점 수 순서 */}
-      <SectionHeader
-        title={`무엇을 노릴까 · ${date === today ? '오늘' : dateText}`}
-        actionLabel="전체 어종 보기"
-        onAction={() => router.push('/species')}
-      />
-      <SpeciesRail items={railSpecies} selected={x.speciesCode} onSelect={x.setSpeciesCode} badges={railBadges} compact />
-      {/* 금어기·금지체장 한 줄. 어종을 골랐으면 누를 때 그 어종 시트(1년 달력·근거), 아니면 금어기 화면 */}
+      {/* 메인의 핵심: 오늘 어종별 공식 바다낚시지수 (좋음 이상 많은 순). 날짜별 비교는 출조계획 탭에서 */}
+      <SectionHeader title="오늘 어종별 낚시지수" actionLabel="전체 어종" onAction={() => router.push('/species')} />
+      <IndexGrid x={x} selected={x.speciesCode} onSelect={x.setSpeciesCode} />
+      {/* 지금 금어기인 어종을 골랐을 때만 경고 (평소 금지체장은 어종 시트에서) */}
       <RulesLine species={x.species} today={range.data?.today} onOpenSpecies={x.species ? () => setYearOpen(true) : undefined} alertOnly />
       {x.species ? (
         <BottomSheet open={yearOpen} title={`${x.species.name} · 1년 달력`} onClose={() => setYearOpen(false)}>
@@ -228,16 +164,9 @@ export default function HomeScreen() {
         </BottomSheet>
       ) : null}
 
-      {/* ③ 어디로 갈까: 그날 가장 좋은 곳 (고른 어종 기준, 없으면 전체) */}
-      <SectionHeader
-        title={`어디로 갈까${x.species ? ` · ${x.species.name}` : ''}`}
-        actionLabel="더 보기"
-        onAction={() => router.push({ pathname: '/points', params: date ? { date } : {} })}
-      />
-      <SpotsCard x={x} dates={dates} date={date} today={today} />
-
-      {/* 지도 · 출조계획 */}
-      <HomeActions onMap={openMap} onPlan={plan} speciesName={x.species?.name} />
+      {/* 어디로 갈까: 오늘 가장 좋은 곳 (고른 어종 기준, 없으면 전체) · 지도로 펼쳐 보기 */}
+      <SectionHeader title={`어디로 갈까${x.species ? ` · ${x.species.name}` : ''}`} actionLabel="지도" onAction={openMap} />
+      <SpotsCard x={x} dates={dates} date={today} today={today} />
 
       {x.summary.isSuccess && x.summary.data.data_status.stale ? (
         <ThemedText type="small" themeColor="warning">
@@ -273,7 +202,10 @@ export default function HomeScreen() {
 
 function HeroButton({ icon, label, onPress, active }: { icon: AppIconName; label: string; onPress: () => void; active?: boolean }) {
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.heroBtn, active && styles.heroBtnOn, pressed && styles.pressed]}>
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [styles.heroBtn, active && styles.heroBtnOn, pressed && styles.pressed]}>
       <View style={styles.heroIcon}>
         <AppIcon name={icon} size={18} />
       </View>
@@ -286,16 +218,47 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   pressed: { opacity: 0.7 },
   bold: { fontWeight: '700' },
-  hero: { backgroundColor: Brand.navy, marginTop: -16, marginHorizontal: -16, paddingTop: 122, paddingHorizontal: 16, paddingBottom: 12, gap: 8, overflow: 'hidden' },
+  hero: {
+    backgroundColor: Brand.navy,
+    marginTop: -16,
+    marginHorizontal: -16,
+    paddingTop: 104,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    gap: 10,
+    overflow: 'hidden',
+  },
   heroImage: { position: 'absolute', top: 0, right: 0 },
   heroShade: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(5, 30, 58, 0.42)' },
   heroActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  heroBtn: { flexDirection: 'row', paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 44, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.1)' },
+  heroCopy: { paddingHorizontal: 4, paddingTop: 8, gap: 4 },
+  heroTitle: { color: '#FFFFFF', fontSize: 25, lineHeight: 32, fontWeight: '800' },
+  heroSubtitle: { color: 'rgba(255,255,255,0.88)', fontSize: 14, lineHeight: 20, fontWeight: '600' },
+  heroBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minHeight: 44,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
   heroBtnOn: { backgroundColor: 'rgba(255,255,255,0.22)' },
   heroIcon: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#F3F6F9', alignItems: 'center', justifyContent: 'center' },
   heroBtnText: { color: Brand.onNavy, fontSize: 15, fontWeight: '700' },
   dateRow: { gap: 6 },
-  datePill: { minHeight: 36, minWidth: 52, paddingHorizontal: 12, borderRadius: 999, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' },
+  datePill: {
+    minHeight: 36,
+    minWidth: 52,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
   datePillOn: { backgroundColor: Brand.orange, borderColor: Brand.orange },
   dateText: { color: Brand.onNavySecondary, fontSize: 14, fontWeight: '600' },
   dateTextPending: { opacity: 0.6 },

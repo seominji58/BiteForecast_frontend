@@ -55,7 +55,7 @@ export function weekHeadline(stats: DayStat[], label: (d: string) => string): st
   return `${label(best.date)}이 가장 좋아요${worst.length ? ` · ${worst.join('·')}은 대부분 나쁨` : ''}`;
 }
 
-export type SpeciesRank = { species: string; good: number; veryGood: number; total: number };
+export type SpeciesRank = { species: string; good: number; veryGood: number; bad: number; total: number };
 
 /** 그날 어종 순위: 좋음 이상 지점 수 → 매우좋음 수 */
 export function speciesRanking(day: FishingIndexDay | undefined, inScope: (placeId: number) => boolean): SpeciesRank[] {
@@ -65,10 +65,11 @@ export function speciesRanking(day: FishingIndexDay | undefined, inScope: (place
       if (SKIP.has(s.species)) continue;
       const g = bestGrade(s.grades);
       if (!g) continue;
-      const r = m.get(s.species) ?? { species: s.species, good: 0, veryGood: 0, total: 0 };
+      const r = m.get(s.species) ?? { species: s.species, good: 0, veryGood: 0, bad: 0, total: 0 };
       r.total++;
       if (isGood(g)) r.good++;
       if (g === '매우좋음') r.veryGood++;
+      if (isBad(g)) r.bad++;
       m.set(s.species, r);
     }
   return [...m.values()].sort((a, b) => b.good - a.good || b.veryGood - a.veryGood || a.species.localeCompare(b.species, 'ko'));
