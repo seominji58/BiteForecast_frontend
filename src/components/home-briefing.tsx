@@ -8,7 +8,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+
+import { Text } from '@/components/app-text';
 
 import { api } from '@/api';
 import type { FishingIndexDay } from '@/api/types';
@@ -239,7 +241,9 @@ export function SpotsCard({
               </View>
               <View style={[styles.pick, { backgroundColor: very ? Brand.teal : noGood ? theme.backgroundSelected : theme.tintSoft }]}>
                 {speciesByIndexName(p0.species) ? <SpeciesImage code={speciesByIndexName(p0.species)!.code} size={18} /> : null}
-                <Text style={[styles.pickText, { color: very ? '#FFFFFF' : noGood ? theme.textSecondary : Brand.teal }]}>
+                <Text
+                  numberOfLines={1}
+                  style={[styles.pickText, { flexShrink: 1, color: very ? '#FFFFFF' : noGood ? theme.textSecondary : Brand.teal }]}>
                   {sel ? p0.grade : `${p0.species} ${p0.grade}`}
                 </Text>
               </View>
@@ -284,7 +288,15 @@ const styles = StyleSheet.create({
   bar: { width: 20, borderRadius: 5 },
   count: { fontSize: 11, lineHeight: 14 },
   rank: { fontSize: 20, fontWeight: '800', width: 18, textAlign: 'center' },
-  pick: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
+  pick: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    maxWidth: '52%',
+  },
   pickText: { fontSize: 12, fontWeight: '700' },
   carHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   arrow: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
@@ -428,7 +440,9 @@ export function IndexCarousel({
                 <ThemedText type="smallBold" numberOfLines={1} style={styles.flex}>
                   {r.species}
                 </ThemedText>
-                <Text style={[styles.word, { color: tone }]}>{word}</Text>
+                <Text style={[styles.word, { color: tone }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                  {word}
+                </Text>
               </View>
               {/* 등급 분포: 좋음 이상 · 보통 · 나쁨 이하 */}
               <View style={[styles.dist, { backgroundColor: theme.border }]}>

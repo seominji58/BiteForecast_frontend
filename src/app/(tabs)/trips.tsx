@@ -1,7 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+
+import { Text } from '@/components/app-text';
 
 import { useDateRange, useTripOutlook, useTrips } from '@/api/queries';
 import type { TripListItem } from '@/api/types';

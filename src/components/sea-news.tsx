@@ -2,7 +2,9 @@
  * 홈 「이번 달 바다」 카드 (2026-11-23): 제철 어종 칩(누르면 그 어종 시트) + 금어기 소식 한 줄.
  * 근거: 통계청 연근해 어획량 「어획 많은 달」, 수산자원관리법 금어기. 자료가 없으면 그리지 않는다
  */
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+
+import { Text } from '@/components/app-text';
 
 import { useCatchSeasons, useFishingRules } from '@/api/queries';
 import { SpeciesImage } from '@/components/species';
@@ -36,7 +38,7 @@ export function SeaNews({ today, region, onOpen }: { today: string | undefined; 
         </ThemedText>
       </View>
       {fish.length ? (
-        <View style={styles.chips}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.bleed} contentContainerStyle={styles.chips}>
           {fish.map((f) => {
             const sp = speciesByCode(f.code)!;
             return (
@@ -51,7 +53,7 @@ export function SeaNews({ today, region, onOpen }: { today: string | undefined; 
               </Pressable>
             );
           })}
-        </View>
+        </ScrollView>
       ) : null}
       {banText ? (
         <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
@@ -66,7 +68,8 @@ const styles = StyleSheet.create({
   card: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
   head: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   src: { fontSize: 11 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  bleed: { marginHorizontal: -12 },
+  chips: { flexDirection: 'row', gap: 6, paddingHorizontal: 12 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingLeft: 6, paddingRight: 10, minHeight: 32 },
   chipText: { color: Brand.teal, fontSize: 14, fontWeight: '700' },
   pressed: { opacity: 0.7 },

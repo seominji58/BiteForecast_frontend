@@ -1,6 +1,8 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Linking, Modal, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { Linking, Modal, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+
+import { Text } from '@/components/app-text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -269,7 +271,7 @@ function ActionRow({
           onPress={it.onPress}
           style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}>
           <UiIcon name={it.icon} size={22} color={it.on ? Brand.orange : Brand.teal} />
-          <ThemedText type="small" numberOfLines={1} style={styles.actionText}>
+          <ThemedText type="small" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={styles.actionText}>
             {it.label}
           </ThemedText>
         </Pressable>

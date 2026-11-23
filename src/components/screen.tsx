@@ -1,16 +1,8 @@
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+
+import { Text } from '@/components/app-text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppIcon } from '@/components/app-icon';
@@ -50,39 +42,45 @@ export function TabScreen({
       }
     : undefined;
   const insets = useSafeAreaInsets();
+  // immersive(홈): 상단바를 스크롤 안에 넣어 히어로와 함께 올라가게 한다 (고정이면 스크롤할 때 「설정」이 콘텐츠 위에 떠 있었다)
+  const appBar = (
+    <View
+      pointerEvents={immersive ? 'box-none' : 'auto'}
+      style={[styles.appBar, immersive && styles.immersiveAppBar, { paddingTop: insets.top }]}>
+      <View pointerEvents={immersive ? 'box-none' : 'auto'} style={styles.appBarInner}>
+        {logo || title ? (
+          <View style={styles.titleRow}>
+            {logo ? <AppIcon name="fishing-index" size={16} badge /> : null}
+            {title ? (
+              <Text style={styles.title} accessibilityRole="header" numberOfLines={1}>
+                {title}
+              </Text>
+            ) : null}
+          </View>
+        ) : (
+          <View />
+        )}
+        {right ?? (
+          <Pressable accessibilityRole="button" hitSlop={12} onPress={() => router.push('/settings')} style={styles.pill}>
+            <Text style={styles.pillText}>설정</Text>
+          </Pressable>
+        )}
+      </View>
+    </View>
+  );
   return (
     <ThemedView style={styles.flex}>
-      {/* immersive: 위에 떠 있는 상단바의 빈 곳은 아래 콘텐츠로 터치를 넘긴다 */}
-      <View
-        pointerEvents={immersive ? 'box-none' : 'auto'}
-        style={[styles.appBar, immersive && styles.immersiveAppBar, { paddingTop: insets.top }]}>
-        <View pointerEvents={immersive ? 'box-none' : 'auto'} style={styles.appBarInner}>
-          {logo || title ? (
-            <View style={styles.titleRow}>
-              {logo ? <AppIcon name="fishing-index" size={16} badge /> : null}
-              {title ? (
-                <Text style={styles.title} accessibilityRole="header" numberOfLines={1}>
-                  {title}
-                </Text>
-              ) : null}
-            </View>
-          ) : (
-            <View />
-          )}
-          {right ?? (
-            <Pressable accessibilityRole="button" hitSlop={12} onPress={() => router.push('/settings')} style={styles.pill}>
-              <Text style={styles.pillText}>설정</Text>
-            </Pressable>
-          )}
-        </View>
-      </View>
+      {immersive ? null : appBar}
       <ScrollView
         refreshControl={pull ? <RefreshControl refreshing={refreshing} onRefresh={pull} /> : undefined}
         contentContainerStyle={[styles.content, styles.tabContent, immersive && styles.immersiveContent]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
+        {immersive ? appBar : null}
         {children}
       </ScrollView>
+      {/* immersive: 상태바 자리는 늘 남색 (스크롤한 콘텐츠가 시계·배터리 밑으로 비치지 않게) */}
+      {immersive ? <View pointerEvents="none" style={[styles.statusShade, { height: insets.top }]} /> : null}
     </ThemedView>
   );
 }
@@ -167,6 +165,7 @@ export function EmptyView({ message }: { message: string }) {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   appBar: { backgroundColor: Brand.navy },
+  statusShade: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: Brand.navy },
   immersiveAppBar: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, backgroundColor: 'transparent' },
   appBarInner: {
     height: Layout.appBarHeight,

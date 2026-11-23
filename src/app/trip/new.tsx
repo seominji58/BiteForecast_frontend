@@ -1,7 +1,9 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useHeaderHeight } from 'expo-router/react-navigation';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+
+import { Text } from '@/components/app-text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api } from '@/api';
@@ -138,7 +140,11 @@ function TripForm({
     if (end < d || end > formatDay(new Date(parseDay(d).getTime() + (MAX_DAYS - 1) * 86_400_000))) setEnd(d);
   };
   const place = places.data?.find((p) => p.id === placeId);
-  const autoTitle = `${Number(start.slice(5, 7))}/${Number(start.slice(8, 10))} ${region ?? place?.region_name.split(' ').at(-1) ?? ''} 출조`.replace('  ', ' ');
+  const autoTitle =
+    `${Number(start.slice(5, 7))}/${Number(start.slice(8, 10))} ${region ?? place?.region_name.split(' ').at(-1) ?? ''} 출조`.replace(
+      '  ',
+      ' ',
+    );
 
   const submit = () => {
     setError(null);
@@ -159,7 +165,10 @@ function TripForm({
             // 새 계획을 만든 직후가 친구를 부르기 가장 좋은 때 — 초대 코드는 계획 › 동행에서 만든다
             Alert.alert('계획을 만들었어요', '같이 갈 친구가 있으면 초대 코드를 보내 보세요.', [
               { text: '나중에', style: 'cancel' },
-              { text: '친구 초대', onPress: () => router.replace({ pathname: '/trip/[id]', params: { id: String(t.id), tab: 'members' } }) },
+              {
+                text: '친구 초대',
+                onPress: () => router.replace({ pathname: '/trip/[id]', params: { id: String(t.id), tab: 'members' } }),
+              },
             ]);
           }
         },
@@ -214,7 +223,10 @@ function TripForm({
               : undefined,
         }}
       />
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={headerHeight}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={headerHeight}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
           {d && !initial && signedIn ? (
             <ThemedText type="small" themeColor="tint">
@@ -223,16 +235,15 @@ function TripForm({
           ) : null}
           <View style={[styles.card, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
             <FormRow icon="title" label="계획 제목">
-              <TextField value={title} onChangeText={touch(setTitle)} placeholder={`예) ${autoTitle}`} maxLength={60} returnKeyType="done" />
+              <TextField
+                value={title}
+                onChangeText={touch(setTitle)}
+                placeholder={`예) ${autoTitle}`}
+                maxLength={60}
+                returnKeyType="done"
+              />
             </FormRow>
-            <FormRow
-              icon="calendar"
-              label="출조 날짜"
-              required
-              value={periodLabel(start, end)}
-              onPress={() => setSheet('date')}
-              divider
-            />
+            <FormRow icon="calendar" label="출조 날짜" required value={periodLabel(start, end)} onPress={() => setSheet('date')} divider />
             <FormRow
               icon="pin"
               label="지역"
@@ -293,7 +304,11 @@ function TripForm({
             </ThemedText>
           ) : null}
         </ScrollView>
-        <View style={[styles.footer, { backgroundColor: theme.background, borderTopColor: theme.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
+        <View
+          style={[
+            styles.footer,
+            { backgroundColor: theme.background, borderTopColor: theme.border, paddingBottom: Math.max(insets.bottom, 12) },
+          ]}>
           {error ? (
             <ThemedText type="small" themeColor="danger">
               {error}
@@ -405,7 +420,12 @@ function FormRow({
       <UiIcon name={iconName} size={22} color={theme.text} />
       <ThemedText type="smallBold" style={children ? styles.flex : undefined}>
         {label}
-        {required ? <ThemedText type="smallBold" style={{ color: Brand.orange }}> *</ThemedText> : null}
+        {required ? (
+          <ThemedText type="smallBold" style={{ color: Brand.orange }}>
+            {' '}
+            *
+          </ThemedText>
+        ) : null}
       </ThemedText>
       {children ? null : (
         <View style={styles.rowRight}>

@@ -5,7 +5,9 @@
  * 기존 3칸 수치·해황 표·물때 탭·날씨 카드를 한 카드로 대신한다. 데이터: GET /places/{id}/conditions
  */
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+
+import { Text } from '@/components/app-text';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
 
 import type { PlaceCompare } from '@/api/types';
@@ -159,7 +161,9 @@ export function SeaChart({ pc, date, cal, updated }: { pc: PlaceCompare; date: s
               accessibilityState={{ selected: on }}
               onPress={() => setTab(t.key)}
               style={[styles.tab, { backgroundColor: on ? Brand.teal : theme.background, borderColor: on ? Brand.teal : theme.border }]}>
-              <Text style={[styles.tabText, { color: on ? '#FFFFFF' : theme.text }]}>{t.label}</Text>
+              <Text style={[styles.tabText, { color: on ? '#FFFFFF' : theme.text }]} numberOfLines={1} adjustsFontSizeToFit>
+                {t.label}
+              </Text>
             </Pressable>
           );
         })}

@@ -7,7 +7,9 @@
  * - 2026-11-20: 근처 주소(카카오 좌표→주소, 번지 없으면 「○○리 근처」)·길안내·근처 낚시점(5km)·낚시배(15km)
  */
 import { useState } from 'react';
-import { Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+
+import { Text } from '@/components/app-text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { RockPoint } from '@/api/types';
@@ -170,7 +172,12 @@ export function RockCard({ point, source, onClose }: { point: RockPoint; source:
                 낚시점·낚시배 · 편의점·주차장·화장실 · 카카오 등록 기준
               </ThemedText>
             </View>
-            <Pressable accessibilityRole="button" accessibilityLabel="닫기" hitSlop={10} onPress={() => setShopsOpen(false)} style={styles.close}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="닫기"
+              hitSlop={10}
+              onPress={() => setShopsOpen(false)}
+              style={styles.close}>
               <ThemedText themeColor="textSecondary">✕</ThemedText>
             </Pressable>
           </View>
