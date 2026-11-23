@@ -422,7 +422,7 @@ function VerdictWithFit({
         a={pcs[0]}
         b={pcs[1]}
         fit={fit}
-        fitBasis={future ? `${dayLabel(day)} 예보` : '지금 이후 예보'}
+        fitBasis={future ? `${dayLabel(day)} 예보` : '남은 시간 예보'}
         onCriteria={() => router.push({ pathname: '/explore', params: { mode: 'criteria' } })}
       />
       {stale ? (

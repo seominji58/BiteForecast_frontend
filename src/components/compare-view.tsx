@@ -25,7 +25,6 @@ import {
   timeLabel,
 } from '@/lib/compare';
 import { placeName } from '@/lib/place';
-import { josa } from '@/lib/species';
 
 /** 지수 등급은 색과 함께 항상 텍스트로 표시 (NFR-05) */
 export const LEVEL_COLOR: Record<FishingIndexLevel, 'success' | 'text' | 'warning' | 'danger'> = {
@@ -58,7 +57,10 @@ export type FitRow = {
 
 const shortName = (p: PlaceCompare) => placeName(p.place);
 
-/** 결론: 같은 종류(예보끼리·실측끼리) 하루 최댓값이 낮은 곳. 특보가 있으면 「확인 필요」를 따로 붙인다 */
+/**
+ * 결론 카드 (2026-11-23 가독성 개선): 「오늘 더 유리한 곳」 큰 글씨 → 파고·풍속 A/B 나란히(낮은 쪽 강조) → 상태 칩 2개.
+ * 같은 종류(예보끼리·실측끼리) 하루 최댓값만 비교한다. 특보가 있으면 「확인 필요」를 따로 둔다 (안전 단정 없음)
+ */
 export function CompareVerdict({
   a,
   b,
@@ -75,57 +77,113 @@ export function CompareVerdict({
   const theme = useTheme();
   const wave = lowerOf(a, b, 'wave_height');
   const wind = lowerOf(a, b, 'wind_speed');
-  // 「A(오천항)이」처럼 장소 이름 끝소리에 맞춘 조사
-  const subj = (w: 'A' | 'B') => {
-    const n = shortName(w === 'A' ? a : b);
-    return `${w}(${n})${josa(n, '이', '가').slice(n.length)}`;
-  };
-  let head: string;
-  if (!wave && !wind) head = '두 곳에 같은 종류의 파고·풍속 자료가 없어 비교하지 않았어요';
-  else if (wave?.winner && (!wind || wind.winner === wave.winner || !wind.winner))
-    head = `${subj(wave.winner)} ${wind?.winner === wave.winner ? '파고·풍속' : '파고'} 기준으로 더 유리해요`;
-  else if (wind?.winner && (!wave || !wave.winner)) head = `${subj(wind.winner)} 풍속 기준으로 더 유리해요`;
-  else if (wave?.winner && wind?.winner) head = `파고는 ${wave.winner}, 풍속은 ${wind.winner}가 더 낮아요`;
-  else head = '두 곳의 파고·풍속이 같아요';
-  const vs = [wave ? `파고 ${wave.aMax} vs ${wave.bMax}m` : null, wind ? `풍속 ${wind.aMax} vs ${wind.bMax}m/s` : null].filter(Boolean);
+  const wins = [wave?.winner, wind?.winner].filter(Boolean) as ('A' | 'B')[];
+  const leader = wins.length && wins.every((w) => w === wins[0]) ? wins[0] : null;
+  const split = wave?.winner && wind?.winner && wave.winner !== wind.winner;
+  const what = leader ? [wave?.winner === leader ? '파고' : null, wind?.winner === leader ? '풍속' : null].filter(Boolean).join('·') : '';
   const kind = wave?.kind ?? wind?.kind;
   const warn = [a, b].filter((p) => ['warning', 'nearby', 'preliminary'].includes(p.warning.level));
   const unknownWarn = [a, b].some((p) => p.warning.level === 'unknown');
+  const metrics = [wave ? { label: '파고', unit: 'm', r: wave } : null, wind ? { label: '풍속', unit: 'm/s', r: wind } : null].filter(
+    (x): x is { label: string; unit: string; r: NonNullable<typeof wave> } => !!x,
+  );
+
   return (
     <View style={[styles.verdict, { backgroundColor: theme.tintSoft, borderColor: theme.border }]}>
+      {/* 결론 */}
       <View style={styles.verdictHead}>
-        <AppIcon name="fact" size={26} />
-        <ThemedText type="sectionTitle" style={styles.flex}>
-          {head}
-        </ThemedText>
+        <AppIcon name="fact" size={28} />
+        <View style={styles.flex}>
+          {leader ? (
+            <>
+              <ThemedText type="small" themeColor="textSecondary">
+                오늘 더 유리한 곳
+              </ThemedText>
+              <ThemedText type="sectionTitle" numberOfLines={1}>
+                <ThemedText type="sectionTitle" themeColor="tint">
+                  {leader}{' '}
+                </ThemedText>
+                {shortName(leader === 'A' ? a : b)}
+              </ThemedText>
+              <ThemedText type="small">{what} 모두 더 낮아요</ThemedText>
+            </>
+          ) : (
+            <ThemedText type="smallBold">
+              {split
+                ? `파고는 ${wave!.winner}, 풍속은 ${wind!.winner}가 더 낮아요`
+                : metrics.length
+                  ? '두 곳의 파고·풍속이 같아요'
+                  : '같은 종류의 파고·풍속 자료가 없어 비교하지 않았어요'}
+            </ThemedText>
+          )}
+        </View>
       </View>
-      {vs.length ? (
-        <ThemedText type="small" themeColor="textSecondary">
-          A vs B · {vs.join(' · ')} · 하루 전체 {kind ? KIND_TEXT[kind] : ''} 최대
-        </ThemedText>
+
+      {/* 파고·풍속 A/B 나란히 — 낮은 쪽을 굵게 */}
+      {metrics.length ? (
+        <View style={[styles.mini, { backgroundColor: theme.background, borderColor: theme.border }]}>
+          <View style={styles.miniRow}>
+            <ThemedText type="small" themeColor="textSecondary" style={styles.miniLabel}>
+              {kind ? `${KIND_TEXT[kind]} 최대` : ''}
+            </ThemedText>
+            <ThemedText type="smallBold" style={styles.miniCell}>
+              A
+            </ThemedText>
+            <ThemedText type="smallBold" style={styles.miniCell}>
+              B
+            </ThemedText>
+          </View>
+          {metrics.map((m) => (
+            <View key={m.label} style={[styles.miniRow, { borderTopWidth: StyleSheet.hairlineWidth, borderColor: theme.border }]}>
+              <ThemedText type="small" style={styles.miniLabel}>
+                {m.label}
+              </ThemedText>
+              {(['A', 'B'] as const).map((side) => {
+                const win = m.r.winner === side;
+                return (
+                  <ThemedText
+                    key={side}
+                    type={win ? 'smallBold' : 'small'}
+                    themeColor={win ? 'tint' : 'textSecondary'}
+                    style={styles.miniCell}>
+                    {side === 'A' ? m.r.aMax : m.r.bMax}
+                    {m.unit}
+                    {win ? ' ✓' : ''}
+                  </ThemedText>
+                );
+              })}
+            </View>
+          ))}
+        </View>
       ) : null}
+
+      {/* 상태: 내 기준 · 특보 (서로 다른 기준이라 칩을 나눈다) */}
       <View style={styles.chips}>
         {fit ? (
-          <Pressable accessibilityRole="button" onPress={onCriteria} style={[styles.chip, { backgroundColor: theme.background }]}>
-            <ThemedText type="small" numberOfLines={1}>
-              내 기준 ·{' '}
-              {fit.map((r, i) => (
-                <ThemedText key={r.label} type="smallBold" themeColor={CHECK_COLOR[r.status]}>
-                  {i ? ' · ' : ''}
-                  {r.label} {CHECK_LABEL[r.status]}
-                </ThemedText>
-              ))}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`내 기준(${fitBasis}): ${fit.map((r) => `${r.label} ${CHECK_LABEL[r.status]}`).join(', ')}. 기준 바꾸기`}
+            onPress={onCriteria}
+            style={[styles.chip, { backgroundColor: theme.background, borderColor: theme.border }]}>
+            <ThemedText type="small" themeColor="textSecondary">
+              내 기준{' '}
             </ThemedText>
+            {fit.map((r, i) => (
+              <ThemedText key={r.label} type="smallBold" themeColor={CHECK_COLOR[r.status]}>
+                {i ? ' · ' : ''}
+                {r.label} {CHECK_LABEL[r.status]}
+              </ThemedText>
+            ))}
           </Pressable>
         ) : null}
         {warn.length ? (
-          <View style={[styles.chip, { backgroundColor: theme.dangerSoft }]}>
-            <ThemedText type="smallBold" themeColor="danger" numberOfLines={1}>
-              ⚠ 해상 특보 확인 필요 · {warn.map((p) => (p === a ? 'A' : 'B')).join('·')}
+          <View style={[styles.chip, { backgroundColor: theme.dangerSoft, borderColor: 'transparent' }]}>
+            <ThemedText type="smallBold" themeColor="danger">
+              ⚠ 특보 확인 필요 {warn.map((p) => (p === a ? 'A' : 'B')).join('·')}
             </ThemedText>
           </View>
         ) : unknownWarn ? (
-          <View style={[styles.chip, { backgroundColor: theme.warningSoft }]}>
+          <View style={[styles.chip, { backgroundColor: theme.warningSoft, borderColor: 'transparent' }]}>
             <ThemedText type="smallBold" themeColor="warning">
               특보 자료 확인 안 됨
             </ThemedText>
@@ -134,7 +192,7 @@ export function CompareVerdict({
       </View>
       {fit ? (
         <ThemedText type="small" themeColor="textSecondary">
-          내 기준은 {fitBasis} 기준 · 위 하루 최댓값과 다를 수 있어요
+          표는 하루 전체, 내 기준은 {fitBasis}로 판단해요
         </ThemedText>
       ) : null}
     </View>
@@ -153,15 +211,7 @@ const CHECK_COLOR = {
 } as const;
 
 /** 탭 하나로 내용이 바뀌는 비교 패널 (내용을 아래로 쌓지 않는다) */
-export function ComparePanel({
-  places,
-  tab,
-  warningNote,
-}: {
-  places: PlaceCompare[];
-  tab: CompareTab;
-  warningNote?: string;
-}) {
+export function ComparePanel({ places, tab, warningNote }: { places: PlaceCompare[]; tab: CompareTab; warningNote?: string }) {
   const [a, b] = places;
   const theme = useTheme();
   const rows: ReactNode[] = [];
@@ -552,13 +602,20 @@ function SourceList({ places }: { places: PlaceCompare[] }) {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   tableCard: { padding: 0, gap: 0, overflow: 'hidden' },
-  verdict: { borderRadius: 16, borderWidth: 1, padding: 14, gap: 8 },
-  verdictHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  verdict: { borderRadius: 16, borderWidth: 1, padding: 14, gap: 10 },
+  verdictHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  mini: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12 },
+  miniRow: { flexDirection: 'row', alignItems: 'center', minHeight: 36 },
+  miniLabel: { width: 72 },
+  miniCell: { flex: 1, textAlign: 'center' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     maxWidth: '100%',
   },
   headRow: {
