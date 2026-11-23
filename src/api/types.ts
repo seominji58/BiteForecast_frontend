@@ -741,6 +741,25 @@ export type FishingRules = {
   exemption_note?: string | null;
 };
 
+/** 어종별 산란기 (수산과학원·국내 논문). 잘 잡히는 시기가 아니다 */
+export type SeasonPeriod = { months: number[]; peak: number[]; area: string | null; cite: string; url: string; note: string | null };
+export type SpeciesSeasons = {
+  notice: string;
+  species: Record<
+    string,
+    {
+      name: string;
+      /** spawn: 산란 / birth: 새끼 낳는 시기 (볼락류) */
+      kind: 'spawn' | 'birth';
+      periods: SeasonPeriod[];
+      temps: { text: string; cite: string; url: string }[];
+      text: string | null;
+      cite: string | null;
+      url: string | null;
+    }
+  >;
+};
+
 /** 주변 편의시설 (카카오 로컬, 반경 2km 가까운 순 3곳씩, 2026-11-20) */
 export type Amenity = { name: string; address: string; phone: string | null; lat: number; lon: number; distance_m: number; kakao_url: string | null };
 export type Amenities = {

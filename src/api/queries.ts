@@ -233,6 +233,10 @@ export const useNearbyShops = (placeId: number | null, rockId: number | null = n
     staleTime: 30 * 60_000,
   });
 
+/** 어종별 산란기 (잘 바뀌지 않음) */
+export const useSpeciesSeasons = () =>
+  useQuery({ queryKey: ['species-seasons'], queryFn: api.speciesSeasons, staleTime: 24 * 3600_000, gcTime: 24 * 3600_000 });
+
 /** 금어기·금지체장 (법령 요약, 잘 바뀌지 않음) */
 export const useFishingRules = () =>
   useQuery({ queryKey: ['fishing-rules'], queryFn: api.fishingRules, staleTime: 6 * 3600_000, gcTime: 24 * 3600_000 });

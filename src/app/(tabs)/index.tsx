@@ -3,12 +3,14 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Image, Keyboard, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { useCatchSummary, useDateRange } from '@/api/queries';
+import { useCatchSummary, useDateRange, useFishingRules, useSpeciesSeasons } from '@/api/queries';
 import type { Place } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { HomeActions, SeaLine } from '@/components/home-explore';
 import { OptionSheet } from '@/components/option-sheet';
 import { RulesLine } from '@/components/rules-line';
+import { SpeciesYear } from '@/components/species-year';
+import { railBadge } from '@/lib/seasons';
 import { Card, SectionHeader, TabScreen } from '@/components/screen';
 import { CatchStrip } from '@/components/catch-strip';
 import { SearchBar } from '@/components/search-bar';
@@ -72,6 +74,14 @@ export default function HomeScreen() {
     () => sortByCount(x.allSpecies.filter((s) => SPECIES_IMAGES[s.code]), speciesCounts),
     [x.allSpecies, speciesCounts],
   );
+  // 어종 카드 배지: 지금 금어기 > 이번 달 산란기 (법령·수산과학원·논문 근거)
+  const seasonsQ = useSpeciesSeasons();
+  const rulesQ = useFishingRules();
+  const railBadges = useMemo(() => {
+    const t = range.data?.today;
+    if (!t) return undefined;
+    return Object.fromEntries(railSpecies.map((s) => [s.code, railBadge(s.code, t, seasonsQ.data, rulesQ.data)]));
+  }, [railSpecies, range.data?.today, seasonsQ.data, rulesQ.data]);
   const results = query.trim() ? (x.places.data ?? []).filter((p) => matches(p, query)).slice(0, 5) : [];
   const speciesHits = query.trim()
     ? x.allSpecies.filter((s) => s.name.includes(query.trim()) || (s.alias ?? '').includes(query.trim())).slice(0, 3)
@@ -221,9 +231,9 @@ export default function HomeScreen() {
 
       {/* 어종 */}
       <SectionHeader title="어떤 어종을 잡으러 가세요?" actionLabel="전체 어종 보기" onAction={() => router.push('/species')} />
-      <SpeciesRail items={railSpecies} selected={x.speciesCode} onSelect={x.setSpeciesCode} />
-      {/* 금어기·금지체장 한 줄 (수산자원관리법 시행령) */}
-      <RulesLine species={x.species} today={range.data?.today} />
+      <SpeciesRail items={railSpecies} selected={x.speciesCode} onSelect={x.setSpeciesCode} badges={railBadges} />
+      {/* 고른 어종: 1년 달력(산란기·금어기·금지체장) / 안 골랐으면 오늘 금어기 한 줄 */}
+      {x.species ? <SpeciesYear species={x.species} today={range.data?.today} /> : <RulesLine species={null} today={range.data?.today} />}
 
       {/* 출조 날짜 | 지역 */}
       <ConditionBox

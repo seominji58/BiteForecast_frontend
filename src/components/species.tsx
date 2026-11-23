@@ -4,7 +4,7 @@
  */
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppIcon } from '@/components/app-icon';
 import { ThemedText } from '@/components/themed-text';
@@ -46,10 +46,13 @@ export function SpeciesRail({
   items,
   selected,
   onSelect,
+  badges,
 }: {
   items: SpeciesItem[];
   selected: string | null;
   onSelect: (code: string | null) => void;
+  /** 카드 왼쪽 위 작은 표시 (금어기·산란기 등). 없으면 안 그린다 */
+  badges?: Record<string, { label: string; tone: 'danger' | 'success' } | null>;
 }) {
   const theme = useTheme();
   const [page, setPage] = useState(0);
@@ -72,7 +75,7 @@ export function SpeciesRail({
               key={s.code}
               accessibilityRole="button"
               accessibilityState={{ selected: on }}
-              accessibilityLabel={`${s.name}${s.indexName ? ', 공식 낚시지수 제공' : ''}`}
+              accessibilityLabel={`${s.name}${s.indexName ? ', 공식 낚시지수 제공' : ''}${badges?.[s.code] ? `, ${badges[s.code]!.label}` : ''}`}
               onPress={() => onSelect(on ? null : s.code)}
               style={({ pressed }) => [
                 styles.card,
@@ -82,6 +85,15 @@ export function SpeciesRail({
               ]}>
               <View style={[styles.art, { backgroundColor: theme.tintSoft }]}>
                 <SpeciesImage code={s.code} size={84} label={s.name} />
+                {badges?.[s.code] ? (
+                  <View
+                    style={[
+                      styles.badge,
+                      { backgroundColor: badges[s.code]!.tone === 'danger' ? theme.danger : theme.success },
+                    ]}>
+                    <Text style={styles.badgeText}>{badges[s.code]!.label}</Text>
+                  </View>
+                ) : null}
               </View>
               <ThemedText type="smallBold" numberOfLines={1} style={styles.name}>
                 {s.name}
@@ -112,6 +124,8 @@ const styles = StyleSheet.create({
   cardOn: { borderWidth: 2.5 },
   art: { alignSelf: 'stretch', height: 84, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
   name: { paddingHorizontal: 6 },
+  badge: { position: 'absolute', top: 6, left: 6, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  badgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 6 },
   pageDot: { width: 7, height: 7, borderRadius: 4 },
 });
