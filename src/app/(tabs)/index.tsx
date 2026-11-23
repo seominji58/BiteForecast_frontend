@@ -6,7 +6,7 @@ import { Image, Keyboard, Pressable, StyleSheet, Text, View } from 'react-native
 import { useCatchSeasons, useCatchSummary, useDateRange, useFishingRules } from '@/api/queries';
 import type { Place } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
-import { HomeActions, SeaLine } from '@/components/home-explore';
+import { HomeActions } from '@/components/home-explore';
 import { OptionSheet } from '@/components/option-sheet';
 import { SpotsCard, WeekCard } from '@/components/home-briefing';
 import { RulesLine } from '@/components/rules-line';
@@ -140,7 +140,7 @@ export default function HomeScreen() {
 
 
   return (
-    <TabScreen title="" immersive onRefresh={refresh}>
+    <TabScreen title="오늘은 어떤 낚시를 떠나세요?" immersive onRefresh={refresh}>
       {/* 상단: 바다 배경 · 검색 · 내 주변 · 지도 탐색 · 날짜 */}
       <View onLayout={(e) => setHero({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })} style={styles.hero}>
         {hero.h > 0 ? (
@@ -154,16 +154,14 @@ export default function HomeScreen() {
           />
         ) : null}
         <View pointerEvents="none" style={styles.heroShade} />
-        <View style={styles.heroCopy}>
-          <Text style={styles.heroTitle}>오늘은 어떤 낚시를 떠나세요?</Text>
-          <Text style={styles.heroSubtitle}>이번 주 언제, 무엇을, 어디서 — 공식 낚시지수로 골라 드려요.</Text>
-        </View>
-        <SearchBar value={query} onChangeText={setQuery} onClear={() => setQuery('')} placeholder="어종·지역·낚시터 검색" />
+        {/* 검색 + 지역 한 줄 (지역은 여기 한 곳에서만 고른다) */}
         <View style={styles.heroActions}>
-          {/* 지도는 아래 「지도에서 찾기」 버튼 하나로 (중복 정리) */}
+          <View style={styles.flex}>
+            <SearchBar value={query} onChangeText={setQuery} onClear={() => setQuery('')} placeholder="어종·낚시터 검색" />
+          </View>
           <HeroButton
             icon="find-gps"
-            label={`${x.near ? (x.nearArea ? `내 주변 · ${x.nearArea.area}` : '내 주변') : x.region} ▾`}
+            label={`${x.near ? '내 주변' : x.region} ▾`}
             onPress={() => setSheet('region')}
           />
         </View>
@@ -221,9 +219,9 @@ export default function HomeScreen() {
         actionLabel="전체 어종 보기"
         onAction={() => router.push('/species')}
       />
-      <SpeciesRail items={railSpecies} selected={x.speciesCode} onSelect={x.setSpeciesCode} badges={railBadges} />
+      <SpeciesRail items={railSpecies} selected={x.speciesCode} onSelect={x.setSpeciesCode} badges={railBadges} compact />
       {/* 금어기·금지체장 한 줄. 어종을 골랐으면 누를 때 그 어종 시트(1년 달력·근거), 아니면 금어기 화면 */}
-      <RulesLine species={x.species} today={range.data?.today} onOpenSpecies={x.species ? () => setYearOpen(true) : undefined} />
+      <RulesLine species={x.species} today={range.data?.today} onOpenSpecies={x.species ? () => setYearOpen(true) : undefined} alertOnly />
       {x.species ? (
         <BottomSheet open={yearOpen} title={`${x.species.name} · 1년 달력`} onClose={() => setYearOpen(false)}>
           <SpeciesYear species={x.species} today={range.data?.today} onLeave={() => setYearOpen(false)} />
@@ -231,25 +229,16 @@ export default function HomeScreen() {
       ) : null}
 
       {/* ③ 어디로 갈까: 그날 가장 좋은 곳 (고른 어종 기준, 없으면 전체) */}
-      <SectionHeader title={`어디로 갈까${x.species ? ` · ${x.species.name}` : ''}`} />
+      <SectionHeader
+        title={`어디로 갈까${x.species ? ` · ${x.species.name}` : ''}`}
+        actionLabel="더 보기"
+        onAction={() => router.push({ pathname: '/points', params: date ? { date } : {} })}
+      />
       <SpotsCard x={x} dates={dates} date={date} today={today} />
 
       {/* 지도 · 출조계획 */}
       <HomeActions onMap={openMap} onPlan={plan} speciesName={x.species?.name} />
 
-      {/* 바다 한 줄 (4칸 → 1줄, 서비스 개선 v2 H-B). 누르면 지도 */}
-      {x.near && (x.gps.loading || x.gps.error) ? (
-        // 위치를 기다리는 동안 「자료 없음」으로 보이지 않게
-        <ThemedText type="small" themeColor={x.gps.error ? 'warning' : 'textSecondary'}>
-          {x.gps.error ?? '현재 위치를 확인하는 중이에요… 위치 권한을 허용하면 내 주변 60km 바다 정보를 보여드려요.'}
-        </ThemedText>
-      ) : x.summary.isSuccess ? (
-        <SeaLine list={x.scoped} tide={x.tide} future={x.future} pending={x.pending} scopeName={x.scopeName} onPress={openMap} />
-      ) : (
-        <ThemedText type="small" themeColor={x.summary.isError ? 'warning' : 'textSecondary'}>
-          {x.summary.isError ? '해황 자료를 잠시 확인할 수 없어요.' : '바다 정보를 불러오는 중이에요…'}
-        </ThemedText>
-      )}
       {x.summary.isSuccess && x.summary.data.data_status.stale ? (
         <ThemedText type="small" themeColor="warning">
           {freshnessLine(x.summary.data.data_status)}
@@ -297,14 +286,11 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   pressed: { opacity: 0.7 },
   bold: { fontWeight: '700' },
-  hero: { backgroundColor: Brand.navy, marginTop: -16, marginHorizontal: -16, paddingTop: 104, paddingHorizontal: 16, paddingBottom: 14, gap: 10, overflow: 'hidden' },
+  hero: { backgroundColor: Brand.navy, marginTop: -16, marginHorizontal: -16, paddingTop: 122, paddingHorizontal: 16, paddingBottom: 12, gap: 8, overflow: 'hidden' },
   heroImage: { position: 'absolute', top: 0, right: 0 },
   heroShade: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(5, 30, 58, 0.42)' },
-  heroCopy: { paddingHorizontal: 4, paddingTop: 8, gap: 4 },
-  heroTitle: { color: '#FFFFFF', fontSize: 25, lineHeight: 32, fontWeight: '800' },
-  heroSubtitle: { color: 'rgba(255,255,255,0.88)', fontSize: 14, lineHeight: 20, fontWeight: '600' },
-  heroActions: { flexDirection: 'row', gap: 8 },
-  heroBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 44, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.1)' },
+  heroActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  heroBtn: { flexDirection: 'row', paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 44, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.1)' },
   heroBtnOn: { backgroundColor: 'rgba(255,255,255,0.22)' },
   heroIcon: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#F3F6F9', alignItems: 'center', justifyContent: 'center' },
   heroBtnText: { color: Brand.onNavy, fontSize: 15, fontWeight: '700' },

@@ -47,12 +47,15 @@ export function SpeciesRail({
   selected,
   onSelect,
   badges,
+  compact,
 }: {
   items: SpeciesItem[];
   selected: string | null;
   onSelect: (code: string | null) => void;
   /** 카드 왼쪽 위 작은 표시 (금어기·산란기 등). 없으면 안 그린다 */
   badges?: Record<string, { label: string; tone: 'danger' | 'success' } | null>;
+  /** 홈: 카드를 작게 (그림 56·쪽 점 없음) */
+  compact?: boolean;
 }) {
   const theme = useTheme();
   const [page, setPage] = useState(0);
@@ -83,8 +86,8 @@ export function SpeciesRail({
                 on && styles.cardOn,
                 pressed && styles.pressed,
               ]}>
-              <View style={[styles.art, { backgroundColor: theme.tintSoft }]}>
-                <SpeciesImage code={s.code} size={84} label={s.name} />
+              <View style={[styles.art, compact && styles.artCompact, { backgroundColor: theme.tintSoft }]}>
+                <SpeciesImage code={s.code} size={compact ? 58 : 84} label={s.name} />
                 {badges?.[s.code] ? (
                   <View
                     style={[
@@ -102,7 +105,7 @@ export function SpeciesRail({
           );
         })}
       </ScrollView>
-      {pages > 1 ? (
+      {pages > 1 && !compact ? (
         <View style={styles.dots}>
           {Array.from({ length: pages }, (_, i) => (
             <View key={i} style={[styles.pageDot, { backgroundColor: i === page ? Brand.orange : theme.border }]} />
@@ -123,6 +126,7 @@ const styles = StyleSheet.create({
   card: { width: CARD_W, borderWidth: 1.5, borderRadius: 16, overflow: 'hidden', alignItems: 'center', paddingBottom: 8 },
   cardOn: { borderWidth: 2.5 },
   art: { alignSelf: 'stretch', height: 84, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  artCompact: { height: 58, marginBottom: 4 },
   name: { paddingHorizontal: 6 },
   badge: { position: 'absolute', top: 6, left: 6, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   badgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },

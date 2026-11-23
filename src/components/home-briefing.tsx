@@ -19,7 +19,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { dayStat, topSpots, weekHeadline } from '@/lib/briefing';
 import { dayLabel } from '@/lib/compare';
 import type { useExplore } from '@/lib/explore';
-import { PLACE_TYPE_LABEL, placeName } from '@/lib/place';
+import { placeName } from '@/lib/place';
 import { speciesByIndexName } from '@/lib/species';
 
 const W = ['일', '월', '화', '수', '목', '금', '토'];
@@ -78,10 +78,8 @@ export function WeekCard({
   const { week, stats, short, headline, bestDate, maxRatio, loading } = useWeekBriefing(x, dates, date, today);
   return (
     <View style={[styles.card, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
-      <View style={styles.head}>
-        <ThemedText type="sectionTitle">언제 갈까</ThemedText>
-      </View>
-      <ThemedText type="smallBold" themeColor={headline ? 'tint' : 'textSecondary'}>
+      {/* 결론 한 줄이 곧 제목 (「언제 갈까」) */}
+      <ThemedText type="smallBold" themeColor={headline ? 'tint' : 'textSecondary'} numberOfLines={1} accessibilityRole="header">
         {headline ?? (loading ? '공식 낚시지수를 불러오는 중이에요…' : '이 범위에는 공식 낚시지수 지점이 없어요')}
       </ThemedText>
 
@@ -92,7 +90,7 @@ export function WeekCard({
           const on = d === date;
           const best = d === bestDate;
           // 그 주 가장 좋은 날을 꽉 찬 막대로 (날짜끼리 비교가 잘 보이게)
-          const h = s ? Math.max(4, Math.round(44 * (s.ratio / maxRatio))) : 4;
+          const h = s ? Math.max(4, Math.round(30 * (s.ratio / maxRatio))) : 4;
           const color = !s ? theme.border : s.ratio >= 0.5 ? Brand.teal : s.ratio >= 0.25 ? '#5EAAA0' : s.bad / Math.max(1, s.total) >= 0.6 ? '#E57373' : '#B7C3CF';
           return (
             <Pressable
@@ -116,9 +114,6 @@ export function WeekCard({
           );
         })}
       </View>
-      <ThemedText type="small" themeColor="textSecondary">
-        숫자 = 공식 지수 「좋음」 이상 개수 · ★ 가장 좋은 날
-      </ThemedText>
 
     </View>
   );
@@ -148,56 +143,48 @@ export function SpotsCard({
     dist: x.distOf,
   });
   return (
-    <View style={styles.list}>
-      {/* ③ 그날 가장 좋은 곳 */}
+    <View style={[styles.listCard, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+      {/* ③ 그날 가장 좋은 곳: 한 곳에 한 줄 (이름 · 최고 등급 칩), 아래 작은 글씨로 지역·물때 */}
       {spots.length === 0 ? (
-        <ThemedText type="small" themeColor="textSecondary">
+        <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
           {loading ? '불러오는 중…' : x.species && !x.species.indexName ? `${x.species.name}은 공식 지수가 없는 어종이에요` : '이날 「좋음」 이상인 곳이 없어요'}
         </ThemedText>
       ) : (
         spots.map((sp, i) => {
           const place = x.byId.get(sp.placeId);
           const s = x.summaryById.get(sp.placeId);
+          const p0 = sp.picks[0];
+          const very = p0.grade === '매우좋음';
           return (
             <Pressable
               key={sp.point.station_id}
               accessibilityRole="button"
               onPress={() => router.push({ pathname: '/place/[id]', params: { id: String(sp.placeId) } })}
-              style={({ pressed }) => [styles.spot, { borderColor: theme.border, backgroundColor: theme.background }, pressed && styles.pressed]}>
+              style={({ pressed }) => [styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderColor: theme.border }, pressed && styles.pressed]}>
               <Text style={[styles.rank, { color: i === 0 ? Brand.orange : theme.textSecondary }]}>{i + 1}</Text>
               <View style={styles.flex}>
                 <ThemedText type="smallBold" numberOfLines={1}>
                   {place ? placeName(place) : sp.point.station_name}
                 </ThemedText>
                 <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                  {[place?.region_name, place ? PLACE_TYPE_LABEL[place.type] : null, sp.tide, isToday && s?.wave_fc_max ? `파고 최대 ${s.wave_fc_max.v}m` : null]
+                  {[place?.region_name, sp.tide, isToday && s?.wave_fc_max ? `파고 ${s.wave_fc_max.v}m` : null, sp.picks.length > 1 ? `외 ${sp.picks.length - 1}종 좋음` : null]
                     .filter(Boolean)
                     .join(' · ')}
                 </ThemedText>
-                <View style={styles.picks}>
-                  {sp.picks.slice(0, 3).map((p) => (
-                    <View key={p.species} style={[styles.pick, { backgroundColor: p.grade === '매우좋음' ? Brand.teal : theme.tintSoft }]}>
-                      {speciesByIndexName(p.species) ? <SpeciesImage code={speciesByIndexName(p.species)!.code} size={18} /> : null}
-                      <Text style={[styles.pickText, { color: p.grade === '매우좋음' ? '#FFFFFF' : Brand.teal }]}>
-                        {p.species} {p.grade}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
               </View>
-              <ThemedText themeColor="textSecondary">›</ThemedText>
+              <View style={[styles.pick, { backgroundColor: very ? Brand.teal : theme.tintSoft }]}>
+                {speciesByIndexName(p0.species) ? <SpeciesImage code={speciesByIndexName(p0.species)!.code} size={18} /> : null}
+                <Text style={[styles.pickText, { color: very ? '#FFFFFF' : Brand.teal }]}>
+                  {x.species ? p0.grade : `${p0.species} ${p0.grade}`}
+                </Text>
+              </View>
             </Pressable>
           );
         })
       )}
-      <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/points', params: date ? { date } : {} })} style={styles.more}>
-        <ThemedText type="small" themeColor="textSecondary" style={styles.flex}>
-          국립해양조사원 바다낚시지수 기준{isToday ? ' · 지금 특보 발효 곳 제외' : ' · 그날 특보는 발표 전'}
-        </ThemedText>
-        <ThemedText type="smallBold" themeColor="tint">
-          더 보기 ›
-        </ThemedText>
-      </Pressable>
+      <ThemedText type="small" themeColor="textSecondary" style={styles.foot}>
+        공식 바다낚시지수 기준{isToday ? ' · 지금 특보 발효 곳 제외' : ' · 그날 특보는 발표 전'}
+      </ThemedText>
     </View>
   );
 }
@@ -206,12 +193,12 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   bold: { fontWeight: '700' },
   pressed: { opacity: 0.8 },
-  card: { borderWidth: 1, borderRadius: 16, padding: 14, gap: 8 },
+  card: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 10, gap: 6 },
   head: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   week: { flexDirection: 'row', gap: 4 },
-  dayCol: { flex: 1, alignItems: 'center', borderRadius: 10, borderWidth: 1.5, borderColor: 'transparent', paddingVertical: 4, gap: 2 },
+  dayCol: { flex: 1, alignItems: 'center', borderRadius: 10, borderWidth: 1.5, borderColor: 'transparent', paddingVertical: 2, gap: 1 },
   best: { color: Brand.orange, fontSize: 12, lineHeight: 14 },
-  barBox: { height: 44, justifyContent: 'flex-end' },
+  barBox: { height: 30, justifyContent: 'flex-end' },
   bar: { width: 20, borderRadius: 5 },
   count: { fontSize: 11, lineHeight: 14 },
   divider: { height: StyleSheet.hairlineWidth, marginVertical: 2 },
@@ -221,5 +208,8 @@ const styles = StyleSheet.create({
   pick: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
   pickText: { fontSize: 12, fontWeight: '700' },
   more: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 32 },
-  list: { gap: 8 },
+  listCard: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 4 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
+  empty: { paddingVertical: 10 },
+  foot: { paddingVertical: 6, fontSize: 11 },
 });

@@ -18,11 +18,14 @@ export function RulesLine({
   species,
   today,
   onOpenSpecies,
+  alertOnly,
 }: {
   species: SpeciesItem | null;
   today: string | undefined;
   /** 어종을 골랐을 때 누르면: 그 어종 시트(1년 달력·근거). 없으면 금어기 화면으로 */
   onOpenSpecies?: () => void;
+  /** 홈: 지금 금어기일 때만 보인다 (평소 금지체장은 어종 시트에서) */
+  alertOnly?: boolean;
 }) {
   const q = useFishingRules();
   const theme = useTheme();
@@ -72,6 +75,7 @@ export function RulesLine({
       .join(' · ');
   }
 
+  if (alertOnly && !(danger && species)) return null;
   return (
     <Pressable
       accessibilityRole="button"
