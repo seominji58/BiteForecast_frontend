@@ -8,6 +8,7 @@ import type { Place } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { HomeActions, SeaLine } from '@/components/home-explore';
 import { OptionSheet } from '@/components/option-sheet';
+import { RulesLine } from '@/components/rules-line';
 import { Card, SectionHeader, TabScreen } from '@/components/screen';
 import { CatchStrip } from '@/components/catch-strip';
 import { SearchBar } from '@/components/search-bar';
@@ -221,6 +222,8 @@ export default function HomeScreen() {
       {/* 어종 */}
       <SectionHeader title="어떤 어종을 잡으러 가세요?" actionLabel="전체 어종 보기" onAction={() => router.push('/species')} />
       <SpeciesRail items={railSpecies} selected={x.speciesCode} onSelect={x.setSpeciesCode} />
+      {/* 금어기·금지체장 한 줄 (수산자원관리법 시행령) */}
+      <RulesLine species={x.species} today={range.data?.today} />
 
       {/* 출조 날짜 | 지역 */}
       <ConditionBox

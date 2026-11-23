@@ -1,5 +1,5 @@
 import { request } from '@/api/client';
-import type { Account, Amenities, Agreements, AuthConfig, AuthResult, BlockedUser, ChecklistItem, CompareResult, DataSource, DateRange, CatchSummary, FishingIndexDay, GoogleSignupNeeded, Health, Journal, JournalInput, JournalMutation, MemberStatus, MergeInfo, MyPoints, MyTitle, Place, PlaceConditions, PlacesSummary, PostCategory, PostDetail, PostFilter, PostEdit, PostInput, PostSummary, RecordSummary, Region, ReportResult, SignupNeeded, Species, Trip, TripInput, TripInvite, TripInvitePreview, TripListItem, TripOutlook, TripPatch, TripStopInput, TripStopPatch, NearbyShops, PlacePhotoIndex, PlacePhotos, PlaceKakao, RockPoints } from '@/api/types';
+import type { Account, Amenities, FishingRules, Agreements, AuthConfig, AuthResult, BlockedUser, ChecklistItem, CompareResult, DataSource, DateRange, CatchSummary, FishingIndexDay, GoogleSignupNeeded, Health, Journal, JournalInput, JournalMutation, MemberStatus, MergeInfo, MyPoints, MyTitle, Place, PlaceConditions, PlacesSummary, PostCategory, PostDetail, PostFilter, PostEdit, PostInput, PostSummary, RecordSummary, Region, ReportResult, SignupNeeded, Species, Trip, TripInput, TripInvite, TripInvitePreview, TripListItem, TripOutlook, TripPatch, TripStopInput, TripStopPatch, NearbyShops, PlacePhotoIndex, PlacePhotos, PlaceKakao, RockPoints } from '@/api/types';
 
 export const api = {
   health: () => request<Health>('/health'),
@@ -92,6 +92,7 @@ export const api = {
   placeKakao: (placeId: number) => request<PlaceKakao>(`/places/${placeId}/kakao`),
   rockPoints: () => request<RockPoints>('/rock-points'),
   nearbyShops: (placeId: number) => request<NearbyShops>(`/places/${placeId}/nearby`),
+  fishingRules: () => request<FishingRules>('/meta/fishing-rules'),
   placeAmenities: (placeId: number) => request<Amenities>(`/places/${placeId}/amenities`),
   rockAmenities: (pointId: number) => request<Amenities>(`/rock-points/${pointId}/amenities`),
   rockNearby: (pointId: number) => request<NearbyShops>(`/rock-points/${pointId}/nearby`),

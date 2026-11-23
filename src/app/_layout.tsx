@@ -48,6 +48,7 @@ export default function RootLayout() {
           <Stack.Screen name="explore" options={{ title: '낚시터 찾기' }} />
           <Stack.Screen name="compare" options={{ title: '조건 비교' }} />
           <Stack.Screen name="species" options={{ title: '전체 어종' }} />
+          <Stack.Screen name="rules" options={{ title: '금어기·금지체장' }} />
           <Stack.Screen name="points" options={{ title: '추천 낚시터' }} />
           <Stack.Screen name="my-records" options={{ title: '내 낚시 요약' }} />
           <Stack.Screen name="my-points" options={{ title: '칭호·포인트' }} />
