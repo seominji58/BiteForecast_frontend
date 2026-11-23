@@ -36,7 +36,7 @@ export function NearbyShops({ placeId, rockId, portId, area }: { placeId?: numbe
         <ThemedText type="small" themeColor="textSecondary">
           근처 낚시점을 지금 불러올 수 없어요.
         </ThemedText>
-        <Pressable accessibilityRole="link" onPress={() => Linking.openURL(naverSearch(`${area} 낚시점`))} hitSlop={8}>
+        <Pressable accessibilityRole="link" onPress={() => Linking.openURL(naverSearch(`${area} 낚시점`)).catch(() => {})} hitSlop={8}>
           <ThemedText type="smallBold" themeColor="tint">
             네이버 지도에서 찾아보기 ›
           </ThemedText>
@@ -58,7 +58,7 @@ export function NearbyShops({ placeId, rockId, portId, area }: { placeId?: numbe
           <Group title="낚시배 (선상낚시)" sub="출항 항구·예약은 전화로 확인" items={d.boats} empty="반경 15km 안에 등록된 낚시배가 없어요." />
         </>
       )}
-      <Pressable accessibilityRole="link" onPress={() => Linking.openURL(naverSearch(`${area} 낚시점`))} hitSlop={8} style={styles.more}>
+      <Pressable accessibilityRole="link" onPress={() => Linking.openURL(naverSearch(`${area} 낚시점`)).catch(() => {})} hitSlop={8} style={styles.more}>
         <ThemedText type="smallBold" themeColor="tint">
           네이버 지도에서 더 보기 ›
         </ThemedText>
@@ -92,7 +92,7 @@ function Group({ title, sub, items, empty }: { title: string; sub: string; items
 
 function ShopRow({ s }: { s: NearbyShop }) {
   const theme = useTheme();
-  const open = () => Linking.openURL(naverSearch(`${s.name} ${s.address}`));
+  const open = () => Linking.openURL(naverSearch(`${s.name} ${s.address}`)).catch(() => {});
   return (
     <View style={styles.row}>
       <Pressable
@@ -112,7 +112,7 @@ function ShopRow({ s }: { s: NearbyShop }) {
           accessibilityRole="button"
           accessibilityLabel={`${s.name}에 전화 걸기`}
           hitSlop={8}
-          onPress={() => Linking.openURL(`tel:${s.phone!.replace(/[^0-9+]/g, '')}`)}
+          onPress={() => Linking.openURL(`tel:${s.phone!.replace(/[^0-9+]/g, '')}`).catch(() => {})}
           style={[styles.iconBtn, { borderColor: theme.border }]}>
           <UiIcon name="phone" size={18} />
         </Pressable>

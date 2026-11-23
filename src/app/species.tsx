@@ -1,5 +1,6 @@
 /**
- * 전체 어종 보기 (홈 「어떤 어종을 잡으러 가세요?」 → 전체 어종 보기).
+ * 전체 어종 보기 (홈 어종 캐러셀 끝 「전체 어종 보기」).
+ * 고르면 홈으로 돌아가 그 어종 시트(오늘 좋은 곳·금어기·1년 달력)를 연다.
  * 공식 지수 제공 어종 / 그 밖의 어종으로 나눠 보여준다. 이미지가 없으면 기본 아이콘 — 목록에서 빠지지 않는다.
  */
 import { router } from 'expo-router';
@@ -18,10 +19,9 @@ import { INDEX_DISCLAIMER, mergeWithApi, type SpeciesItem } from '@/lib/species'
 export default function SpeciesScreen() {
   const api = useSpecies();
   const all = useMemo(() => mergeWithApi(api.data), [api.data]);
-  const [selected, setSelected] = useHomeSpecies();
-  const pick = (code: string | null) => {
-    setSelected(code);
-    router.back();
+  const [selected] = useHomeSpecies();
+  const pick = (code: string) => {
+    router.navigate({ pathname: '/', params: { fish: code } });
   };
   const indexed = all.filter((s) => s.indexName);
   const others = all.filter((s) => !s.indexName);
@@ -34,14 +34,9 @@ export default function SpeciesScreen() {
       <Grid items={indexed} selected={selected} onPick={pick} />
       <SectionHeader title={`그 밖의 어종 ${others.length}종`} />
       <ThemedText type="small" themeColor="textSecondary">
-        공식 낚시지수가 없는 어종이에요. 고르면 일반 낚시터 탐색과 실제 조황 기록으로 안내해요.
+        공식 낚시지수가 없는 어종이에요. 고르면 금어기·금지체장과 1년 달력(어획 많은 달)을 볼 수 있어요.
       </ThemedText>
       <Grid items={others} selected={selected} onPick={pick} />
-      <Pressable accessibilityRole="button" onPress={() => pick(null)} style={styles.clear}>
-        <ThemedText type="smallBold" themeColor="tint">
-          어종 상관없이 보기 ›
-        </ThemedText>
-      </Pressable>
     </StackScreen>
   );
 }
@@ -90,5 +85,4 @@ const styles = StyleSheet.create({
   cellOn: { borderWidth: 2.5 },
   art: { alignSelf: 'stretch', height: 80, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   alias: { fontSize: 11, lineHeight: 15 },
-  clear: { minHeight: 44, justifyContent: 'center', alignItems: 'center' },
 });

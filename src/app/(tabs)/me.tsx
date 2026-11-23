@@ -23,7 +23,7 @@ const PROVIDER_NAME: Record<string, string> = { email: '이메일', google: '구
 export default function MeScreen() {
   const { status } = useAuth();
   return (
-    <TabScreen title="내정보">
+    <TabScreen title="내정보" right={<View />}>
       {status === 'loading' ? <Loading /> : status === 'signed-in' ? <SignedIn /> : <Guest />}
     </TabScreen>
   );

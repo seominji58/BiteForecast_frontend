@@ -134,7 +134,6 @@ export default function PlaceDetailScreen() {
                     hitSlop={6}
                     onPress={() => {
                       setHomeId(place.id);
-                      router.back();
                     }}>
                     <ThemedText type="smallBold" themeColor="tint">
                       기준으로 설정
@@ -315,7 +314,7 @@ export default function PlaceDetailScreen() {
             <Pressable accessibilityRole="button" accessibilityLabel="닫기" onPress={() => setSheet(null)} style={styles.photoClose}>
               <Text style={styles.photoCloseText}>✕</Text>
             </Pressable>
-            <PlaceGallery place={place} />
+            <PlaceGallery place={place} onPost={() => setSheet(null)} />
           </View>
         </Modal>
       ) : null}

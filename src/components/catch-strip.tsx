@@ -32,7 +32,7 @@ export function CatchStrip({ title, filter, note, onMore }: Props) {
   if (!posts.isSuccess || posts.data.length === 0) return null;
   return (
     <>
-      <SectionHeader title={title} actionLabel="더 보기" onAction={onMore ?? (() => router.push('/community'))} />
+      <SectionHeader title={title} actionLabel="더 보기" onAction={onMore ?? (() => router.push({ pathname: '/community', params: { category: 'catch' } }))} />
       {note ? (
         <ThemedText type="small" themeColor="textSecondary">
           {note}

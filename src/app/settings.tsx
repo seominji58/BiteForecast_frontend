@@ -48,14 +48,18 @@ export default function SettingsScreen() {
 
       <Fold title="이용 안내" hint="예보·지수 해석, 책임 범위">
         <ThemedText type="small" themeColor="textSecondary">
-          • 관측소 값은 낚시 장소의 현장 조건과 다를 수 있으며, 관측소까지의 거리를 함께 표시합니다.{'\n'}• 바다낚시지수는
-          국립해양조사원 발표값을 그대로 보여주며 앱이 판정한 값이 아닙니다.{'\n'}• 실제 입질·조과를 보장하지 않습니다.
-          출조 전 공식 특보와 현장 출입 제한을 확인하세요.{'\n'}• 목록의 장소를 낚시 허용구역으로 보증하지 않습니다.
+          • 관측소 값은 낚시 장소의 현장 조건과 다를 수 있으며, 관측소까지의 거리를 함께 표시합니다.{'\n'}• 바다낚시지수는 국립해양조사원
+          발표값을 그대로 보여주며 앱이 판정한 값이 아닙니다.{'\n'}• 실제 입질·조과를 보장하지 않습니다. 출조 전 공식 특보와 현장 출입
+          제한을 확인하세요.{'\n'}• 목록의 장소를 낚시 허용구역으로 보증하지 않습니다.
         </ThemedText>
       </Fold>
 
       <Card>
-        <ThemedText type="sectionTitle">약관</ThemedText>
+        <ThemedText type="sectionTitle">안내·약관</ThemedText>
+        <Pressable accessibilityRole="link" onPress={() => router.push('/info/safety')} style={styles.linkRow}>
+          <ThemedText>금어기·출조 안전 정보</ThemedText>
+          <ThemedText themeColor="textSecondary">›</ThemedText>
+        </Pressable>
         <Pressable accessibilityRole="link" onPress={() => router.push('/terms')} style={styles.linkRow}>
           <ThemedText>이용약관</ThemedText>
           <ThemedText themeColor="textSecondary">›</ThemedText>

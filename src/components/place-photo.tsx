@@ -46,7 +46,9 @@ export function PlacePhoto({
   const [failed, setFailed] = useState(false);
   if (!url || failed) {
     return (
-      <View style={[styles.fallback, { backgroundColor: theme.tintSoft }, style]} accessibilityLabel={label ? `${label} (사진 없음)` : undefined}>
+      <View
+        style={[styles.fallback, { backgroundColor: theme.tintSoft }, style]}
+        accessibilityLabel={label ? `${label} (사진 없음)` : undefined}>
         <AppIcon name={PLACE_IMAGE[place.type]} size={size === 'hero' ? 56 : 26} />
       </View>
     );
@@ -111,7 +113,18 @@ export function PlaceThumb({ place, style }: { place: Pick<Place, 'id' | 'type'>
  * - 없으면 작은 위성 지도를 「위치 확인용」으로만 (신고 주소 좌표라 실제 낚시 자리와 다를 수 있음을 밝힌다)
  * - 좌표가 없거나 의심이면 아무것도 그리지 않는다
  */
-export function PlaceGallery({ place, style, height }: { place: Place; style?: StyleProp<ViewStyle>; height?: number }) {
+export function PlaceGallery({
+  place,
+  style,
+  height,
+  onPost,
+}: {
+  place: Place;
+  style?: StyleProp<ViewStyle>;
+  height?: number;
+  /** 이용자 사진을 누르면 그 글로 (넘어가기 직전 호출). 안 주면 사진은 눌리지 않는다 (바깥이 「크게 보기」일 때) */
+  onPost?: () => void;
+}) {
   // height 를 주면 사진·지도를 그 높이로 맞춘다 (상세 상단 미리보기, 2026-11-23)
   const box = height ? { height } : { aspectRatio: 4 / 3 };
   const theme = useTheme();
@@ -153,14 +166,24 @@ export function PlaceGallery({ place, style, height }: { place: Place; style?: S
     );
   }
   if (photos.isPending) return null;
-  return <UserPhotosOrMap place={place} style={style} height={height} />;
+  return <UserPhotosOrMap place={place} style={style} height={height} onPost={onPost} />;
 }
 
 /**
  * 관광공사 사진이 없으면: 이용자가 이 낚시터로 올린 글 사진 (낚시터 이름까지 공개한 글만, 신고 숨김·차단 제외는 서버 규칙)
  * → 그것도 없으면 위성 지도. 사진마다 「이용자 사진 · 닉네임 · 언제」를 쓰고, 누르면 그 글로 간다
  */
-function UserPhotosOrMap({ place, style, height }: { place: Place; style?: StyleProp<ViewStyle>; height?: number }) {
+function UserPhotosOrMap({
+  place,
+  style,
+  height,
+  onPost,
+}: {
+  place: Place;
+  style?: StyleProp<ViewStyle>;
+  height?: number;
+  onPost?: () => void;
+}) {
   const box = height ? { height } : { aspectRatio: 4 / 3 };
   const theme = useTheme();
   const source = usePhotoSource();
@@ -184,9 +207,13 @@ function UserPhotosOrMap({ place, style, height }: { place: Place; style?: Style
             return (
               <Pressable
                 key={x.id}
-                accessibilityRole="button"
-                accessibilityLabel={`${x.author.nickname}님이 올린 사진, 글 보기`}
-                onPress={() => router.push({ pathname: '/community/[id]', params: { id: String(x.id) } })}>
+                disabled={!onPost}
+                accessibilityRole={onPost ? 'button' : 'image'}
+                accessibilityLabel={`${x.author.nickname}님이 올린 사진${onPost ? ', 글 보기' : ''}`}
+                onPress={() => {
+                  onPost?.();
+                  router.push({ pathname: '/community/[id]', params: { id: String(x.id) } });
+                }}>
                 {src ? (
                   <Image source={src} style={{ width: w || 1, ...box, backgroundColor: '#0B2D4D' }} contentFit="cover" transition={150} />
                 ) : (
@@ -214,17 +241,39 @@ function UserPhotosOrMap({ place, style, height }: { place: Place; style?: Style
         : '신고된 주소 위치 · 실제 낚시 자리와 다를 수 있어요';
   return (
     <View style={style}>
-      <PlacePhoto place={place} size="hero" style={height ? { width: '100%', height } : styles.locMap} label={`${place.name} 위치`} caption={caption} />
+      <PlacePhoto
+        place={place}
+        size="hero"
+        style={height ? { width: '100%', height } : styles.locMap}
+        label={`${place.name} 위치`}
+        caption={caption}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  counter: { position: 'absolute', right: 10, top: 10, backgroundColor: 'rgba(8,28,50,0.72)', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 2 },
+  counter: {
+    position: 'absolute',
+    right: 10,
+    top: 10,
+    backgroundColor: 'rgba(8,28,50,0.72)',
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 2,
+  },
   credit: { fontSize: 11, paddingHorizontal: 12, paddingTop: 6 },
   locMap: { width: '100%', aspectRatio: 2.6 },
   fallback: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   box: { overflow: 'hidden' },
-  tag: { position: 'absolute', left: 10, bottom: 10, backgroundColor: 'rgba(8,28,50,0.72)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
+  tag: {
+    position: 'absolute',
+    left: 10,
+    bottom: 10,
+    backgroundColor: 'rgba(8,28,50,0.72)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
   tagText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
 });

@@ -24,7 +24,7 @@ import { type SpeciesItem, speciesByIndexName } from '@/lib/species';
 
 const W = ['일', '월', '화', '수', '목', '금', '토'];
 
-export function useWeekBriefing(x: ReturnType<typeof useExplore>, dates: string[], date: string | undefined, today: string | undefined) {
+function useWeekBriefing(x: ReturnType<typeof useExplore>, dates: string[], date: string | undefined, today: string | undefined) {
   const week = dates.slice(0, 7);
   // 7일치를 한 번에 받는다 (예전 날짜별 7번 요청은 서버가 깨어날 때 20~60초 밀렸다). 서버가 옛 버전이면 날짜별로
   const weekQ = useQuery({
@@ -140,6 +140,7 @@ export function SpotsCard({
   today,
   species: speciesProp,
   limit,
+  onOpen,
 }: {
   x: ReturnType<typeof useExplore>;
   dates: string[];
@@ -148,6 +149,8 @@ export function SpotsCard({
   /** 이 어종 기준 (null = 전체). 안 주면 x 에서 고른 어종 */
   species?: SpeciesItem | null;
   limit?: number;
+  /** 낚시터로 넘어가기 직전 (시트 안에서 쓰면 시트를 닫는다) */
+  onOpen?: () => void;
 }) {
   const theme = useTheme();
   const { day, loading, inScopeId } = useWeekBriefing(x, dates, date, today);
@@ -180,7 +183,10 @@ export function SpotsCard({
             <Pressable
               key={sp.point.station_id}
               accessibilityRole="button"
-              onPress={() => router.push({ pathname: '/place/[id]', params: { id: String(sp.placeId) } })}
+              onPress={() => {
+                onOpen?.();
+                router.push({ pathname: '/place/[id]', params: { id: String(sp.placeId) } });
+              }}
               style={({ pressed }) => [
                 styles.row,
                 i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderColor: theme.border },
@@ -224,20 +230,15 @@ const styles = StyleSheet.create({
   bold: { fontWeight: '700' },
   pressed: { opacity: 0.8 },
   card: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 10, gap: 6 },
-  head: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   week: { flexDirection: 'row', gap: 4 },
   dayCol: { flex: 1, alignItems: 'center', borderRadius: 10, borderWidth: 1.5, borderColor: 'transparent', paddingVertical: 2, gap: 1 },
   best: { color: Brand.orange, fontSize: 12, lineHeight: 14 },
   barBox: { height: 30, justifyContent: 'flex-end' },
   bar: { width: 20, borderRadius: 5 },
   count: { fontSize: 11, lineHeight: 14 },
-  divider: { height: StyleSheet.hairlineWidth, marginVertical: 2 },
-  spot: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 12, padding: 10 },
   rank: { fontSize: 20, fontWeight: '800', width: 18, textAlign: 'center' },
-  picks: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4 },
   pick: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
   pickText: { fontSize: 12, fontWeight: '700' },
-  more: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 32 },
   carHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   arrow: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   arrowText: { fontSize: 22, lineHeight: 24, fontWeight: '700' },

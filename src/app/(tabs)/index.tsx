@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Image, Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -16,11 +16,11 @@ import { Card, SectionHeader, TabScreen } from '@/components/screen';
 import { CatchStrip } from '@/components/catch-strip';
 import { SearchBar } from '@/components/search-bar';
 import { SpeciesImage } from '@/components/species';
-import type { SpeciesItem } from '@/lib/species';
+import { speciesByCode, type SpeciesItem } from '@/lib/species';
 import { ThemedText } from '@/components/themed-text';
 import type { AppIconName } from '@/constants/icons';
 import { Brand, IconSize } from '@/constants/theme';
-import { dayLabel, dayList } from '@/lib/compare';
+import { dayList } from '@/lib/compare';
 import { freshnessLine } from '@/lib/criteria';
 import { useExplore } from '@/lib/explore';
 import { matches, PLACE_IMAGE, PLACE_TYPE_LABEL, placeName } from '@/lib/place';
@@ -45,24 +45,30 @@ function homeBackgroundSource(hour = new Date().getHours()) {
 export default function HomeScreen() {
   const range = useDateRange();
   const today = range.data?.today;
-  const [dateSel, setDate] = useState<string | null>(null);
-  const date = dateSel ?? today;
+  const date = today;
   const x = useExplore(date, today);
   const [query, setQuery] = useState('');
   // 배경 사진(16:9)의 낚시꾼이 오른쪽 끝에 있어서, 가운데 맞춤(cover) 대신 오른쪽에 붙여 잘리지 않게 한다
   const [hero, setHero] = useState({ w: 0, h: 0 });
-  const [sheet, setSheet] = useState<'date' | 'region' | null>(null);
+  const [sheet, setSheet] = useState<'region' | null>(null);
 
   const [yearOpen, setYearOpen] = useState(false);
   // 어종 카드를 누르면 그 어종 오늘 시트
   const [fish, setFish] = useState<SpeciesItem | null>(null);
+  // 「전체 어종」에서 고르고 돌아오면 (?fish=code) 그 어종 시트를 연다
+  const params = useLocalSearchParams<{ fish?: string }>();
+  const [seenFish, setSeenFish] = useState<string | undefined>();
+  if (params.fish !== seenFish) {
+    setSeenFish(params.fish);
+    const sp = speciesByCode(params.fish);
+    if (sp) setFish(sp);
+  }
   const results = query.trim() ? (x.places.data ?? []).filter((p) => matches(p, query)).slice(0, 5) : [];
   const speciesHits = query.trim()
     ? x.allSpecies.filter((s) => s.name.includes(query.trim()) || (s.alias ?? '').includes(query.trim())).slice(0, 3)
     : [];
 
   const dates = range.data ? dayList(range.data.today, range.data.max) : [];
-  const beyond = (d: string) => !!x.lastForecastDay && d > x.lastForecastDay;
 
   const openPlace = (p: Place) => {
     setQuery('');
@@ -127,7 +133,7 @@ export default function HomeScreen() {
               key={s.code}
               accessibilityRole="button"
               onPress={() => {
-                x.setSpeciesCode(s.code);
+                setFish(s);
                 setQuery('');
                 Keyboard.dismiss();
               }}
@@ -160,7 +166,7 @@ export default function HomeScreen() {
           ))}
           {speciesHits.length === 0 && results.length === 0 ? (
             <ThemedText type="small" themeColor="textSecondary">
-              맞는 어종·낚시터가 없어요. 「지도 탐색」에서 지역별로 둘러보세요.
+              맞는 어종·낚시터가 없어요. 「지도로 찾기」에서 지역별로 둘러보세요.
             </ThemedText>
           ) : null}
         </Card>
@@ -177,7 +183,7 @@ export default function HomeScreen() {
       <BottomSheet open={!!fish} title={fish ? `오늘 ${fish.name} 좋은 곳` : ''} onClose={() => setFish(null)}>
         {fish ? (
           <View style={styles.sheet}>
-            <SpotsCard x={x} dates={dates} date={today} today={today} species={fish} limit={5} />
+            <SpotsCard x={x} dates={dates} date={today} today={today} species={fish} limit={5} onOpen={() => setFish(null)} />
             <RulesLine species={fish} today={today} onOpenSpecies={() => setYearOpen(true)} />
             <View style={styles.sheetActions}>
               <View style={styles.flex}>
@@ -207,7 +213,14 @@ export default function HomeScreen() {
       </BottomSheet>
       {fish ? (
         <BottomSheet open={yearOpen} title={`${fish.name} · 1년 달력`} onClose={() => setYearOpen(false)}>
-          <SpeciesYear species={fish} today={today} onLeave={() => setYearOpen(false)} />
+          <SpeciesYear
+            species={fish}
+            today={today}
+            onLeave={() => {
+              setYearOpen(false);
+              setFish(null);
+            }}
+          />
         </BottomSheet>
       ) : null}
 
@@ -223,14 +236,6 @@ export default function HomeScreen() {
         filter={{ species: x.species ? (x.species.speciesCode ?? x.species.name) : null }}
       />
 
-      <OptionSheet
-        open={sheet === 'date'}
-        title="출조 날짜"
-        value={date ?? null}
-        options={dates.map((d) => ({ value: d, label: dayLabel(d), sub: beyond(d) ? '해역 파고 예보(참고)·물때만' : undefined }))}
-        onPick={(d) => setDate(d)}
-        onClose={() => setSheet(null)}
-      />
       <OptionSheet<Region>
         open={sheet === 'region'}
         title="지역"
@@ -243,12 +248,9 @@ export default function HomeScreen() {
   );
 }
 
-function HeroButton({ icon, label, onPress, active }: { icon: AppIconName; label: string; onPress: () => void; active?: boolean }) {
+function HeroButton({ icon, label, onPress }: { icon: AppIconName; label: string; onPress: () => void }) {
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [styles.heroBtn, active && styles.heroBtnOn, pressed && styles.pressed]}>
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.heroBtn, pressed && styles.pressed]}>
       <View style={styles.heroIcon}>
         <AppIcon name={icon} size={18} />
       </View>
@@ -260,7 +262,6 @@ function HeroButton({ icon, label, onPress, active }: { icon: AppIconName; label
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   pressed: { opacity: 0.7 },
-  bold: { fontWeight: '700' },
   hero: {
     backgroundColor: Brand.navy,
     marginTop: -16,
@@ -302,24 +303,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: 'rgba(255,255,255,0.14)',
   },
-  heroBtnOn: { backgroundColor: 'rgba(255,255,255,0.22)' },
   heroIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F3F6F9', alignItems: 'center', justifyContent: 'center' },
   heroBtnText: { color: Brand.onNavy, fontSize: 13, fontWeight: '700' },
-  dateRow: { gap: 6 },
-  datePill: {
-    minHeight: 36,
-    minWidth: 52,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
-  },
-  datePillOn: { backgroundColor: Brand.orange, borderColor: Brand.orange },
-  dateText: { color: Brand.onNavySecondary, fontSize: 14, fontWeight: '600' },
-  dateTextPending: { opacity: 0.6 },
-  dateTextOn: { color: '#fff', fontWeight: '800' },
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 },
-  condLine: { width: 1, marginVertical: 14 },
 });
