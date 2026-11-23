@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Modal, Pressable, StyleSheet, View } from 'react-native';
 
 import { api } from '@/api';
@@ -53,6 +53,34 @@ export function AddToTripButton({
         </Modal>
       ) : null}
     </>
+  );
+}
+
+/**
+ * 버튼 없이 「출조계획에 추가」 창만 연다 (조건 비교에서 A/B 중 고른 뒤 등, 2026-11-23).
+ * 로그인 전이면 새 계획 화면으로 바로 간다.
+ */
+export function TripAddModal({
+  target,
+  date,
+  onClose,
+}: {
+  target: { placeId: number; placeName: string } | null;
+  date: string;
+  onClose: () => void;
+}) {
+  const { signedIn } = useAuth();
+  useEffect(() => {
+    if (target && !signedIn) {
+      onClose();
+      router.push({ pathname: '/trip/new', params: { place: String(target.placeId), date } });
+    }
+  }, [target, signedIn, date, onClose]);
+  if (!signedIn) return null;
+  return (
+    <Modal visible={!!target} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      {target ? <Sheet placeId={target.placeId} placeName={target.placeName} date={date} onClose={onClose} /> : null}
+    </Modal>
   );
 }
 

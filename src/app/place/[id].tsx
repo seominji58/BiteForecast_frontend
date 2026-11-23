@@ -1,36 +1,56 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useConditions, useDateRange, useFavorites, usePlaceKakao, usePlaces, usePlacesSummary, useSetFavorite } from '@/api/queries';
-import { AddToTripButton } from '@/components/add-to-trip';
-import { NearbyShops } from '@/components/nearby-shops';
+import { TripAddModal } from '@/components/add-to-trip';
 import { Amenities } from '@/components/amenities';
+import { BottomSheet } from '@/components/bottom-sheet';
 import { CatchStrip } from '@/components/catch-strip';
 import { CoordNote } from '@/components/coord-note';
-import { ZoneNotice } from '@/components/zone-notice';
-import { AppIcon } from '@/components/app-icon';
 import { Button } from '@/components/form';
 import { MarineWarningBanner } from '@/components/marine-warning-banner';
-import { Card, ErrorView, Loading, SectionHeader, StackScreen } from '@/components/screen';
-import { DataBasis, FishingIndexCard, MetricTable, NearbyPlaces, TideCard, WeatherForecastCard } from '@/components/sea-detail';
-import { ThemedText } from '@/components/themed-text';
-import { PlaceGallery } from '@/components/place-photo';
+import { NearbyShops } from '@/components/nearby-shops';
+import { MetricTiles, NearbyCompact } from '@/components/place-compact';
 import { PlaceNavigate } from '@/components/place-navigate';
+import { PlaceGallery } from '@/components/place-photo';
+import { Card, ErrorView, Loading } from '@/components/screen';
+import { DataBasis, FishingIndexCard, MetricTable, NearbyPlaces, TideCard, WeatherForecastCard } from '@/components/sea-detail';
+import { SegmentTabs } from '@/components/segment-tabs';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { ZoneNotice } from '@/components/zone-notice';
+import { Brand, Layout } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+import { useAuth } from '@/lib/auth';
 import { dayLabel, timeLabel } from '@/lib/compare';
 import { nearLabel } from '@/lib/navigate';
-import { nearby, PLACE_IMAGE, PLACE_TYPE_LABEL, placeKindNote, placeName } from '@/lib/place';
-import { Brand } from '@/constants/theme';
-import { useAuth } from '@/lib/auth';
+import { nearby, PLACE_TYPE_LABEL, placeKindNote, placeName } from '@/lib/place';
 import { pushRecentPlace, useHomePlace } from '@/lib/prefs';
 
-// 상세 해황 (재설계 v2 §4-4): 홈에서 줄인 내용을 모두 여기서 본다. 데이터는 홈과 같은 API.
+type Tab = 'sea' | 'tide' | 'around';
+const TABS: { value: Tab; label: string }[] = [
+  { value: 'sea', label: '해황' },
+  { value: 'tide', label: '물때' },
+  { value: 'around', label: '주변 시설' },
+];
+type Sheet = 'index' | 'source' | 'around' | 'photo' | null;
+
+/**
+ * 위치 상세 (2026-11-23 화면 재설계): 길게 나열하던 구조를
+ *   ① 장소·작은 지도/사진 ② 특보·위험구역(안전은 기본 화면에) ③ 파고·풍속·수온 3칸
+ *   ④ [해황][물때][주변 시설] 탭 — 고른 탭 내용만 ⑤ 아래 고정 버튼 [조건 비교][출조계획에 추가]
+ * 로 바꿨다. 낚시지수·전체 주변 시설·자료 출처·사진 크게 보기는 바텀시트로.
+ * 데이터는 이전과 같은 API (GET /places/{id}/conditions · 전체 요약 · 카카오).
+ */
 export default function PlaceDetailScreen() {
   const placeId = Number(useLocalSearchParams<{ id: string }>().id);
-  // 상세를 연 낚시터는 「최근 본 낚시터」에 남긴다 (기기 저장)
   useEffect(() => {
     if (Number.isFinite(placeId)) pushRecentPlace(placeId);
   }, [placeId]);
+  const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const places = usePlaces();
   const range = useDateRange();
   const [homeId, setHomeId] = useHomePlace();
@@ -38,171 +58,256 @@ export default function PlaceDetailScreen() {
   const today = range.data?.today;
   const cond = useConditions(place ? placeId : null, today);
   const pc = cond.data?.place;
-  const [more, setMore] = useState(false);
-  // 물때(몇 물)·일출·일몰 — 전체 요약에 들어 있는 달력 계산값 (지도와 같은 응답이라 다시 받지 않는다)
   const summary = usePlacesSummary(today);
   const cal = summary.data?.places.find((x) => x.place_id === placeId);
   const kakao = usePlaceKakao(placeId);
+  const [tab, setTab] = useState<Tab>('sea');
+  const [sheet, setSheet] = useState<Sheet>(null);
+  const [trip, setTrip] = useState(false);
+
+  const address = place ? (place.address ?? (place.near_address ? nearLabel(place.near_address, place.near_address_kind) : null)) : null;
 
   return (
-    <StackScreen>
+    <ThemedView style={styles.flex}>
       <Stack.Screen options={{ title: place ? placeName(place) : '상세 해황' }} />
-      {places.isPending || (place && cond.isPending) ? <Loading /> : null}
-      {places.isSuccess && !place ? (
-        <ErrorView message="지원하지 않는 낚시터예요." onRetry={() => places.refetch()} />
-      ) : null}
-      {cond.isError ? <ErrorView message={cond.error.message} onRetry={() => cond.refetch()} /> : null}
+      <ScrollView contentContainerStyle={styles.content}>
+        {places.isPending || (place && cond.isPending) ? <Loading /> : null}
+        {places.isSuccess && !place ? <ErrorView message="지원하지 않는 낚시터예요." onRetry={() => places.refetch()} /> : null}
+        {cond.isError ? <ErrorView message={cond.error.message} onRetry={() => cond.refetch()} /> : null}
 
-      {place ? (
-        <Card>
-          {/* 실제 사진(한국관광공사) 또는 위치 확인용 위성 지도 */}
-          <PlaceGallery place={place} style={styles.heroWrap} />
-          <View style={styles.row}>
-            <AppIcon name={PLACE_IMAGE[place.type]} size={32} />
-            <View style={styles.flex}>
-              <ThemedText type="sectionTitle">{placeName(place)}</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                {place.region_name} · {PLACE_TYPE_LABEL[place.type]}
-                {place.address
-                  ? ` · ${place.address}`
-                  : place.near_address
-                    ? ` · ${nearLabel(place.near_address, place.near_address_kind)}`
-                    : ''}
-              </ThemedText>
+        {place ? (
+          <Card style={styles.headCard}>
+            {/* 사진(관광공사·이용자) 또는 작은 위치 지도. 누르면 크게 */}
+            <Pressable accessibilityRole="button" accessibilityLabel="사진·지도 크게 보기" onPress={() => setSheet('photo')}>
+              <PlaceGallery place={place} height={140} />
+            </Pressable>
+            <View style={styles.headBody}>
+              <View style={styles.titleRow}>
+                <View style={styles.flex}>
+                  <ThemedText type="sectionTitle" numberOfLines={1}>
+                    {placeName(place)}
+                  </ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                    {place.region_name} · {PLACE_TYPE_LABEL[place.type]}
+                    {address ? ` · ${address}` : ''}
+                  </ThemedText>
+                </View>
+                <FavoriteStar placeId={place.id} />
+              </View>
+              {/* 기관 지정 대표 지점 ↔ 실제 낚시 자리 구분, 위치 정확도는 짧게 */}
               {placeKindNote(place) ? (
                 <ThemedText type="small" themeColor="tint">
                   {placeKindNote(place)}
                 </ThemedText>
               ) : null}
-            </View>
-            <FavoriteStar placeId={place.id} />
-          </View>
-          <CoordNote place={pc?.place ?? place} kakaoMoved={kakao.data?.moved} />
-          <ThemedText type="small" themeColor="textSecondary">
-            {today ? `${dayLabel(today)} · ` : ''}
-            {place.id === homeId ? '내 기준 낚시터' : '기준 낚시터 아님'}
-            {cond.data ? ` · ${timeLabel(cond.data.generated_at)} 갱신` : ''}
-          </ThemedText>
-          <View style={styles.actions}>
-            {today ? (
-              <View style={styles.flex}>
-                <AddToTripButton placeId={place.id} placeName={place.name} date={today} />
+              <CoordNote place={pc?.place ?? place} compact kakaoMoved={kakao.data?.moved} />
+              <PlaceNavigate place={place} name={placeName(place)} compact />
+              <View style={styles.links}>
+                <Pressable
+                  accessibilityRole="button"
+                  hitSlop={6}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/journal/new',
+                      params: { place: String(place.id) },
+                    })
+                  }>
+                  <ThemedText type="smallBold" themeColor="tint">
+                    기록 남기기
+                  </ThemedText>
+                </Pressable>
+                {place.id !== homeId ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    hitSlop={6}
+                    onPress={() => {
+                      setHomeId(place.id);
+                      router.back();
+                    }}>
+                    <ThemedText type="smallBold" themeColor="tint">
+                      기준으로 설정
+                    </ThemedText>
+                  </Pressable>
+                ) : (
+                  <ThemedText type="small" themeColor="textSecondary">
+                    내 기준 낚시터
+                  </ThemedText>
+                )}
+                {kakao.data ? (
+                  <Pressable accessibilityRole="link" hitSlop={6} onPress={() => Linking.openURL(kakao.data!.url).catch(() => {})}>
+                    <ThemedText type="smallBold" themeColor="tint">
+                      카카오맵
+                    </ThemedText>
+                  </Pressable>
+                ) : null}
+                <Pressable accessibilityRole="button" hitSlop={6} onPress={() => setSheet('source')}>
+                  <ThemedText type="smallBold" themeColor="tint">
+                    자료 출처
+                  </ThemedText>
+                </Pressable>
               </View>
-            ) : null}
-            <View style={styles.flex}>
-              <Button
-                label="기록 남기기"
-                variant="secondary"
-                onPress={() => router.push({ pathname: '/journal/new', params: { place: String(place.id) } })}
-              />
             </View>
-          </View>
-          <PlaceNavigate place={place} name={placeName(place)} />
-          {place.id !== homeId ? (
-            <Pressable
-              accessibilityRole="button"
-              hitSlop={8}
-              style={styles.homeLink}
-              onPress={() => {
-                setHomeId(place.id);
-                router.back();
-              }}>
-              <ThemedText type="small" themeColor="tint">
-                이 낚시터를 기준으로 설정
+          </Card>
+        ) : null}
+
+        {pc ? (
+          <>
+            {/* 안전 정보는 기본 화면에: 출입통제·위험구역, 해상 특보(누르면 발표 시각·해역) */}
+            <ZoneNotice regulation={pc.regulation} compact />
+            <MarineWarningBanner w={pc.warning} />
+
+            <View style={styles.between}>
+              <ThemedText type="smallBold">현재 해황</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {today ? dayLabel(today) : ''}
+                {cond.data ? ` · ${timeLabel(cond.data.generated_at)} 갱신` : ''}
               </ThemedText>
-            </Pressable>
-          ) : null}
-        </Card>
+            </View>
+            <MetricTiles pc={pc} />
+
+            <SegmentTabs tabs={TABS} value={tab} onChange={setTab} />
+            {tab === 'sea' ? (
+              <>
+                <MetricTable pc={pc} />
+                <WeatherForecastCard pc={pc} />
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => setSheet('index')}
+                  style={[
+                    styles.rowLink,
+                    {
+                      borderColor: theme.border,
+                      backgroundColor: theme.backgroundElement,
+                    },
+                  ]}>
+                  <ThemedText type="smallBold">공식 바다낚시지수</ThemedText>
+                  <ThemedText type="smallBold" themeColor="tint">
+                    보기 ›
+                  </ThemedText>
+                </Pressable>
+                <CatchStrip
+                  title="이 낚시터 이용자 조황"
+                  filter={{ placeId }}
+                  note="이용자가 올린 조황이에요. 예보가 아니고, 낚시가 허용된 곳이라는 뜻도 아니에요."
+                />
+              </>
+            ) : tab === 'tide' ? (
+              <>
+                {cal?.mulddae || cal?.sunrise ? (
+                  <Card>
+                    <ThemedText type="smallBold">
+                      {[
+                        cal.mulddae ? `물때 ${cal.mulddae}` : null,
+                        cal.sunrise ? `일출 ${cal.sunrise}` : null,
+                        cal.sunset ? `일몰 ${cal.sunset}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </ThemedText>
+                    {cal.wind_dir_fc && cal.wind_fc_max ? (
+                      <ThemedText type="small" themeColor="textSecondary">
+                        가장 센 바람 {cal.wind_dir_fc}풍 {cal.wind_fc_max.v}m/s (예보)
+                      </ThemedText>
+                    ) : null}
+                    {calendarSource(cal) ? (
+                      <ThemedText type="small" themeColor="textSecondary">
+                        {calendarSource(cal)}
+                      </ThemedText>
+                    ) : null}
+                  </Card>
+                ) : null}
+                <TideCard pc={pc} />
+              </>
+            ) : (
+              <>
+                {place && places.data && !place.location_suspect && !place.coord?.recommend_hold ? (
+                  <NearbyPlaces
+                    items={nearby(place, places.data, 8)}
+                    currentId={place.id}
+                    onPress={(p) =>
+                      router.replace({
+                        pathname: '/place/[id]',
+                        params: { id: String(p.id) },
+                      })
+                    }
+                  />
+                ) : null}
+                <Card>
+                  <NearbyCompact placeId={placeId} onAll={() => setSheet('around')} />
+                </Card>
+              </>
+            )}
+          </>
+        ) : null}
+      </ScrollView>
+
+      {/* 주요 행동: 아래 고정 */}
+      {place && today ? (
+        <View
+          style={[
+            styles.footer,
+            {
+              paddingBottom: insets.bottom + 8,
+              backgroundColor: theme.background,
+              borderColor: theme.border,
+            },
+          ]}>
+          <View style={styles.flex}>
+            <Button
+              label="조건 비교"
+              variant="secondary"
+              onPress={() =>
+                router.push({
+                  pathname: '/compare',
+                  params: { a: String(placeId) },
+                })
+              }
+            />
+          </View>
+          <View style={styles.flex}>
+            <Button label="출조계획에 추가" onPress={() => setTrip(true)} />
+          </View>
+        </View>
       ) : null}
 
+      {place && today ? (
+        <TripAddModal target={trip ? { placeId: place.id, placeName: place.name } : null} date={today} onClose={() => setTrip(false)} />
+      ) : null}
       {pc ? (
         <>
-          {/* 출입통제구역·연안사고 위험구역 (해양경찰청 공간정보, 판정 아님) */}
-          <ZoneNotice regulation={pc.regulation} />
-
-          {/* ① 이용자 조황을 맨 위에 (서비스 개선 v2 P-A). 예보·지수와 제목·문구로 구분, 없으면 칸을 숨김 */}
-          <CatchStrip
-            title="이 낚시터 이용자 조황"
-            filter={{ placeId }}
-            note="이용자가 올린 조황이에요. 예보가 아니고, 낚시가 허용된 곳이라는 뜻도 아니에요."
-          />
-
-          {/* ② 가도 될까: 특보 + 지금 바다 */}
-          <MarineWarningBanner w={pc.warning} />
-          <SectionHeader title="지금 바다" />
-          {cal?.mulddae || cal?.sunrise || cal?.wind_dir_fc ? (
+          <BottomSheet open={sheet === 'index'} title="공식 바다낚시지수" onClose={() => setSheet(null)}>
+            <FishingIndexCard pc={pc} />
+          </BottomSheet>
+          <BottomSheet open={sheet === 'source'} title="자료 기준·출처" onClose={() => setSheet(null)}>
+            <DataBasis pc={pc} initiallyOpen />
+            {cal && calendarSource(cal) ? (
+              <ThemedText type="small" themeColor="textSecondary">
+                {calendarSource(cal)}
+              </ThemedText>
+            ) : null}
             <ThemedText type="small" themeColor="textSecondary">
-              {[
-                cal.mulddae ? `물때 ${cal.mulddae} (${cal.mulddae_style})` : null,
-                cal.wind_dir_fc && cal.wind_fc_max ? `가장 센 바람 ${cal.wind_dir_fc}풍 ${cal.wind_fc_max.v}m/s` : null,
-                cal.sunrise ? `일출 ${cal.sunrise}` : null,
-                cal.sunset ? `일몰 ${cal.sunset}` : null,
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-              {calendarSource(cal) ? `\n${calendarSource(cal)}` : ''}
+              {cond.data?.disclaimer}
             </ThemedText>
-          ) : null}
-          <MetricTable pc={pc} />
-
-          {/* ③ 자세히: 날씨·물때·지수는 펼쳐서 */}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ expanded: more }}
-            onPress={() => setMore((v) => !v)}
-            style={styles.moreBtn}>
-            <ThemedText type="smallBold" themeColor="tint">
-              {more ? '날씨·물때·낚시지수 접기 ▴' : '날씨·물때·낚시지수 자세히 ▾'}
-            </ThemedText>
-          </Pressable>
-          {more ? (
-            <>
-              <SectionHeader title="출조 시간 날씨" />
-              <WeatherForecastCard pc={pc} />
-
-              <SectionHeader title="물때 (오늘)" />
-              <TideCard pc={pc} />
-
-              <SectionHeader title="바다낚시지수 (국립해양조사원)" />
-              <FishingIndexCard pc={pc} />
-            </>
-          ) : null}
-
-          {/* 위치 확인 필요·좌표 불일치 의심이면 거리 기준 목록을 내지 않는다 (시뮬레이터 검증 2026-11-10) */}
-          {place && places.data && !place.location_suspect && !place.coord?.recommend_hold ? (
-            <>
-              <SectionHeader title="가까운 낚시터" />
-              <NearbyPlaces
-                items={nearby(place, places.data, 10)}
-                currentId={place.id}
-                onPress={(p) => router.replace({ pathname: '/place/[id]', params: { id: String(p.id) } })}
-              />
-            </>
-          ) : null}
-
-          {/* 근처 낚시점·낚시배 (카카오 로컬, 네이버 지도로 연결) — 주변 플레이스 설계 2차 */}
-          {place ? (
-            <>
-              <SectionHeader title="근처 낚시점·낚시배" />
-              <NearbyShops placeId={place.id} area={place.region_name} />
-              <SectionHeader title="주변 편의점·주차장·화장실" />
-              <Amenities placeId={place.id} />
-            </>
-          ) : null}
-
-          <DataBasis pc={pc} />
-
-          <Button
-            label="다른 곳과 비교"
-            onPress={() => router.push({ pathname: '/compare', params: { a: String(placeId) } })}
-          />
-          {/* 서버 고지문 전문(관측소 위치 차이·조과 비보장·특보 확인)은 상세에서 그대로 보여준다 */}
-          <ThemedText type="small" themeColor="textSecondary">
-            {cond.data?.disclaimer}
-          </ThemedText>
+          </BottomSheet>
         </>
       ) : null}
-    </StackScreen>
+      {place ? (
+        <BottomSheet open={sheet === 'around'} title="주변 시설" onClose={() => setSheet(null)}>
+          <NearbyShops placeId={place.id} area={place.region_name} />
+          <Amenities placeId={place.id} />
+        </BottomSheet>
+      ) : null}
+      {place ? (
+        <Modal visible={sheet === 'photo'} animationType="fade" onRequestClose={() => setSheet(null)}>
+          <View style={[styles.photoModal, { paddingTop: insets.top + 8 }]}>
+            <Pressable accessibilityRole="button" accessibilityLabel="닫기" onPress={() => setSheet(null)} style={styles.photoClose}>
+              <Text style={styles.photoCloseText}>✕</Text>
+            </Pressable>
+            <PlaceGallery place={place} />
+          </View>
+        </Modal>
+      ) : null}
+    </ThemedView>
   );
 }
 
@@ -235,11 +340,51 @@ function FavoriteStar({ placeId }: { placeId: number }) {
 }
 
 const styles = StyleSheet.create({
-  star: { fontSize: 26, lineHeight: 30 },
-  actions: { flexDirection: 'row', gap: 8 },
-  homeLink: { alignSelf: 'center', minHeight: 36, justifyContent: 'center' },
-  moreBtn: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
   flex: { flex: 1 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  heroWrap: { marginTop: -12, marginHorizontal: -12, marginBottom: 4, borderTopLeftRadius: 12, borderTopRightRadius: 12, overflow: 'hidden' },
+  content: {
+    padding: Layout.screenPadding,
+    gap: Layout.gap,
+    paddingBottom: Layout.gap * 3,
+  },
+  star: { fontSize: 26, lineHeight: 30 },
+  headCard: { padding: 0, overflow: 'hidden', gap: 0 },
+  headBody: { padding: 12, gap: 8 },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  links: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    alignItems: 'center',
+    minHeight: 32,
+  },
+  between: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+  },
+  rowLink: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    minHeight: 48,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+  },
+  footer: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: Layout.screenPadding,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  photoModal: { flex: 1, backgroundColor: '#000', justifyContent: 'center' },
+  photoClose: {
+    position: 'absolute',
+    top: 54,
+    right: 16,
+    zIndex: 2,
+    padding: 8,
+  },
+  photoCloseText: { color: '#FFF', fontSize: 24, fontWeight: '700' },
 });

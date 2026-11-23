@@ -111,7 +111,9 @@ export function PlaceThumb({ place, style }: { place: Pick<Place, 'id' | 'type'>
  * - 없으면 작은 위성 지도를 「위치 확인용」으로만 (신고 주소 좌표라 실제 낚시 자리와 다를 수 있음을 밝힌다)
  * - 좌표가 없거나 의심이면 아무것도 그리지 않는다
  */
-export function PlaceGallery({ place, style }: { place: Place; style?: StyleProp<ViewStyle> }) {
+export function PlaceGallery({ place, style, height }: { place: Place; style?: StyleProp<ViewStyle>; height?: number }) {
+  // height 를 주면 사진·지도를 그 높이로 맞춘다 (상세 상단 미리보기, 2026-11-23)
+  const box = height ? { height } : { aspectRatio: 4 / 3 };
   const theme = useTheme();
   const photos = usePlacePhotos(place.id);
   const [page, setPage] = useState(0);
@@ -129,7 +131,7 @@ export function PlaceGallery({ place, style }: { place: Place; style?: StyleProp
             <Image
               key={im.url}
               source={{ uri: im.url }}
-              style={{ width: w || 1, aspectRatio: 4 / 3, backgroundColor: '#0B2D4D' }}
+              style={{ width: w || 1, ...box, backgroundColor: '#0B2D4D' }}
               contentFit="contain"
               cachePolicy="disk"
               transition={150}
@@ -151,14 +153,15 @@ export function PlaceGallery({ place, style }: { place: Place; style?: StyleProp
     );
   }
   if (photos.isPending) return null;
-  return <UserPhotosOrMap place={place} style={style} />;
+  return <UserPhotosOrMap place={place} style={style} height={height} />;
 }
 
 /**
  * 관광공사 사진이 없으면: 이용자가 이 낚시터로 올린 글 사진 (낚시터 이름까지 공개한 글만, 신고 숨김·차단 제외는 서버 규칙)
  * → 그것도 없으면 위성 지도. 사진마다 「이용자 사진 · 닉네임 · 언제」를 쓰고, 누르면 그 글로 간다
  */
-function UserPhotosOrMap({ place, style }: { place: Place; style?: StyleProp<ViewStyle> }) {
+function UserPhotosOrMap({ place, style, height }: { place: Place; style?: StyleProp<ViewStyle>; height?: number }) {
+  const box = height ? { height } : { aspectRatio: 4 / 3 };
   const theme = useTheme();
   const source = usePhotoSource();
   const posts = usePosts(null, 'latest', { placeId: place.id }, 20);
@@ -185,9 +188,9 @@ function UserPhotosOrMap({ place, style }: { place: Place; style?: StyleProp<Vie
                 accessibilityLabel={`${x.author.nickname}님이 올린 사진, 글 보기`}
                 onPress={() => router.push({ pathname: '/community/[id]', params: { id: String(x.id) } })}>
                 {src ? (
-                  <Image source={src} style={{ width: w || 1, aspectRatio: 4 / 3, backgroundColor: '#0B2D4D' }} contentFit="cover" transition={150} />
+                  <Image source={src} style={{ width: w || 1, ...box, backgroundColor: '#0B2D4D' }} contentFit="cover" transition={150} />
                 ) : (
-                  <View style={{ width: w || 1, aspectRatio: 4 / 3, backgroundColor: '#0B2D4D' }} />
+                  <View style={{ width: w || 1, ...box, backgroundColor: '#0B2D4D' }} />
                 )}
               </Pressable>
             );
@@ -211,7 +214,7 @@ function UserPhotosOrMap({ place, style }: { place: Place; style?: StyleProp<Vie
         : '신고된 주소 위치 · 실제 낚시 자리와 다를 수 있어요';
   return (
     <View style={style}>
-      <PlacePhoto place={place} size="hero" style={styles.locMap} label={`${place.name} 위치`} caption={caption} />
+      <PlacePhoto place={place} size="hero" style={height ? { width: '100%', height } : styles.locMap} label={`${place.name} 위치`} caption={caption} />
     </View>
   );
 }

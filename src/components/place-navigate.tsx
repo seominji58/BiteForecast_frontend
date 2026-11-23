@@ -16,7 +16,7 @@ import { useNavPicker } from '@/components/nav-picker';
 import { ThemedText } from '@/components/themed-text';
 import { navTarget, nearLabel } from '@/lib/navigate';
 
-export function PlaceNavigate({ place, name }: { place: Place; name: string }) {
+export function PlaceNavigate({ place, name, compact }: { place: Place; name: string; compact?: boolean }) {
   const kakao = usePlaceKakao(place.id).data;
   const t = navTarget(place, name);
   const address = kakao?.road_address ?? place.address ?? nearLabel(place.near_address, place.near_address_kind);
@@ -24,7 +24,9 @@ export function PlaceNavigate({ place, name }: { place: Place; name: string }) {
 
   const nav = useNavPicker(t);
   const share = () =>
-    Share.share({ message: [name, address ?? place.region_name].filter(Boolean).join('\n') }).catch(() => {});
+    Share.share({
+      message: [name, address ?? place.region_name].filter(Boolean).join('\n'),
+    }).catch(() => {});
 
   return (
     <View style={styles.wrap}>
@@ -38,7 +40,20 @@ export function PlaceNavigate({ place, name }: { place: Place; name: string }) {
           <Button label="주소 공유" variant="secondary" onPress={share} />
         </View>
       </View>
-      {t.kind === 'none' ? (
+      {compact ? (
+        // 상세 상단용 한 줄 안내 (카카오맵 링크는 상세의 링크 줄에, 2026-11-23)
+        <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+          {t.kind === 'none'
+            ? t.reason
+            : kakao && t.kind === 'route'
+              ? '카카오맵 등록 위치로 안내 · 실제 자리와 다를 수 있어요'
+              : approx
+                ? '신고 주소 위치로 안내 · 실제 자리와 다를 수 있어요'
+                : t.kind === 'search'
+                  ? '위치 확인이 필요해 주소로 검색해요'
+                  : ''}
+        </ThemedText>
+      ) : t.kind === 'none' ? (
         <ThemedText type="small" themeColor="textSecondary">
           {t.reason}
         </ThemedText>
@@ -55,7 +70,7 @@ export function PlaceNavigate({ place, name }: { place: Place; name: string }) {
           위치 확인이 필요한 곳이라 경로 대신 주소로 검색해요
         </ThemedText>
       ) : null}
-      {kakao ? (
+      {kakao && !compact ? (
         <Pressable
           accessibilityRole="link"
           accessibilityLabel={`카카오맵에서 ${kakao.name} 사진·리뷰 보기`}

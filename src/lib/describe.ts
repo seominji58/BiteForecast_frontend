@@ -6,7 +6,7 @@
  * - 파도: WMO 해상상태 코드(Douglas) 파고 구간
  * 「낚시하기 좋다/안전하다」 같은 판정 표현은 쓰지 않는다.
  */
-import type { DataKind, PlaceCompare, Series } from '@/api/types';
+import type { PlaceCompare, Series } from '@/api/types';
 import { currentIndexPeriod, findSeries, latestPoint, nextExtreme, rangeOf, timeLabel } from '@/lib/compare';
 
 /** 보퍼트 풍력계급: [상한 m/s, 이름, 체감 설명] */
@@ -165,44 +165,3 @@ export function distanceGrade(km: number): string {
   return '먼 거리';
 }
 
-/**
- * 두 장소에 공통으로 있는 자료 종류. 둘 다 예보가 있으면 예보, 둘 다 실측만 있으면 실측, 아니면 null.
- * 비교 요약은 이 종류로만 만든다 — 예보와 실측을 나란히 놓지 않는다 (UX 검토 P0-3)
- */
-export function commonKind(a: PlaceCompare, b: PlaceCompare, metric: 'wave_height' | 'wind_speed'): DataKind | null {
-  const has = (p: PlaceCompare, k: DataKind) => findSeries(p, metric, k)?.status === 'ok';
-  if (has(a, 'forecast') && has(b, 'forecast')) return 'forecast';
-  if (has(a, 'observed') && has(b, 'observed')) return 'observed';
-  return null;
-}
-
-function shortMetric(pc: PlaceCompare, metric: 'wave_height' | 'wind_speed', kind: DataKind | null): string | null {
-  const label = metric === 'wave_height' ? '파고' : '바람';
-  const unit = metric === 'wave_height' ? 'm' : 'm/s';
-  const name = (v: number) => (metric === 'wave_height' ? seaState(v) : windName(v).name);
-  if (kind === 'forecast') {
-    const p = peak(findSeries(pc, metric, 'forecast'));
-    return p ? `${label} 예보 최대 ${f1(p.v)}${unit}(${name(p.v)})` : `${label} 예보 없음`;
-  }
-  if (kind === 'observed') {
-    const p = latestPoint(findSeries(pc, metric, 'observed'));
-    return p?.v != null ? `${label} 실측 ${f1(p.v)}${unit}(${timeLabel(p.t)}, ${name(p.v)})` : `${label} 실측 없음`;
-  }
-  return `${label}: 두 곳에 같은 종류 자료가 없어 비교 생략`;
-}
-
-/** 비교 화면용 한 줄 요약. kinds 는 commonKind() 결과 — 두 장소가 같은 종류로 요약된다 */
-export function describeShort(
-  pc: PlaceCompare,
-  kinds: { wave: DataKind | null; wind: DataKind | null },
-): string {
-  const parts = [shortMetric(pc, 'wave_height', kinds.wave), shortMetric(pc, 'wind_speed', kinds.wind)].filter(
-    (x): x is string => !!x,
-  );
-  const ext = findSeries(pc, 'tide_extreme', 'forecast')?.extremes;
-  if (ext?.length) {
-    const highs = ext.filter((e) => e.type === 'high').map((e) => timeLabel(e.t));
-    if (highs.length) parts.push(`만조 ${highs.join('·')}`);
-  }
-  return parts.join(', ');
-}

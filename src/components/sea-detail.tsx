@@ -69,10 +69,6 @@ export function MetricTable({ pc }: { pc: PlaceCompare }) {
         const fcS = findSeries(pc, r.metric, 'forecast');
         const obs = latestPoint(obsS);
         const fc = rangeText(fcS);
-        const src = [
-          obsS?.source ? `실측 ${obsS.source.station_name} ${distText(obsS.source.distance_km)}` : null,
-          fcS?.source ? `예보 ${fcS.source.agency}` : null,
-        ].filter(Boolean);
         return (
           <View key={r.metric} style={[styles.tbody, i < METRIC_ROWS.length - 1 && line]}>
             <View style={styles.tr}>
@@ -108,14 +104,22 @@ export function MetricTable({ pc }: { pc: PlaceCompare }) {
                 )}
               </View>
             </View>
-            {src.length ? (
-              <ThemedText type="small" themeColor="textSecondary" style={styles.srcLine}>
-                기준: {src.join(' · ')}
-              </ThemedText>
-            ) : null}
           </View>
         );
       })}
+      {/* 기준 지점은 항목마다 반복하지 않고 한 줄로 (자세한 출처는 「자료 출처」 시트, 2026-11-23) */}
+      <ThemedText type="small" themeColor="textSecondary" style={styles.srcFoot}>
+        기준:{' '}
+        {[
+          ...new Set(
+            METRIC_ROWS.flatMap((r) => {
+              const o = findSeries(pc, r.metric, 'observed')?.source;
+              const fcs = findSeries(pc, r.metric, 'forecast')?.source;
+              return [o ? `실측 ${o.station_name} ${distText(o.distance_km)}` : null, fcs ? `예보 ${fcs.agency}` : null];
+            }).filter(Boolean),
+          ),
+        ].join(' · ') || '기준 지점 없음'}
+      </ThemedText>
       <TermLinks items={[['wave', '파고란?'], ['wind', '풍속이란?'], ['water_temp', '수온이란?']]} />
     </Card>
   );
@@ -375,7 +379,7 @@ const styles = StyleSheet.create({
   colLabel: { width: 60 },
   col: { flex: 1 },
   num: { fontSize: 17, lineHeight: 22, fontWeight: '800' },
-  srcLine: { paddingLeft: 68 },
+  srcFoot: { paddingTop: 6 },
   weatherRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
   tideRow: { flexDirection: 'row', gap: 6 },
   tideCell: { flex: 1, borderWidth: 1, borderRadius: 10, paddingVertical: 6, alignItems: 'center' },

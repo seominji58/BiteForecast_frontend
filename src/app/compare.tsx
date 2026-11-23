@@ -5,9 +5,20 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useCompare, useDateRange, usePlaces, usePlacesSummary } from '@/api/queries';
 import type { Place } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
-import { CompareView, type CompareFocus } from '@/components/compare-view';
+import { TripAddModal } from '@/components/add-to-trip';
+import {
+  ComparePanel,
+  COMPARE_TABS,
+  CompareVerdict,
+  HourlySheet,
+  SourceSheet,
+  type CompareTab,
+  type FitRow,
+} from '@/components/compare-view';
+import { OptionSheet } from '@/components/option-sheet';
+import { SegmentTabs } from '@/components/segment-tabs';
 import { Dropdown } from '@/components/dropdown';
-import { Chip } from '@/components/form';
+import { Button, Chip } from '@/components/form';
 import { PlacePicker } from '@/components/place-picker';
 import { Card, ErrorView, Loading, StackScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
@@ -15,22 +26,19 @@ import type { AppIconName } from '@/constants/icons';
 import { Brand, IconSize } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { dayLabel, dayList } from '@/lib/compare';
-import { CHECK_TEXT, checkPlace, criteriaLabel, freshnessLine } from '@/lib/criteria';
+import { checkPlace, freshnessLine } from '@/lib/criteria';
 import { getCurrentCoords } from '@/lib/location';
 import { distLabel, isApprox, km, nearby, PLACE_IMAGE, recommendable } from '@/lib/place';
 import { getRecent, pushRecent, RECENT_COMPARES, RECENT_PLACES, useCriteria, useHomePlace } from '@/lib/prefs';
 
-const FOCUS: { value: CompareFocus; label: string }[] = [
-  { value: 'all', label: '전체' },
-  { value: 'sea', label: '파도·바람' },
-  { value: 'tide', label: '물때' },
-  { value: 'index', label: '낚시지수' },
-];
-
 // SCR-02 조건 비교 (재설계 v2 §6): A=기준 낚시터(있을 때만), B=가까운 곳 추천 또는 검색, 날짜는 드롭다운
 // 2026-11-09: 탭에서 빠져 화면으로 열린다 (출조계획·홈·상세에서). date 로 날짜를 넘겨받는다
 export default function CompareScreen() {
-  const params = useLocalSearchParams<{ a?: string; b?: string; date?: string }>();
+  const params = useLocalSearchParams<{
+    a?: string;
+    b?: string;
+    date?: string;
+  }>();
   const places = usePlaces();
   const range = useDateRange();
   const [homeId, , homeLoaded] = useHomePlace();
@@ -39,7 +47,12 @@ export default function CompareScreen() {
   const [aId, setAId] = useState<number | null>(null);
   const [bId, setBId] = useState<number | null>(params.b ? Number(params.b) : null);
   const days = range.data ? dayList(range.data.min, range.data.max) : [];
-  const [focus, setFocus] = useState<CompareFocus>('all');
+  const [tab, setTab] = useState<CompareTab>('summary');
+  const [sheet, setSheet] = useState<'hourly' | 'source' | 'trip' | null>(null);
+  const [tripTarget, setTripTarget] = useState<{
+    placeId: number;
+    placeName: string;
+  } | null>(null);
   const [picking, setPicking] = useState<'A' | 'B' | null>(null);
 
   // 홈·상세에서 「비교」로 들어오면 그 낚시터가 A (새로 들어올 때마다 직접 고른 값보다 우선)
@@ -61,7 +74,12 @@ export default function CompareScreen() {
   const q = useCompare(a?.id ?? NaN, b?.id ?? NaN, selectedDay);
 
   // B 추천: A에서 가까운 3곳 (A 자신 제외)
-  const suggestions = a && places.data ? nearby(a, places.data, 4).filter((n) => n.place.id !== a.id).slice(0, 3) : [];
+  const suggestions =
+    a && places.data
+      ? nearby(a, places.data, 4)
+          .filter((n) => n.place.id !== a.id)
+          .slice(0, 3)
+      : [];
 
   // 비어 있는 칸부터 채운다 (A 먼저, 그다음 B)
   const pick = (id: number) => (a ? setBId(id) : setAId(id));
@@ -112,43 +130,11 @@ export default function CompareScreen() {
         <Slot label="B" place={b} empty="비교할 곳 고르기" onPress={() => setPicking('B')} />
       </View>
 
-      {a && !b && suggestions.length > 0 ? (
-        <Card>
-          <ThemedText type="small" themeColor="textSecondary">
-            {a.name} 근처에서 B 고르기
-          </ThemedText>
-          {/* 줄바꿈 칩: 화면 밖으로 잘리지 않게 */}
-          <View style={styles.wrap}>
-            {suggestions.map(({ place, km }) => (
-              <Chip
-                key={place.id}
-                label={`${place.name} · ${distLabel(km, place, isApprox(a))}`}
-                selected={false}
-                onPress={() => setBId(place.id)}
-              />
-            ))}
-            <Chip label="전국에서 검색" selected={false} onPress={() => setPicking('B')} />
-          </View>
-        </Card>
-      ) : null}
-
-      {a && b ? (
-        <View style={styles.focusRow}>
-          <ThemedText type="small" themeColor="textSecondary">
-            보기
-          </ThemedText>
-          <View style={[styles.wrap, styles.flex]}>
-            {FOCUS.map((f) => (
-              <Chip key={f.value} label={f.label} selected={focus === f.value} onPress={() => setFocus(f.value)} />
-            ))}
-          </View>
-        </View>
-      ) : null}
-
       {!a || !b ? (
         <PickPanel
           places={places.data ?? []}
           a={a}
+          near={suggestions}
           onPick={pick}
           onPair={(x, y) => {
             setAId(x);
@@ -158,19 +144,50 @@ export default function CompareScreen() {
         />
       ) : null}
 
-      {a && b && selectedDay ? <CriteriaFit a={a} b={b} day={selectedDay} future={selectedDay !== range.data?.today} /> : null}
-
       {!a || !b ? null : q.isPending ? (
         <Loading />
       ) : q.isError ? (
         <ErrorView message={q.error.message} onRetry={() => q.refetch()} />
       ) : (
-        <CompareView
-          places={q.data.places}
-          disclaimer={q.data.disclaimer}
-          focus={focus}
-          warningNote={selectedDay !== range.data?.today ? `지금 발효 상태 (${dayLabel(range.data?.today ?? selectedDay)} 기준) · 그날 특보는 발표 전` : undefined}
-        />
+        <>
+          <VerdictWithFit a={a} b={b} day={selectedDay} future={selectedDay !== range.data?.today} pcs={q.data.places} />
+          <SegmentTabs tabs={COMPARE_TABS} value={tab} onChange={setTab} />
+          <ComparePanel
+            places={q.data.places}
+            tab={tab}
+            warningNote={
+              selectedDay !== range.data?.today
+                ? `특보는 지금 발효 상태 (${dayLabel(range.data?.today ?? selectedDay)} 기준) · 그날 특보는 발표 전`
+                : undefined
+            }
+          />
+          <Button label="출조계획에 추가" onPress={() => setSheet('trip')} />
+          <View style={styles.actions}>
+            <View style={styles.flex}>
+              <Button label="시간별 보기" variant="secondary" onPress={() => setSheet('hourly')} />
+            </View>
+            <View style={styles.flex}>
+              <Button label="자료 기준·출처" variant="secondary" onPress={() => setSheet('source')} />
+            </View>
+          </View>
+          <HourlySheet open={sheet === 'hourly'} onClose={() => setSheet(null)} places={q.data.places} />
+          <SourceSheet open={sheet === 'source'} onClose={() => setSheet(null)} places={q.data.places} disclaimer={q.data.disclaimer} />
+          <OptionSheet<'A' | 'B'>
+            open={sheet === 'trip'}
+            title="어느 곳을 출조계획에 넣을까요?"
+            options={[
+              { value: 'A', label: `A · ${a.name}`, sub: a.region_name },
+              { value: 'B', label: `B · ${b.name}`, sub: b.region_name },
+            ]}
+            value={null}
+            onPick={(v) => {
+              const p = v === 'A' ? a : b;
+              setTimeout(() => setTripTarget({ placeId: p.id, placeName: p.name }), 300);
+            }}
+            onClose={() => setSheet(null)}
+          />
+          <TripAddModal target={tripTarget} date={selectedDay} onClose={() => setTripTarget(null)} />
+        </>
       )}
 
       <PlacePicker
@@ -192,19 +209,26 @@ export default function CompareScreen() {
 function PickPanel({
   places,
   a,
+  near: nearA,
   onPick,
   onPair,
   onSearch,
 }: {
   places: Place[];
   a: Place | null;
+  /** A 근처 추천 (A를 골랐을 때만) */
+  near: { place: Place; km: number }[];
   onPick: (id: number) => void;
   onPair: (a: number, b: number) => void;
   onSearch: () => void;
 }) {
   const [pairs, setPairs] = useState<[Place, Place][]>([]);
   const [recent, setRecent] = useState<Place[]>([]);
-  const [near, setNear] = useState<{ loading: boolean; list: { place: Place; d: number }[]; error: string | null }>({
+  const [near, setNear] = useState<{
+    loading: boolean;
+    list: { place: Place; d: number }[];
+    error: string | null;
+  }>({
     loading: false,
     list: [],
     error: null,
@@ -224,7 +248,13 @@ function PickPanel({
       );
     });
     getRecent(RECENT_PLACES).then((list) => {
-      if (alive) setRecent(list.map((k) => byId.get(Number(k))).filter((p): p is Place => !!p).slice(0, 5));
+      if (alive)
+        setRecent(
+          list
+            .map((k) => byId.get(Number(k)))
+            .filter((p): p is Place => !!p)
+            .slice(0, 5),
+        );
     });
     return () => {
       alive = false;
@@ -252,6 +282,24 @@ function PickPanel({
       <ThemedText type="small" themeColor="textSecondary">
         고른 곳은 {slot} 칸에 들어가요. 같은 날 특보·파고·바람·물때·수온을 나란히 보여드려요.
       </ThemedText>
+
+      {a && nearA.length ? (
+        <>
+          <ThemedText type="smallBold" themeColor="textSecondary">
+            {a.name} 근처
+          </ThemedText>
+          <View style={styles.wrap}>
+            {nearA.map(({ place, km: d }) => (
+              <Chip
+                key={place.id}
+                label={`${place.name} · ${distLabel(d, place, isApprox(a))}`}
+                selected={false}
+                onPress={() => onPick(place.id)}
+              />
+            ))}
+          </View>
+        </>
+      ) : null}
 
       {!a && pairs.length ? (
         <>
@@ -290,12 +338,7 @@ function PickPanel({
             {near.list
               .filter((x) => x.place.id !== a?.id)
               .map(({ place, d }) => (
-                <Chip
-                  key={place.id}
-                  label={`${place.name} · ${distLabel(d, place)}`}
-                  selected={false}
-                  onPress={() => onPick(place.id)}
-                />
+                <Chip key={place.id} label={`${place.name} · ${distLabel(d, place)}`} selected={false} onPress={() => onPick(place.id)} />
               ))}
           </View>
         </>
@@ -312,7 +355,10 @@ function PickPanel({
           icon="find-map"
           label="지도에서"
           onPress={() =>
-            router.push({ pathname: '/explore', params: a ? { pick: 'compare', a: String(a.id) } : { pick: 'compare' } })
+            router.push({
+              pathname: '/explore',
+              params: a ? { pick: 'compare', a: String(a.id) } : { pick: 'compare' },
+            })
           }
         />
         <PickButton icon="find-sea" label="검색" onPress={onSearch} />
@@ -335,70 +381,57 @@ function PickButton({ icon, label, onPress }: { icon: AppIconName; label: string
 }
 
 /**
- * 내 기준(파고·풍속 상한, 특보)에 각각 맞는지 — 위에서 고른 날짜 기준 (비교 표와 같은 날짜).
- * 그 날짜 예보가 없으면 오늘 자료로 대신하지 않고 「자료 부족」으로 보여준다
+ * 결론 카드 + 내 기준(파고·풍속 상한, 특보) 충족 여부. 위에서 고른 날짜 기준.
+ * 내 기준은 전체 요약(오늘이면 지금 이후 예보)으로 계산 — 결론의 하루 최댓값과 기준이 달라 문구로 구분한다.
+ * 자료가 오래됐으면 충족 여부를 보여주지 않는다
  */
-function CriteriaFit({ a, b, day, future }: { a: Place; b: Place; day: string; future: boolean }) {
+function VerdictWithFit({
+  a,
+  b,
+  day,
+  future,
+  pcs,
+}: {
+  a: Place;
+  b: Place;
+  day: string;
+  future: boolean;
+  pcs: import('@/api/types').PlaceCompare[];
+}) {
   const summary = usePlacesSummary(day);
   const [criteria] = useCriteria();
-  if (!summary.data) return null;
-  if (summary.data.data_status.stale) {
-    return (
-      <Card>
-        <ThemedText type="smallBold">내 기준과 비교</ThemedText>
-        <ThemedText type="small" themeColor="warning">
-          {summary.data.data_status.stale_reason} · {freshnessLine(summary.data.data_status)}
-        </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          오래된 예보·특보로는 기준 충족 여부를 보여드리지 않아요. 아래 표의 자료 시각을 확인하세요.
-        </ThemedText>
-      </Card>
-    );
-  }
-  const rows = [a, b].map((p, i) => ({
-    label: i === 0 ? 'A' : 'B',
-    p,
-    r: checkPlace(
-      summary.data.places.find((s) => s.place_id === p.id),
-      criteria,
-      { future },
-    ),
-  }));
+  const stale = summary.data?.data_status.stale;
+  const fit: FitRow[] | null =
+    summary.data && !stale
+      ? ([a, b] as const).map((p, i) => {
+          const r = checkPlace(
+            summary.data.places.find((s) => s.place_id === p.id),
+            criteria,
+            { future },
+          );
+          return {
+            label: i === 0 ? 'A' : 'B',
+            status: r.status,
+            notes: r.notes,
+          };
+        })
+      : null;
   return (
-    <Card>
-      <View style={styles.between}>
-        <ThemedText type="smallBold">내 기준과 비교</ThemedText>
-        <Pressable
-          accessibilityRole="button"
-          hitSlop={8}
-          onPress={() => router.push({ pathname: '/explore', params: { mode: 'criteria' } })}>
-          <ThemedText type="small" themeColor="tint">
-            기준 바꾸기 ›
-          </ThemedText>
-        </Pressable>
-      </View>
-      <ThemedText type="small" themeColor="textSecondary">
-        {dayLabel(day)} 기준 · {criteriaLabel(criteria)}
-      </ThemedText>
-      {rows.map(({ label, p, r }) => (
-        <View key={label} style={styles.fitRow}>
-          <ThemedText type="smallBold" style={styles.fitLabel}>
-            {label}
-          </ThemedText>
-          <View style={styles.flex}>
-            <ThemedText type="smallBold" numberOfLines={1}>
-              {p.name}{' '}
-              <ThemedText type="smallBold" themeColor={CHECK_TEXT[r.status].color}>
-                {CHECK_TEXT[r.status].label}
-              </ThemedText>
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
-              {r.notes.join(', ')}
-            </ThemedText>
-          </View>
-        </View>
-      ))}
-    </Card>
+    <>
+      <CompareVerdict
+        a={pcs[0]}
+        b={pcs[1]}
+        fit={fit}
+        fitBasis={future ? `${dayLabel(day)} 예보` : '지금 이후 예보'}
+        onCriteria={() => router.push({ pathname: '/explore', params: { mode: 'criteria' } })}
+      />
+      {stale ? (
+        <ThemedText type="small" themeColor="warning">
+          {summary.data!.data_status.stale_reason} · {freshnessLine(summary.data!.data_status)} · 오래된 자료라 내 기준 충족 여부는
+          보여드리지 않아요
+        </ThemedText>
+      ) : null}
+    </>
   );
 }
 
@@ -413,7 +446,11 @@ function StepButton({ label, text, disabled, onPress }: { label: string; text: s
       onPress={onPress}
       style={({ pressed }) => [
         styles.step,
-        { borderColor: theme.backgroundSelected, backgroundColor: theme.backgroundElement, opacity: disabled ? 0.35 : pressed ? 0.7 : 1 },
+        {
+          borderColor: theme.backgroundSelected,
+          backgroundColor: theme.backgroundElement,
+          opacity: disabled ? 0.35 : pressed ? 0.7 : 1,
+        },
       ]}>
       <ThemedText style={styles.stepText} themeColor="tint">
         {text}
@@ -431,7 +468,10 @@ function Slot({ label, place, empty, onPress }: { label: string; place: Place | 
       onPress={onPress}
       style={({ pressed }) => [
         styles.slot,
-        { borderColor: place ? theme.border : Brand.orange, backgroundColor: theme.backgroundElement },
+        {
+          borderColor: place ? theme.border : Brand.orange,
+          backgroundColor: theme.backgroundElement,
+        },
         pressed && styles.pressed,
       ]}>
       <View style={styles.badge}>
@@ -456,17 +496,48 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   pressed: { opacity: 0.8 },
   dayRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  step: { width: 44, height: 44, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  step: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   stepText: { fontSize: 24, lineHeight: 28, fontWeight: '700' },
   slots: { flexDirection: 'row', gap: 8 },
-  slot: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 12, padding: 8 },
-  badge: { width: 22, height: 22, borderRadius: 11, backgroundColor: Brand.navy, alignItems: 'center', justifyContent: 'center' },
+  slot: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 8,
+  },
+  badge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: Brand.navy,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   badgeText: { color: Brand.onNavy },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  focusRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  actions: { flexDirection: 'row', gap: 8 },
+  between: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   pickActions: { flexDirection: 'row', gap: 8, marginTop: 4 },
-  pickBtn: { flex: 1, alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: 10, paddingVertical: 10 },
-  fitRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
-  fitLabel: { width: 18, color: Brand.navy },
+  pickBtn: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 10,
+  },
 });
