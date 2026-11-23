@@ -17,9 +17,10 @@ import { ThemedText } from '@/components/themed-text';
 import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { dayStat, speciesRanking, topSpots, weekHeadline } from '@/lib/briefing';
-import { dayLabel } from '@/lib/compare';
+import { dayLabel, timeLabel } from '@/lib/compare';
 import type { useExplore } from '@/lib/explore';
 import { placeName } from '@/lib/place';
+
 import { type SpeciesItem, speciesByIndexName } from '@/lib/species';
 
 const W = ['일', '월', '화', '수', '목', '금', '토'];
@@ -227,7 +228,8 @@ export function SpotsCard({
                 <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
                   {[
                     place?.region_name,
-                    sp.tide,
+                    // 다음 만조·간조 (같은 바다 조위관측소 예보일 때만, 오늘만) — 물 돌이 전후가 입질 시간
+                    isToday && s?.next_tide ? `${s.next_tide.type === 'high' ? '만조' : '간조'} ${timeLabel(s.next_tide.t)}` : sp.tide,
                     isToday && s?.wave_fc_max ? `파고 ${s.wave_fc_max.v}m` : null,
                     sp.picks.length > 1 ? `외 ${sp.picks.length - 1}종 ${noGood ? '보통' : '좋음'}` : null,
                   ]

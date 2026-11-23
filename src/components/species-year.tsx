@@ -14,6 +14,7 @@ import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { inPeriod, periodText, rulesForSpecies } from '@/lib/rules';
 import { yearCells } from '@/lib/seasons';
+import { CATCH_DIFFERS } from '@/lib/sea-news';
 import type { SpeciesItem } from '@/lib/species';
 
 export function SpeciesYear({
@@ -181,7 +182,6 @@ function Legend({ color, label, outline }: { color: string; label: string; outli
 }
 
 /** 어선 조업 시기가 낚시 시즌과 크게 다른 어종 (2026-11-23 통계 검토) */
-const CATCH_DIFFERS = new Set(['croaker', 'rockfish', 'black_porgy']);
 
 const styles = StyleSheet.create({
   catch: { gap: 4 },

@@ -14,9 +14,12 @@ import { BottomSheet } from '@/components/bottom-sheet';
 import { SpeciesYear } from '@/components/species-year';
 import { Card, SectionHeader, TabScreen } from '@/components/screen';
 import { CatchStrip } from '@/components/catch-strip';
+import { SeaNews } from '@/components/sea-news';
 import { SearchBar } from '@/components/search-bar';
 import { SpeciesImage } from '@/components/species';
 import { speciesByCode, type SpeciesItem } from '@/lib/species';
+import { TACKLE } from '@/lib/tackle';
+import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/themed-text';
 import type { AppIconName } from '@/constants/icons';
 import { Brand, IconSize } from '@/constants/theme';
@@ -43,6 +46,7 @@ function homeBackgroundSource(hour = new Date().getHours()) {
  * 낚시터 목록은 「추천 낚시터」 화면에서 (홈에 목록을 나열하지 않는다). 맨 아래 「최근 이용자 조황」은 글이 있을 때만.
  */
 export default function HomeScreen() {
+  const theme = useTheme();
   const range = useDateRange();
   const today = range.data?.today;
   const date = today;
@@ -173,6 +177,8 @@ export default function HomeScreen() {
       ) : null}
 
       {/* 메인의 핵심: 오늘 어종별 공식 바다낚시지수 (좋음 이상 많은 순, 옆으로 넘김). 날짜별 비교는 출조계획 탭에서 */}
+      {/* 이번 달 제철(통계청 어획 많은 달)·금어기 소식 — 매달·매주 내용이 바뀌는 한 줄 */}
+      <SeaNews today={today} region={x.near ? '내 주변' : x.region} onOpen={setFish} />
       <IndexCarousel x={x} onOpen={setFish} onAll={() => router.push('/species')} />
 
       {/* 어디로 갈까: 오늘 가장 좋은 곳 (전체 어종 기준) · 지도로 펼쳐 보기 */}
@@ -184,6 +190,14 @@ export default function HomeScreen() {
         {fish ? (
           <View style={styles.sheet}>
             <SpotsCard x={x} dates={dates} date={today} today={today} species={fish} limit={5} onOpen={() => setFish(null)} />
+            {TACKLE[fish.code] ? (
+              <View style={[styles.tackle, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+                <ThemedText type="smallBold">🎣 {TACKLE[fish.code].how}</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  미끼 {TACKLE[fish.code].bait} · 흔히 쓰는 방법(참고), 지역·시기마다 달라요
+                </ThemedText>
+              </View>
+            ) : null}
             <RulesLine species={fish} today={today} onOpenSpecies={() => setYearOpen(true)} />
             <View style={styles.sheetActions}>
               <View style={styles.flex}>
@@ -287,6 +301,7 @@ const styles = StyleSheet.create({
   },
   regionText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
   sheet: { gap: 10 },
+  tackle: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, gap: 2 },
   sheetActions: { flexDirection: 'row', gap: 8 },
   heroCopy: { paddingHorizontal: 4, paddingTop: 8, gap: 4 },
   heroTitle: { color: '#FFFFFF', fontSize: 25, lineHeight: 32, fontWeight: '800' },
