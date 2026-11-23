@@ -141,7 +141,7 @@ export function PortCard({
             {seaParts.join(' · ') || '오늘 예보 자료 없음'}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-            {sea.place.name} {Math.round(sea.km)}km 기준 · 먼바다는 다를 수 있어요
+            {sea.km < 1 ? `이 항구(${sea.place.name}) 예보 기준` : `가까운 ${sea.place.name} ${Math.round(sea.km)}km 기준`} · 먼바다는 다를 수 있어요
           </ThemedText>
         </View>
       ) : null}
