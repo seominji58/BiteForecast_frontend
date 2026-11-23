@@ -1,14 +1,16 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Image, Keyboard, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useCatchSeasons, useCatchSummary, useDateRange, useFishingRules } from '@/api/queries';
 import type { Place } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { HomeActions, SeaLine } from '@/components/home-explore';
 import { OptionSheet } from '@/components/option-sheet';
+import { HomeBriefing } from '@/components/home-briefing';
 import { RulesLine } from '@/components/rules-line';
+import { speciesRanking } from '@/lib/briefing';
 import { BottomSheet } from '@/components/bottom-sheet';
 import { SpeciesYear } from '@/components/species-year';
 import { railBadge } from '@/lib/seasons';
@@ -71,10 +73,17 @@ export default function HomeScreen() {
         : null,
     [x.places.data, x.summary.isSuccess, x.near, x.gps.coords, x.allSpecies, x.day, catches.data, x.inScope],
   );
-  const railSpecies = useMemo(
-    () => sortByCount(x.allSpecies.filter((s) => SPECIES_IMAGES[s.code]), speciesCounts),
-    [x.allSpecies, speciesCounts],
-  );
+  // 2026-11-23 브리핑: 고른 날짜의 공식 지수 「좋음 이상」 지점 수로 먼저 줄 세운다 (공식 등급 정렬은 사용자 승인).
+  // 지수가 없는 어종은 그 뒤에 예전 순서(자료가 연결된 낚시터 수)대로
+  const ranking = useMemo(() => {
+    const inScopeId = (id: number) => !!x.byId.get(id) && x.inScope(x.byId.get(id)!);
+    return new Map(speciesRanking(x.day, inScopeId).map((r) => [r.species, r]));
+  }, [x.day, x.byId, x.inScope]); // eslint-disable-line react-hooks/exhaustive-deps
+  const railSpecies = useMemo(() => {
+    const base = sortByCount(x.allSpecies.filter((s) => SPECIES_IMAGES[s.code]), speciesCounts);
+    const good = (s: (typeof base)[number]) => (s.indexName ? (ranking.get(s.indexName)?.good ?? 0) : -1);
+    return base.map((s, i) => ({ s, i })).sort((a, b) => good(b.s) - good(a.s) || a.i - b.i).map((v) => v.s);
+  }, [x.allSpecies, speciesCounts, ranking]);
   // 어종 카드 배지: 지금 금어기 > 이번 달 산란기 (법령·수산과학원·논문 근거)
   // 고른 지역이 바다(서해·남해·동해·제주)면 그 바다 기준으로 「어획 많은 달」
   const homeSea = (SEA_GROUPS as readonly string[]).includes(x.region) ? x.region : null;
@@ -84,15 +93,22 @@ export default function HomeScreen() {
   const railBadges = useMemo(() => {
     const t = range.data?.today;
     if (!t) return undefined;
-    return Object.fromEntries(railSpecies.map((s) => [s.code, railBadge(s.code, t, rulesQ.data, catchQ.data, homeSea)]));
-  }, [railSpecies, range.data?.today, rulesQ.data, catchQ.data, homeSea]);
+    return Object.fromEntries(
+      railSpecies.map((s) => {
+        const b = railBadge(s.code, t, rulesQ.data, catchQ.data, homeSea);
+        // 금어기가 아니면 공식 지수 「좋음 이상 N곳」이 먼저 (그날 기준)
+        const g = s.indexName ? ranking.get(s.indexName) : undefined;
+        if (b?.tone !== 'danger' && g && g.good > 0) return [s.code, { label: `좋음 ${g.good}곳`, tone: 'success' as const }];
+        return [s.code, b];
+      }),
+    );
+  }, [railSpecies, range.data?.today, rulesQ.data, catchQ.data, homeSea, ranking]);
   const results = query.trim() ? (x.places.data ?? []).filter((p) => matches(p, query)).slice(0, 5) : [];
   const speciesHits = query.trim()
     ? x.allSpecies.filter((s) => s.name.includes(query.trim()) || (s.alias ?? '').includes(query.trim())).slice(0, 3)
     : [];
 
   const dates = range.data ? dayList(range.data.today, range.data.max) : [];
-  const shortDay = (d: string) => (d === today ? '오늘' : dates[1] === d ? '내일' : dayLabel(d).replace(' ', ''));
   const dateText = date ? dayLabel(date) : '';
   const beyond = (d: string) => !!x.lastForecastDay && d > x.lastForecastDay;
 
@@ -167,22 +183,6 @@ export default function HomeScreen() {
             onPress={() => router.push({ pathname: '/explore', params: { near: '1' } })}
           />
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateRow}>
-          {dates.map((d) => {
-            const on = d === date;
-            return (
-              <Pressable
-                key={d}
-                accessibilityRole="button"
-                accessibilityState={{ selected: on }}
-                accessibilityLabel={`${dayLabel(d)}${beyond(d) ? ', 해역 예보만' : ''}`}
-                onPress={() => setDate(d)}
-                style={({ pressed }) => [styles.datePill, on && styles.datePillOn, pressed && styles.pressed]}>
-                <Text style={[styles.dateText, !on && beyond(d) && styles.dateTextPending, on && styles.dateTextOn]}>{shortDay(d)}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
       </View>
 
       {query.trim() ? (
@@ -234,6 +234,9 @@ export default function HomeScreen() {
       />
 
       {/* 어종 */}
+      {/* 이번 주 언제 갈까 · 그날 가장 좋은 곳 (공식 지수 등급 기준) */}
+      <HomeBriefing x={x} dates={dates} date={date} today={today} onDate={setDate} />
+
       <SectionHeader title="어떤 어종을 잡으러 가세요?" actionLabel="전체 어종 보기" onAction={() => router.push('/species')} />
       <SpeciesRail items={railSpecies} selected={x.speciesCode} onSelect={x.setSpeciesCode} badges={railBadges} />
       {/* 금어기·금지체장 한 줄. 어종을 골랐으면 누를 때 그 어종 시트(1년 달력·근거), 아니면 금어기 화면 */}
