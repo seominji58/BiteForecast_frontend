@@ -9,6 +9,7 @@ import { useDateRange, useDeleteTrip, useFavorites, useTrip, useTripMutation, us
 import type { ChecklistItem, StopOutlook, Trip, TripStop } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { CoordNote } from '@/components/coord-note';
+import { StopSea } from '@/components/stop-sea';
 import { OptionSheet } from '@/components/option-sheet';
 import { PickerField } from '@/components/date-time-field';
 import { Button, Chip, Field, TextField } from '@/components/form';
@@ -632,8 +633,6 @@ function StopCard({
   onToggleRole: () => void;
   onDelete: () => void;
 }) {
-  const theme = useTheme();
-  const line = outlookLine(o, criteria, lastDay);
   const time = timeRange(stop);
   const canRecord = stop.day <= today;
   return (
@@ -662,21 +661,7 @@ function StopCard({
         </Pressable>
       </View>
       <CoordNote place={stop.place} compact />
-      <View style={[styles.stopSea, { backgroundColor: theme.background }]}>
-        <ThemedText type="small" themeColor={line.tone}>
-          {line.text}
-        </ThemedText>
-        {line.fit ? (
-          <ThemedText type="smallBold" themeColor={line.fit.color}>
-            {line.fit.label}
-          </ThemedText>
-        ) : null}
-        {line.tide ? (
-          <ThemedText type="small" themeColor="textSecondary">
-            {line.tide}
-          </ThemedText>
-        ) : null}
-      </View>
+      <StopSea o={o} criteria={criteria} lastDay={lastDay} />
       {stop.memo ? <ThemedText type="small">{stop.memo}</ThemedText> : null}
       <View style={styles.stopActions}>
         {canEdit ? (
@@ -1054,7 +1039,6 @@ const styles = StyleSheet.create({
   stopThumb: { width: 48, height: 48, borderRadius: 10 },
   link: { minHeight: 32, justifyContent: 'center', paddingHorizontal: 4 },
   sea: { gap: 10 },
-  stopSea: { borderRadius: 8, padding: 8, gap: 2 },
   stopActions: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
   sheet: { flex: 1, padding: 20, gap: 14 },
   check: { gap: 2 },
