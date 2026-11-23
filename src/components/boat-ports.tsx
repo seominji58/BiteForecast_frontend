@@ -19,7 +19,8 @@ import { ThemedText } from '@/components/themed-text';
 import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-export const PORT_MAX_DELTA = 3;
+// 전국 화면에서도 묶음 핀으로 보인다 (예전 3도 제한은 「배낚시 항구」로 열면 빈 지도였다)
+export const PORT_MAX_DELTA = 12;
 const MAX_MARKERS = 200;
 
 export type PortCluster = { key: string; ports: BoatPort[] };

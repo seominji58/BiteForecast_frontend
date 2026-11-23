@@ -189,7 +189,7 @@ export default function ExploreScreen() {
   const [portId, setPortId] = useState<number | null>(params.port ? Number(params.port) : null);
   const ports = useBoatPorts(portOn);
   const port = portOn && portId != null ? (ports.data?.ports.find((p) => p.id === portId) ?? null) : null;
-  const portGroups = portOn ? portClusters(ports.data?.ports, view, portId) : [];
+  const portGroups = portOn ? portClusters(ports.data?.ports, view ?? KOREA, portId) : [];
 
   const locate = async () => {
     setGps({ loading: true, coords: null, error: null });
