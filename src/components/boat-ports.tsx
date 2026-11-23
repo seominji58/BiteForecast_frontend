@@ -1,6 +1,7 @@
 /**
  * 배낚시: 낚시어선 출항항 (2026-11-23).
- * - 지도 「출항항」 켜기 → 항구 핀(척수). 확대했을 때(위도 폭 3° 이하) 화면 안 것만, 최대 200개
+ * - 지도 「출항항」 켜기 → 닻 핀(아래 척수). 위도 폭 3° 이하일 때 화면 안 것만, 최대 200개.
+ *   넓게 볼 때는 10척 이상, 중간은 3척 이상, 가까이 보면 전부
  * - 항구 카드: 척수·최대 승객·배 이름 일부 · 그 앞바다(가장 가까운 낚시터 요약) 특보·파고·풍속 ·
  *   [선상낚시 업체](카카오, 전화) [길안내] [카카오맵]
  * - 신고정보에는 연락처·출항 시간이 없어 업체에 직접 확인하라고 늘 적는다. 예약·결제는 하지 않는다
@@ -27,8 +28,11 @@ export function portMarkers(ports: BoatPort[] | undefined, view: MapRegion | nul
   const lat1 = view.latitude + view.latitudeDelta / 2;
   const lon0 = view.longitude - view.longitudeDelta / 2;
   const lon1 = view.longitude + view.longitudeDelta / 2;
+  // 넓게 볼 때는 큰 항구만 (겹쳐서 지도를 덮지 않게). 확대할수록 작은 항구까지. 고른 항구는 늘 표시
+  const min = view.latitudeDelta > 0.6 ? 10 : view.latitudeDelta > 0.25 ? 3 : 1;
   return ports
     .filter((p) => p.lat >= lat0 && p.lat <= lat1 && p.lon >= lon0 && p.lon <= lon1)
+    .filter((p) => p.boats >= min || p.id === selectedId)
     .slice(0, MAX_MARKERS)
     .map((p) => ({
       id: `h${p.id}`,

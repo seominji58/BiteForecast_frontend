@@ -191,10 +191,12 @@ export const KakaoMap = forwardRef<AppMapHandle, AppMapProps>(function KakaoMap(
         levels: [{ level: 0, image: asset(ME, 30), anchor: { x: 0.5, y: 0.5 } }],
       },
       // 출항항: 닻 핀 + 아래 「93척」
-      ...([
-        ['port', PORT],
-        ['port-selected', PORT_SEL],
-      ] as const).map(([id, src]) => ({
+      ...(
+        [
+          ['port', PORT],
+          ['port-selected', PORT_SEL],
+        ] as const
+      ).map(([id, src]) => ({
         id,
         levels: [
           {
@@ -210,9 +212,16 @@ export const KakaoMap = forwardRef<AppMapHandle, AppMapProps>(function KakaoMap(
     const catchBadge = { id: 'catch', image: asset(BADGE_CATCH, 14), offset: { x: 0.9, y: 0.1 }, zOrder: 1 };
     const warnBadge = { id: 'warn', image: asset(BADGE_WARN, 16), offset: { x: 0.1, y: 0.1 }, zOrder: 2 };
     const labels: import('@react-native-kakao/map').MapLabel[] = markers.map((m) => {
-      const pin = m.kind === 'port' ? (m.selected ? 'port-selected' : 'port') : m.fish && PIN[m.fish] ? `pin-${m.fish}-${m.ring ?? 'normal'}` : null;
+      const pin =
+        m.kind === 'port' ? (m.selected ? 'port-selected' : 'port') : m.fish && PIN[m.fish] ? `pin-${m.fish}-${m.ring ?? 'normal'}` : null;
       const styleId = pin ?? (m.count && m.count > 1 ? `group-${m.tone}` : m.fish && FISH[m.fish] ? `fish-${m.fish}` : `dot-${m.tone}`);
-      const text = pin ? (m.caption ? [{ value: m.caption }] : undefined) : m.count && m.count > 1 ? [{ value: String(m.count) }] : undefined;
+      const text = pin
+        ? m.caption
+          ? [{ value: m.caption }]
+          : undefined
+        : m.count && m.count > 1
+          ? [{ value: String(m.count) }]
+          : undefined;
       return {
         id: m.id,
         layerId: LAYER,
@@ -220,7 +229,18 @@ export const KakaoMap = forwardRef<AppMapHandle, AppMapProps>(function KakaoMap(
         coordinate: { latitude: m.lat, longitude: m.lon },
         text,
         // 고른 곳 → 특보 → 좋음 → 조황 순으로 위에
-        rank: m.selected || m.tone === 'selected' ? 1000 : m.warn || m.tone === 'danger' ? 100 : m.ring === 'good' ? 80 : m.fish ? 60 : m.tone === 'catch' ? 50 : 1,
+        rank:
+          m.selected || m.tone === 'selected'
+            ? 1000
+            : m.warn || m.tone === 'danger'
+              ? 100
+              : m.ring === 'good'
+                ? 80
+                : m.fish
+                  ? 60
+                  : m.tone === 'catch'
+                    ? 50
+                    : 1,
         clickable: true,
         // 고른 핀은 색을 바꾸지 않고 크게
         scale: m.selected ? { x: 1.3, y: 1.3 } : undefined,
