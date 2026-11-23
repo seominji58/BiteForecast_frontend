@@ -21,12 +21,18 @@ export function RulesLine({ species, today }: { species: SpeciesItem | null; tod
   if (species) {
     const { bans, sizes } = rulesForSpecies(r, species.code);
     if (!bans.length && !sizes.length) return null; // 시행령 대상이 아닌 어종은 조용히
-    const fixed = bans.filter((b) => !b.notice);
-    const nowBan = fixed.find((b) => b.periods.some((p) => inPeriod(p, today)));
+    const year = Number(today.slice(0, 4));
+    // 고시 어종은 그해 고시된 기간만 (inPeriod 가 year 를 본다)
+    const nowBan = bans.find((b) => b.periods.some((p) => inPeriod(p, today)));
     const nowPeriods = nowBan?.periods.filter((p) => inPeriod(p, today)) ?? [];
     const parts = [
       sizes.length ? `${sizes.map((s) => s.limit).join('·')}는 놓아주세요` : null,
-      bans.length ? `금어기 ${bans.map((b) => (b.notice ? '고시 확인' : b.periods.map(periodText).join('·'))).join(' / ')}` : null,
+      bans.length ? `금어기 ${bans
+            .map((b) => {
+              const ps = b.notice ? b.periods.filter((p) => p.year === year) : b.periods;
+              return ps.length ? ps.map(periodText).join('·') : '고시 확인';
+            })
+            .join(' / ')}` : null,
     ].filter(Boolean);
     return (
       <Pressable accessibilityRole="button" onPress={() => open(bans[0]?.name ?? sizes[0]?.name)} style={styles.line}>

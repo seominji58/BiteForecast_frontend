@@ -69,6 +69,17 @@ export default function RulesScreen() {
         </ThemedText>
       </Card>
 
+      {r.female?.length ? (
+        <>
+          <SectionHeader title="연중 금지 · 암컷" />
+          <Card style={styles.card}>
+            {r.female.map((f) => (
+              <Row key={f.name} title={f.name} sub={f.rule} tone="danger" style={hl(f.name)} />
+            ))}
+          </Card>
+        </>
+      ) : null}
+
       <SectionHeader title="전체 금어기" />
       {GROUPS.map((g) => {
         const list = r.ban.filter((b) => b.group === g && !b.notice);
@@ -98,6 +109,12 @@ export default function RulesScreen() {
           </Card>
         ) : null;
       })}
+
+      {r.exemption_note ? (
+        <ThemedText type="small" themeColor="textSecondary">
+          {r.exemption_note}
+        </ThemedText>
+      ) : null}
 
       <SectionHeader title="재는 법" />
       <Card style={styles.card}>

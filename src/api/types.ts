@@ -728,7 +728,7 @@ export type FishingRules = {
     group: string;
     sci: string;
     /** "MM-DD" 시작·끝(끝 포함). region 이 있으면 그 지역에만 */
-    periods: { from: string; to: string; region: string | null }[];
+    periods: { from: string; to: string; region: string | null; /** 그해에만 (해마다 고시) */ year?: number | null }[];
     /** 해수부·시도 고시로 실제 기간이 정해짐 */
     notice: boolean;
     note: string | null;
@@ -736,6 +736,9 @@ export type FishingRules = {
   size: { name: string; group: string; limit: string; measure: string; measure_desc: string; note: string | null }[];
   /** 앱 어종 코드 → 법령 이름 */
   app_species: Record<string, string[]>;
+  /** 시행령 제6조 ③항 연중 포획금지 암컷 */
+  female?: { name: string; rule: string }[];
+  exemption_note?: string | null;
 };
 
 /** 주변 편의시설 (카카오 로컬, 반경 2km 가까운 순 3곳씩, 2026-11-20) */

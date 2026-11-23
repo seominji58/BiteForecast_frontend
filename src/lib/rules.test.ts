@@ -46,6 +46,17 @@ test('다가오는 금어기: 30일 안에 시작, 가까운 순', () => {
   assert.deepEqual(up.map((u) => [u.rule.name, u.inDays]), [['문치가자미', 8]]);
 });
 
+test('고시 어종: 그해 고시된 기간만 금어기', () => {
+  const r: FishingRules = {
+    ...rules,
+    ban: [{ name: '고등어', group: '어류', sci: '', periods: [{ from: '05-01', to: '05-31', region: null, year: 2026 }], notice: true, note: null }],
+  };
+  assert.equal(activeBans(r, '2026-05-10').length, 1);
+  assert.equal(activeBans(r, '2027-05-10').length, 0); // 2027년은 고시 전 → 단정하지 않음
+  assert.deepEqual(upcomingBans(r, '2026-04-20', 30).map((u) => u.inDays), [11]);
+  assert.equal(periodText(r.ban[0].periods[0]), '2026년 5.1~5.31');
+});
+
 test('앱 어종 → 규정', () => {
   const r = rulesForSpecies(rules, 'black_porgy');
   assert.equal(r.bans[0].name, '감성돔');
