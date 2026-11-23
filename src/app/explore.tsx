@@ -301,6 +301,17 @@ export default function ExploreScreen() {
         .join(',')
     : '';
   const [mapReady, setMapReady] = useState(false);
+  // 링크(?port=)로 열면 그 항구로 지도를 옮긴다 (항구 핀이 보이는 확대로, 한 번만)
+  const portFocused = useRef(false);
+  useEffect(() => {
+    if (!params.port || portFocused.current || !mapReady || !port) return;
+    portFocused.current = true;
+    const go = () => mapRef.current?.moveTo({ latitude: port.lat, longitude: port.lon, latitudeDelta: 0.3, longitudeDelta: 0.3 }, 300);
+    go();
+    // 지역 맞추기(fitTo)가 뒤따라 실행되거나 막 연 지도가 이동을 무시할 때가 있어 한 번 더
+    const t = setTimeout(go, 700);
+    return () => clearTimeout(t);
+  }, [params.port, mapReady, port]);
   useEffect(() => {
     if (!fitKey || !mapReady) return;
     const pts = rows
@@ -312,7 +323,8 @@ export default function ExploreScreen() {
   }, [fitKey, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!mapReady || region === 'all' || origin) return;
+    // 항구 링크로 열었으면 지역 전체로 맞추지 않는다 (항구 위치를 덮지 않게)
+    if (!mapReady || region === 'all' || origin || params.port) return;
     const pts = (places.data ?? []).filter((p) => inRegion(p) && usableForLocation(p)).map((p) => ({ lat: p.lat!, lon: p.lon! }));
     if (pts.length) mapRef.current?.fitTo(pts);
   }, [region, mapReady, seaOf]); // eslint-disable-line react-hooks/exhaustive-deps
