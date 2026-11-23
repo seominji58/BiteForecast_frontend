@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Image, Keyboard, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { useCatchSummary, useDateRange, useFishingRules } from '@/api/queries';
+import { useCatchSeasons, useCatchSummary, useDateRange, useFishingRules } from '@/api/queries';
 import type { Place } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { HomeActions, SeaLine } from '@/components/home-explore';
@@ -76,13 +76,16 @@ export default function HomeScreen() {
     [x.allSpecies, speciesCounts],
   );
   // 어종 카드 배지: 지금 금어기 > 이번 달 산란기 (법령·수산과학원·논문 근거)
+  // 고른 지역이 바다(서해·남해·동해·제주)면 그 바다 기준으로 「어획 많은 달」
+  const homeSea = (SEA_GROUPS as readonly string[]).includes(x.region) ? x.region : null;
   const rulesQ = useFishingRules();
+  const catchQ = useCatchSeasons();
   const [yearOpen, setYearOpen] = useState(false);
   const railBadges = useMemo(() => {
     const t = range.data?.today;
     if (!t) return undefined;
-    return Object.fromEntries(railSpecies.map((s) => [s.code, railBadge(s.code, t, rulesQ.data)]));
-  }, [railSpecies, range.data?.today, rulesQ.data]);
+    return Object.fromEntries(railSpecies.map((s) => [s.code, railBadge(s.code, t, rulesQ.data, catchQ.data, homeSea)]));
+  }, [railSpecies, range.data?.today, rulesQ.data, catchQ.data, homeSea]);
   const results = query.trim() ? (x.places.data ?? []).filter((p) => matches(p, query)).slice(0, 5) : [];
   const speciesHits = query.trim()
     ? x.allSpecies.filter((s) => s.name.includes(query.trim()) || (s.alias ?? '').includes(query.trim())).slice(0, 3)

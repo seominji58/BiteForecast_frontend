@@ -43,6 +43,14 @@ export const SPECIES: SpeciesItem[] = [
   // 2026-11-16: 낚시터 공공데이터에 많이 나오는 어종 (도다리 37곳·점성어 8곳), 기준표 0006
   { code: 'marbled_flounder', name: '도다리', alias: '문치가자미', indexName: null, speciesCode: 'marbled_flounder' },
   { code: 'red_drum', name: '점성어', indexName: null, speciesCode: 'red_drum' },
+  // 2026-11-23: 통계청 어업생산동향조사로 「어획 많은 달」을 계산한 바다낚시 어종 (기준표 0009). 그림 없으면 기본 아이콘
+  { code: 'spanish_mackerel', name: '삼치', indexName: null, speciesCode: 'spanish_mackerel' },
+  { code: 'yellowtail', name: '방어', indexName: null, speciesCode: 'yellowtail' },
+  { code: 'filefish', name: '쥐치', indexName: null, speciesCode: 'filefish' },
+  { code: 'mitre_squid', name: '한치', indexName: null, speciesCode: 'mitre_squid' },
+  { code: 'gizzard_shad', name: '전어', indexName: null, speciesCode: 'gizzard_shad' },
+  { code: 'flounder', name: '가자미', indexName: null, speciesCode: 'flounder' },
+  { code: 'croaker', name: '민어', indexName: null, speciesCode: 'croaker' },
 ];
 
 const BY_CODE = new Map(SPECIES.map((s) => [s.code, s]));

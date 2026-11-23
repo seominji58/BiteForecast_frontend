@@ -717,6 +717,14 @@ export type NearbyShops = {
   skipped: string | null;
 };
 
+/** 어종별 바다별 「어획 많은 달」 (통계청 어업생산동향조사, 연근해어업 월평균). 낚시 조과가 아니다 */
+export type CatchSeasons = {
+  source: string;
+  period: string;
+  notice: string;
+  species: Record<string, { name: string; seas: Record<string, { share: Record<string, number>; peak: number[]; tons_per_year: number }> }>;
+};
+
 /** 낚시어선 출항항 (해양수산부 낚시 어선업 신고정보, 2026-11-23). 연락처·출항 시간은 자료에 없다 */
 export type BoatPort = {
   id: number;

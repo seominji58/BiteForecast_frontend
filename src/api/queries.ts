@@ -233,6 +233,10 @@ export const useNearbyShops = (placeId: number | null, rockId: number | null = n
     staleTime: 30 * 60_000,
   });
 
+/** 어획 많은 달 (통계, 잘 바뀌지 않음) */
+export const useCatchSeasons = () =>
+  useQuery({ queryKey: ['catch-seasons'], queryFn: api.catchSeasons, staleTime: 24 * 3600_000, gcTime: 24 * 3600_000 });
+
 /** 낚시어선 출항항 (지도 켜기·선상 지점의 가까운 항구) */
 export const useBoatPorts = (enabled = true) =>
   useQuery({ queryKey: ['boat-ports'], queryFn: api.boatPorts, enabled, staleTime: 6 * 3600_000, gcTime: 24 * 3600_000 });

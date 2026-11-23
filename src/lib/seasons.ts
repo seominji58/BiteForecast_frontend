@@ -4,7 +4,7 @@
  * - 금어기는 시행령·고시 기간 중 「그 달에 하루라도 걸치면」 칠한다. 지역 한정 기간도 넓게 알리는 쪽으로 포함
  * - 고시 어종(연도별 기간)은 그해 것만
  */
-import type { FishingRules, SpeciesSeasons } from '@/api/types';
+import type { CatchSeasons, FishingRules, SpeciesSeasons } from '@/api/types';
 
 import { inPeriod, rulesForSpecies } from './rules.ts';
 
@@ -35,11 +35,25 @@ export function yearCells(code: string, year: number, seasons?: SpeciesSeasons, 
 export type RailBadge = { label: string; tone: 'danger' | 'success' };
 
 /**
- * 홈 어종 카드 배지: 지금 금어기일 때만 (2026-11-23 변경).
- * 산란기는 「잘 잡히는 시기」로 오해되기 쉬워 카드에 달지 않는다 (어종 시트의 1년 달력에서만)
+ * 홈 어종 카드 배지: 지금 금어기 > 이번 달 어획 많은 달 (2026-11-23).
+ * 산란기는 「잘 잡히는 시기」로 오해되기 쉬워 카드에 달지 않는다.
+ * 어획 많은 달은 통계청 어업생산동향조사(어선 어획) — 고른 바다(sea)가 있으면 그 바다만, 없으면 어느 바다든
  */
-export function railBadge(code: string, today: string, rules?: FishingRules): RailBadge | null {
-  if (!rules) return null;
-  const { bans } = rulesForSpecies(rules, code);
-  return bans.some((b) => b.periods.some((p) => inPeriod(p, today))) ? { label: '금어기', tone: 'danger' } : null;
+export function railBadge(code: string, today: string, rules?: FishingRules, catches?: CatchSeasons, sea?: string | null): RailBadge | null {
+  if (rules) {
+    const { bans } = rulesForSpecies(rules, code);
+    if (bans.some((b) => b.periods.some((p) => inPeriod(p, today)))) return { label: '금어기', tone: 'danger' };
+  }
+  const m = Number(today.slice(5, 7));
+  if (catchPeakSeas(catches, code, m, sea).length) return { label: '어획 많은 달', tone: 'success' };
+  return null;
+}
+
+/** 그 달이 「어획 많은 달」인 바다 목록 */
+export function catchPeakSeas(catches: CatchSeasons | undefined, code: string, month: number, sea?: string | null): string[] {
+  const s = catches?.species[code];
+  if (!s) return [];
+  return Object.entries(s.seas)
+    .filter(([name, v]) => (!sea || name === sea) && v.peak.includes(month))
+    .map(([name]) => name);
 }

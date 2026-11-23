@@ -8,7 +8,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { useFishingRules, useSpeciesSeasons } from '@/api/queries';
+import { useCatchSeasons, useFishingRules, useSpeciesSeasons } from '@/api/queries';
 import { ThemedText } from '@/components/themed-text';
 import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -29,6 +29,8 @@ export function SpeciesYear({
   const theme = useTheme();
   const seasons = useSpeciesSeasons().data;
   const rules = useFishingRules().data;
+  const catches = useCatchSeasons().data;
+  const catchS = catches?.species[species.code];
   const [open, setOpen] = useState(false);
   if (!today || (!seasons && !rules)) return null;
   const year = Number(today.slice(0, 4));
@@ -72,6 +74,44 @@ export function SpeciesYear({
           ● 이번 달
         </ThemedText>
       </View>
+
+      {/* 어획 많은 달 (통계청 어업생산동향조사 · 어선 어획): 바다별 월 막대 */}
+      {catchS && Object.keys(catchS.seas).length ? (
+        <View style={styles.catch}>
+          <ThemedText type="smallBold">어획 많은 달 · 바다별</ThemedText>
+          {Object.entries(catchS.seas).map(([sea, v]) => {
+            const max = Math.max(...Object.values(v.share), 1);
+            return (
+              <View key={sea} style={styles.catchRow}>
+                <ThemedText type="small" style={styles.catchSea}>
+                  {sea}
+                </ThemedText>
+                <View style={styles.bars}>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
+                    const h = Math.max(2, Math.round((22 * (v.share[String(m)] ?? 0)) / max));
+                    const peak = v.peak.includes(m);
+                    return (
+                      <View key={m} style={styles.barCell}>
+                        <View
+                          style={[
+                            styles.bar,
+                            { height: h, backgroundColor: peak ? Brand.teal : theme.border },
+                            m === month && { borderWidth: 1.5, borderColor: Brand.orange },
+                          ]}
+                        />
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            );
+          })}
+          <ThemedText type="small" themeColor="textSecondary">
+            진한 막대가 어획 많은 달 · {catches?.period} · 통계청 어업생산동향조사(어선 어획)
+            {CATCH_DIFFERS.has(species.code) ? ' · 어선 조업 시기라 낚시 시즌과 달라요' : ''}
+          </ThemedText>
+        </View>
+      ) : null}
 
       {sizes.length ? (
         <ThemedText type="small">
@@ -140,7 +180,16 @@ function Legend({ color, label, outline }: { color: string; label: string; outli
   );
 }
 
+/** 어선 조업 시기가 낚시 시즌과 크게 다른 어종 (2026-11-23 통계 검토) */
+const CATCH_DIFFERS = new Set(['croaker', 'rockfish', 'black_porgy']);
+
 const styles = StyleSheet.create({
+  catch: { gap: 4 },
+  catchRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 6 },
+  catchSea: { width: 30 },
+  bars: { flex: 1, flexDirection: 'row', gap: 3, alignItems: 'flex-end', height: 24 },
+  barCell: { flex: 1, justifyContent: 'flex-end', height: 24 },
+  bar: { borderRadius: 2 },
   box: { borderWidth: 1, borderRadius: 12, padding: 12, gap: 8 },
   row: { flexDirection: 'row', gap: 3 },
   cellWrap: { flex: 1, alignItems: 'center', gap: 2 },
