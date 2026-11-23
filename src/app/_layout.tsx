@@ -1,7 +1,7 @@
 import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { AppState, Platform, useColorScheme } from 'react-native';
+import { AppState, Platform, Pressable, Text, useColorScheme } from 'react-native';
 
 import { ApiError } from '@/api';
 import { Brand } from '@/constants/theme';
@@ -34,12 +34,14 @@ export default function RootLayout() {
       <AuthProvider>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <Stack
-          screenOptions={{
+          screenOptions={({ navigation }) => ({
             headerBackButtonDisplayMode: 'minimal',
             headerStyle: { backgroundColor: Brand.navy },
             headerTintColor: Brand.onNavy,
             headerTitleStyle: { fontWeight: '700' },
-          }}>
+            // 링크·알림으로 바로 열려 돌아갈 화면이 없으면 기본 ‹ 가 사라진다 → 홈으로 가는 버튼 (2026-11-23)
+            headerLeft: navigation.canGoBack() ? undefined : () => <HomeBack />,
+          })}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="journal/new" options={{ title: '낚시일지 작성' }} />
           <Stack.Screen name="journal/[id]" options={{ title: '낚시일지' }} />
@@ -69,5 +71,19 @@ export default function RootLayout() {
       </ThemeProvider>
       </AuthProvider>
     </QueryClientProvider>
+  );
+}
+
+/** 돌아갈 화면이 없을 때 왼쪽 위: 홈으로 */
+function HomeBack() {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="홈으로"
+      hitSlop={10}
+      onPress={() => router.replace('/')}
+      style={{ paddingHorizontal: 6, paddingVertical: 4 }}>
+      <Text style={{ color: Brand.onNavy, fontSize: 15, fontWeight: '700' }}>‹ 홈</Text>
+    </Pressable>
   );
 }
