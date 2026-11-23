@@ -20,6 +20,7 @@ import { useNavPicker } from '@/components/nav-picker';
 import { ThemedText } from '@/components/themed-text';
 import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { AppIcon } from '@/components/app-icon';
 
 // 전국 화면에서도 묶음 핀으로 보인다 (예전 3도 제한은 「배낚시 항구」로 열면 빈 지도였다)
 export const PORT_MAX_DELTA = 12;
@@ -125,7 +126,8 @@ export function PortToggle({ on, onPress, zoomHint }: { on: boolean; onPress: ()
           { backgroundColor: on ? Brand.teal : theme.background, borderColor: on ? Brand.teal : theme.border },
           pressed && styles.pressed,
         ]}>
-        <Text style={[styles.toggleText, { color: on ? '#FFFFFF' : theme.text }]}>⚓ 출항항</Text>
+        <AppIcon name="anchor" size={18} tint={on ? '#FFFFFF' : undefined} />
+        <Text style={[styles.toggleText, { color: on ? '#FFFFFF' : theme.text }]}>출항항</Text>
       </Pressable>
     </View>
   );

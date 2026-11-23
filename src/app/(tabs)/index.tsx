@@ -118,7 +118,8 @@ export default function HomeScreen() {
           onPress={() => setSheet('region')}
           style={({ pressed }) => [styles.regionPill, pressed && styles.pressed]}>
           <AppIcon name="find-gps" size={16} />
-          <Text style={styles.regionText}>{x.near ? (x.nearArea ? `내 주변 · ${x.nearArea.area}` : '내 주변') : x.region} ▾</Text>
+          <Text style={styles.regionText}>{x.near ? (x.nearArea ? `내 주변 · ${x.nearArea.area}` : '내 주변') : x.region}</Text>
+          <AppIcon name="arrow-down" size={12} tint="#FFFFFF" />
         </Pressable>
         <View style={styles.heroCopy}>
           <Text style={styles.heroTitle}>오늘은 어떤 낚시를 떠나세요?</Text>
@@ -205,7 +206,12 @@ export default function HomeScreen() {
             )}
             {TACKLE[fish.code] ? (
               <View style={[styles.tackle, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
-                <ThemedText type="smallBold">🎣 {TACKLE[fish.code].how}</ThemedText>
+                <View style={styles.tackleHead}>
+                  <AppIcon name="rod" size={20} />
+                  <ThemedText type="smallBold" style={styles.flex}>
+                    {TACKLE[fish.code].how}
+                  </ThemedText>
+                </View>
                 <ThemedText type="small" themeColor="textSecondary">
                   미끼 {TACKLE[fish.code].bait} · 흔히 쓰는 방법(참고), 지역·시기마다 달라요
                 </ThemedText>
@@ -316,6 +322,7 @@ const styles = StyleSheet.create({
   },
   regionText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
   sheet: { gap: 10 },
+  tackleHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   tackle: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, gap: 2 },
   sheetActions: { flexDirection: 'row', gap: 8 },
   heroCopy: { paddingHorizontal: 4, paddingTop: 8, gap: 4 },

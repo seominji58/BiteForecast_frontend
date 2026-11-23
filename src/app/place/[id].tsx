@@ -41,6 +41,8 @@ import { nearLabel, navTarget } from '@/lib/navigate';
 import { nearby, PLACE_TYPE_LABEL, placeKindNote, placeName } from '@/lib/place';
 import { pushRecentPlace, useHomePlace } from '@/lib/prefs';
 import type { Place, PlaceCompare } from '@/api/types';
+import { AppIcon } from '@/components/app-icon';
+import type { AppIconName } from '@/constants/icons';
 
 type Sheet = 'index' | 'source' | 'around' | 'photo' | 'safety' | null;
 
@@ -246,12 +248,13 @@ function ActionRow({
   const ports = useBoatPorts();
   const port = t.kind === 'none' ? nearestPort(ports.data?.ports, place) : null;
   const share = () => Share.share({ message: [name, place.address ?? place.region_name].filter(Boolean).join('\n') }).catch(() => {});
-  const items: { icon: UiIconName; label: string; onPress: () => void; on?: boolean }[] = [
+  const items: { icon: UiIconName; app?: AppIconName; label: string; onPress: () => void; on?: boolean }[] = [
     t.kind !== 'none'
       ? { icon: 'navigate', label: t.kind === 'route' ? '길안내' : '주소 찾기', onPress: nav.open }
       : port && port.km <= 60
         ? {
             icon: 'boat',
+            app: 'anchor' as const,
             label: `출항항 ${Math.round(port.km)}km`,
             onPress: () => router.push({ pathname: '/explore', params: { port: String(port.port.id) } }),
           }
@@ -270,7 +273,7 @@ function ActionRow({
           accessibilityState={it.on != null ? { selected: it.on } : undefined}
           onPress={it.onPress}
           style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}>
-          <UiIcon name={it.icon} size={22} color={it.on ? Brand.orange : Brand.teal} />
+          {it.app ? <AppIcon name={it.app} size={22} /> : <UiIcon name={it.icon} size={22} color={it.on ? Brand.orange : Brand.teal} />}
           <ThemedText type="small" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={styles.actionText}>
             {it.label}
           </ThemedText>
@@ -382,7 +385,7 @@ function calendarSource(c: { mulddae?: string | null; lunar_source?: string | nu
   return parts.length ? `출처: ${parts.join(' · ')}` : null;
 }
 
-/** 즐겨찾기 ☆ (로그인 필요, 계정에 저장) */
+/** 즐겨찾기 별 (로그인 필요, 계정에 저장) */
 function FavoriteStar({ placeId }: { placeId: number }) {
   const { signedIn } = useAuth();
   const favs = useFavorites();
@@ -396,7 +399,7 @@ function FavoriteStar({ placeId }: { placeId: number }) {
       hitSlop={10}
       disabled={set.isPending}
       onPress={() => (signedIn ? set.mutate({ placeId, on: !on }) : router.push('/login'))}>
-      <Text style={[styles.star, { color: on ? Brand.orange : '#9AA5B1' }]}>{on ? '★' : '☆'}</Text>
+      <AppIcon name={on ? 'star-on' : 'star'} size={28} />
     </Pressable>
   );
 }

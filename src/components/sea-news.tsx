@@ -13,6 +13,7 @@ import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { banNews, inSeason } from '@/lib/sea-news';
 import { speciesByCode, type SpeciesItem } from '@/lib/species';
+import { AppIcon } from '@/components/app-icon';
 
 const SEAS = new Set(['서해', '남해', '동해', '제주']);
 
@@ -51,8 +52,8 @@ export function SeaNews({ today, region, onOpen }: { today: string | undefined; 
             </ThemedText>
             {(
               [
-                ['‹', -1, '이전 제철 어종'],
-                ['›', 1, '다음 제철 어종'],
+                ['arrow-left', -1, '이전 제철 어종'],
+                ['arrow-right', 1, '다음 제철 어종'],
               ] as const
             ).map(([t, d, label]) => {
               const off = d < 0 ? p === 0 : p >= pages - 1;
@@ -71,7 +72,7 @@ export function SeaNews({ today, region, onOpen }: { today: string | undefined; 
                     off && styles.off,
                     pressed && styles.pressed,
                   ]}>
-                  <Text style={[styles.arrowText, { color: theme.text }]}>{t}</Text>
+                  <AppIcon name={t} size={14} />
                 </Pressable>
               );
             })}

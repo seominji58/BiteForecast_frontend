@@ -24,6 +24,7 @@ import type { useExplore } from '@/lib/explore';
 import { placeName } from '@/lib/place';
 
 import { type SpeciesItem, speciesByIndexName } from '@/lib/species';
+import { AppIcon } from '@/components/app-icon';
 
 const W = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -124,7 +125,9 @@ export function WeekCard({
               accessibilityLabel={`${dayLabel(d)}${s ? `, 공식 지수 좋음 이상 ${s.good}곳` : ', 지수 없음'}`}
               onPress={() => onDate(d)}
               style={[styles.dayCol, on && { backgroundColor: theme.background, borderColor: Brand.teal }]}>
-              <Text style={[styles.best, { opacity: best ? 1 : 0 }]}>★</Text>
+              <View style={[styles.bestBox, { opacity: best ? 1 : 0 }]}>
+                <AppIcon name="star-on" size={12} />
+              </View>
               <View style={styles.barBox}>
                 <View style={[styles.bar, { height: h, backgroundColor: color }]} />
               </View>
@@ -295,7 +298,7 @@ const styles = StyleSheet.create({
   card: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 10, gap: 6 },
   week: { flexDirection: 'row', gap: 4 },
   dayCol: { flex: 1, alignItems: 'center', borderRadius: 10, borderWidth: 1.5, borderColor: 'transparent', paddingVertical: 2, gap: 1 },
-  best: { color: Brand.orange, fontSize: 12, lineHeight: 14 },
+  bestBox: { height: 14, justifyContent: 'center' },
   barBox: { height: 30, justifyContent: 'flex-end' },
   bar: { width: 20, borderRadius: 5 },
   count: { fontSize: 11, lineHeight: 14 },
@@ -374,8 +377,8 @@ export function IndexCarousel({
           </ThemedText>
           {(
             [
-              ['‹', -1, '이전 어종'],
-              ['›', 1, '다음 어종'],
+              ['arrow-left', -1, '이전 어종'],
+              ['arrow-right', 1, '다음 어종'],
             ] as const
           ).map(([t, d, label]) => {
             const off = d < 0 ? page === 0 : page >= pages - 1;
@@ -394,7 +397,7 @@ export function IndexCarousel({
                   off && styles.off,
                   pressed && styles.pressed,
                 ]}>
-                <Text style={[styles.arrowText, { color: theme.text }]}>{t}</Text>
+                <AppIcon name={t} size={14} />
               </Pressable>
             );
           })}

@@ -69,7 +69,7 @@ export function FavoritesSection() {
         <PlaceStrip places={favs.data} />
       ) : (
         <ThemedText type="small" themeColor="textSecondary">
-          낚시터 상세에서 ☆를 누르면 여기에 모여요.
+          낚시터 상세에서 별을 누르면 여기에 모여요.
         </ThemedText>
       )}
     </>

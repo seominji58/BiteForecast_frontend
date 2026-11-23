@@ -36,9 +36,12 @@ export function CoordNote({ place, compact, kakaoMoved }: { place: Place; compac
   if (compact) {
     // 카드·목록에서는 대략 위치만 알린다 (정밀 좌표는 따로 표시하지 않음)
     return c.approx ? (
-      <ThemedText type="small" themeColor="warning">
-        📍 {c.label}
-      </ThemedText>
+      <View style={styles.pinRow}>
+        <AppIcon name="map-pin" size={14} />
+        <ThemedText type="small" themeColor="warning" style={styles.flex}>
+          {c.label}
+        </ThemedText>
+      </View>
     ) : null;
   }
   // 신고 주소 좌표를 카카오맵 등록 위치로 옮긴 곳 (2026-11-19, scripts/match_kakao_places.py) — 등급은 그대로
@@ -57,12 +60,12 @@ export function CoordNote({ place, compact, kakaoMoved }: { place: Place; compac
   const detail = c.recommend_hold
     ? '등록된 주소와 좌표가 서로 다른 시·군을 가리켜요. 추가 검증 전까지 출조 후보·가까운 곳 추천에서 빼고, 좌표로 연결한 파고·풍속·물때는 판단을 보류해요. 특보는 등록 주소 기준으로만 보여드려요. 거리는 대략이에요.'
     : c.approx
-    ? '여러 낚시터가 같은 좌표를 쓰거나 좌표가 반올림돼 있어요. 지도 위치와 거리는 대략적이고, 실제 좌대·포인트 위치가 아니에요. 관측소 거리도 대략적이에요.'
-    : c.grade === 'B'
-      ? '기관이 정한 대표 지점이에요. 실제로 낚시하는 자리와는 다를 수 있어요.'
-      : c.grade === 'A'
-        ? '실제 낚시 위치를 확인한 좌표예요.'
-        : '지자체에 신고된 좌표예요. 실제 낚시 지점인지 사업장 위치인지는 아직 확인하지 않았어요.';
+      ? '여러 낚시터가 같은 좌표를 쓰거나 좌표가 반올림돼 있어요. 지도 위치와 거리는 대략적이고, 실제 좌대·포인트 위치가 아니에요. 관측소 거리도 대략적이에요.'
+      : c.grade === 'B'
+        ? '기관이 정한 대표 지점이에요. 실제로 낚시하는 자리와는 다를 수 있어요.'
+        : c.grade === 'A'
+          ? '실제 낚시 위치를 확인한 좌표예요.'
+          : '지자체에 신고된 좌표예요. 실제 낚시 지점인지 사업장 위치인지는 아직 확인하지 않았어요.';
   return (
     <View style={[styles.box, { backgroundColor: c.approx ? theme.warningSoft : theme.background }]}>
       <ThemedText type="smallBold" themeColor={c.approx ? 'warning' : 'textSecondary'}>
@@ -76,15 +79,7 @@ export function CoordNote({ place, compact, kakaoMoved }: { place: Place; compac
 }
 
 /** 같은 좌표를 쓰는 낚시터 목록 (지도에서 한 점을 눌렀을 때) */
-export function SameCoordSheet({
-  places,
-  onPick,
-  onClose,
-}: {
-  places: Place[] | null;
-  onPick: (p: Place) => void;
-  onClose: () => void;
-}) {
+export function SameCoordSheet({ places, onPick, onClose }: { places: Place[] | null; onPick: (p: Place) => void; onClose: () => void }) {
   const theme = useTheme();
   const approx = places?.some((p) => p.coord?.approx);
   const allSame = !!places && new Set(places.map((p) => `${p.lat},${p.lon}`)).size === 1;
@@ -134,6 +129,7 @@ export function SameCoordSheet({
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  pinRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   pressed: { opacity: 0.7 },
   box: { borderRadius: 8, padding: 10, gap: 2 },
   sheet: { flex: 1, padding: 20, gap: 10 },

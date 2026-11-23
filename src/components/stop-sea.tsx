@@ -43,12 +43,17 @@ export function StopSea({ o, criteria, lastDay }: { o: StopOutlook | undefined; 
           : warnLevel === 'nearby' || warnLevel === 'preliminary'
             ? { text: WARNING_SHORT[warnLevel].text, fg: 'warning' as const, bg: theme.warningSoft }
             : { text: '특보 없음', fg: 'success' as const, bg: theme.tintSoft };
-  const rain = [o.pop_fc_max ? `${o.pop_fc_max.v}%` : null, o.precipitation_types.length ? o.precipitation_types.map(ptyLabel).join('·') : null]
+  const rain = [
+    o.pop_fc_max ? `${o.pop_fc_max.v}%` : null,
+    o.precipitation_types.length ? o.precipitation_types.map(ptyLabel).join('·') : null,
+  ]
     .filter(Boolean)
     .join(' ');
   const now = new Date();
   const next = o.tides.find((t) => new Date(t.t) > now);
-  const cal = [o.mulddae ? `${o.mulddae}` : null, o.sunrise ? `일출 ${o.sunrise}` : null, o.sunset ? `일몰 ${o.sunset}` : null].filter(Boolean);
+  const cal = [o.mulddae ? `${o.mulddae}` : null, o.sunrise ? `일출 ${o.sunrise}` : null, o.sunset ? `일몰 ${o.sunset}` : null].filter(
+    Boolean,
+  );
   return (
     <View style={[styles.box, { backgroundColor: theme.background }]}>
       <View style={styles.chips}>
@@ -73,7 +78,7 @@ export function StopSea({ o, criteria, lastDay }: { o: StopOutlook | undefined; 
           label={o.wind_dir_fc ? `${o.wind_dir_fc}풍 최대` : '바람 최대'}
           value={o.wind_fc_max ? `${o.wind_fc_max.v}m/s` : '없음'}
         />
-        <Tile emoji="☔" label="강수" value={rain || '없음'} />
+        <Tile icon="rain" label="강수" value={rain || '없음'} />
       </View>
 
       {cal.length ? (
