@@ -168,7 +168,10 @@ export default function RulesScreen() {
 
 /** 그 달에 하루라도 금어기가 걸치는 어종 (고시 어종은 그해 기간만) */
 function MonthList({ rules, year, month, onPick }: { rules: FishingRules; year: number; month: number; onPick: (n: string) => void }) {
-  const list = rules.ban.map((b) => ({ b, ps: b.periods.filter((p) => monthHasBan(p, year, month)) })).filter((x) => x.ps.length);
+  // 고시 어종은 그해 고시된 기간만 (모르는 해는 아래 「고시 확인」 줄로)
+  const list = rules.ban
+    .map((b) => ({ b, ps: b.periods.filter((p) => (!b.notice || p.year === year) && monthHasBan(p, year, month)) }))
+    .filter((x) => x.ps.length);
   const unknown = rules.ban.filter((b) => b.notice && !b.periods.some((p) => p.year === year));
   return (
     <>
