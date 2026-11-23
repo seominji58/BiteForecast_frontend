@@ -4,17 +4,17 @@
  * - 줄을 누르면 카카오맵 장소 페이지(위치·영업시간), 없으면 네이버 지도 검색
  * - 없으면 「반경 2km 안에 없어요」로 쓰고 채워 넣지 않는다. 영업 여부는 방문 전에 확인하라고 적는다
  */
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useAmenities } from '@/api/queries';
 import type { Amenity } from '@/api/types';
 import { Card } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
+import { useNavPicker } from '@/components/nav-picker';
 import { UiIcon } from '@/components/ui-icon';
 import { useTheme } from '@/hooks/use-theme';
 
 const km = (m: number) => (m < 1000 ? `${m}m` : `${Number((m / 1000).toFixed(1))}km`); // 2000 → 「2km」(「2.0km」 아님)
-const naverSearch = (q: string) => `https://map.naver.com/p/search/${encodeURIComponent(q)}`;
 
 export function Amenities({ placeId, rockId }: { placeId?: number; rockId?: number }) {
   const q = useAmenities(placeId ?? null, rockId ?? null);
@@ -69,12 +69,13 @@ function Group({ title, items, empty }: { title: string; items: Amenity[]; empty
 
 function Row({ a }: { a: Amenity }) {
   const theme = useTheme();
-  const open = () => Linking.openURL(a.kakao_url ?? naverSearch(`${a.name} ${a.address}`)).catch(() => {});
+  // 누르면 카카오맵·네이버 지도·T맵 중 골라 길안내 (2026-11-23, 네이버로만 열리던 것)
+  const nav = useNavPicker({ kind: 'route', name: a.name, lat: a.lat, lon: a.lon });
   return (
     <Pressable
-      accessibilityRole="link"
-      accessibilityLabel={`${a.name}, ${km(a.distance_m)}, 지도에서 보기`}
-      onPress={open}
+      accessibilityRole="button"
+      accessibilityLabel={`${a.name}, ${km(a.distance_m)}, 길안내`}
+      onPress={nav.open}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
       <View style={styles.flex}>
         <ThemedText type="default" numberOfLines={1}>
@@ -87,6 +88,7 @@ function Row({ a }: { a: Amenity }) {
       <View style={[styles.iconBtn, { borderColor: theme.border }]}>
         <UiIcon name="map" size={16} />
       </View>
+      {nav.sheet}
     </Pressable>
   );
 }

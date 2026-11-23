@@ -11,16 +11,17 @@ import { useNearbyShops } from '@/api/queries';
 import type { NearbyShop } from '@/api/types';
 import { Card } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
+import { useNavPicker } from '@/components/nav-picker';
 import { UiIcon } from '@/components/ui-icon';
 import { useTheme } from '@/hooks/use-theme';
-
-const naverSearch = (q: string) => `https://map.naver.com/p/search/${encodeURIComponent(q)}`;
 
 const km = (m: number) => (m < 1000 ? `${m}m` : `${(m / 1000).toFixed(m < 10_000 ? 1 : 0)}km`);
 
 export function NearbyShops({ placeId, rockId, portId, area }: { placeId?: number; rockId?: number; portId?: number; area: string }) {
   const theme = useTheme();
   const q = useNearbyShops(placeId ?? null, rockId ?? null, portId ?? null);
+  // 「더 찾기」: 카카오맵·네이버 지도·T맵 중 고른 앱에서 검색 (2026-11-23, 네이버로만 열리던 것)
+  const more = useNavPicker({ kind: 'search', query: `${area} 낚시점` });
   if (q.isPending) {
     return (
       <Card>
@@ -36,11 +37,12 @@ export function NearbyShops({ placeId, rockId, portId, area }: { placeId?: numbe
         <ThemedText type="small" themeColor="textSecondary">
           근처 낚시점을 지금 불러올 수 없어요.
         </ThemedText>
-        <Pressable accessibilityRole="link" onPress={() => Linking.openURL(naverSearch(`${area} 낚시점`)).catch(() => {})} hitSlop={8}>
+        <Pressable accessibilityRole="button" onPress={more.open} hitSlop={8}>
           <ThemedText type="smallBold" themeColor="tint">
-            네이버 지도에서 찾아보기 ›
+            지도 앱에서 찾아보기 ›
           </ThemedText>
         </Pressable>
+        {more.sheet}
       </Card>
     );
   }
@@ -55,14 +57,20 @@ export function NearbyShops({ placeId, rockId, portId, area }: { placeId?: numbe
         <>
           <Group title="낚시점" sub="미끼·채비 · 대여 여부는 전화로 확인" items={d.shops} empty="반경 5km 안에 등록된 낚시점이 없어요." />
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
-          <Group title="낚시배 (선상낚시)" sub="출항 항구·예약은 전화로 확인" items={d.boats} empty="반경 15km 안에 등록된 낚시배가 없어요." />
+          <Group
+            title="낚시배 (선상낚시)"
+            sub="출항 항구·예약은 전화로 확인"
+            items={d.boats}
+            empty="반경 15km 안에 등록된 낚시배가 없어요."
+          />
         </>
       )}
-      <Pressable accessibilityRole="link" onPress={() => Linking.openURL(naverSearch(`${area} 낚시점`)).catch(() => {})} hitSlop={8} style={styles.more}>
+      <Pressable accessibilityRole="button" onPress={more.open} hitSlop={8} style={styles.more}>
         <ThemedText type="smallBold" themeColor="tint">
-          네이버 지도에서 더 보기 ›
+          지도 앱에서 더 찾기 ›
         </ThemedText>
       </Pressable>
+      {more.sheet}
       <ThemedText type="small" themeColor="textSecondary">
         출처: {d.source} · 영업 여부·위치는 방문 전에 확인하세요
       </ThemedText>
@@ -92,12 +100,14 @@ function Group({ title, sub, items, empty }: { title: string; sub: string; items
 
 function ShopRow({ s }: { s: NearbyShop }) {
   const theme = useTheme();
-  const open = () => Linking.openURL(naverSearch(`${s.name} ${s.address}`)).catch(() => {});
+  // 이름: 카카오맵 장소 페이지(사진·리뷰)가 있으면 그곳, 없으면 지도 앱 고르기. 지도 버튼: 고른 앱으로 길안내
+  const nav = useNavPicker({ kind: 'route', name: s.name, lat: s.lat, lon: s.lon });
+  const open = () => (s.kakao_url ? Linking.openURL(s.kakao_url).catch(() => {}) : nav.open());
   return (
     <View style={styles.row}>
       <Pressable
         accessibilityRole="link"
-        accessibilityLabel={`${s.name}, ${km(s.distance_m)}, 네이버 지도에서 보기`}
+        accessibilityLabel={`${s.name}, ${km(s.distance_m)}, 장소 보기`}
         onPress={open}
         style={({ pressed }) => [styles.flex, pressed && styles.pressed]}>
         <ThemedText type="smallBold" numberOfLines={1}>
@@ -117,9 +127,15 @@ function ShopRow({ s }: { s: NearbyShop }) {
           <UiIcon name="phone" size={18} />
         </Pressable>
       ) : null}
-      <Pressable accessibilityRole="link" accessibilityLabel={`${s.name} 지도`} hitSlop={8} onPress={open} style={[styles.iconBtn, { borderColor: theme.border }]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${s.name} 길안내`}
+        hitSlop={8}
+        onPress={nav.open}
+        style={[styles.iconBtn, { borderColor: theme.border }]}>
         <UiIcon name="map" size={18} />
       </Pressable>
+      {nav.sheet}
     </View>
   );
 }
