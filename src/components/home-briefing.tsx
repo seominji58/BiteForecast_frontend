@@ -27,7 +27,14 @@ import { type SpeciesItem, speciesByIndexName } from '@/lib/species';
 
 const W = ['일', '월', '화', '수', '목', '금', '토'];
 
-function useWeekBriefing(x: ReturnType<typeof useExplore>, dates: string[], date: string | undefined, today: string | undefined) {
+function useWeekBriefing(
+  x: ReturnType<typeof useExplore>,
+  dates: string[],
+  date: string | undefined,
+  today: string | undefined,
+  /** 이 어종만 센다 (공식 지수 어종 이름). 없으면 전체 */
+  species?: string | null,
+) {
   const week = dates.slice(0, 7);
   // 7일치를 한 번에 받는다 (예전 날짜별 7번 요청은 서버가 깨어날 때 20~60초 밀렸다). 서버가 옛 버전이면 날짜별로
   const weekQ = useQuery({
@@ -49,7 +56,7 @@ function useWeekBriefing(x: ReturnType<typeof useExplore>, dates: string[], date
   const inScopeId = useMemo(() => (id: number) => !!x.byId.get(id) && x.inScope(x.byId.get(id)!), [x]);
   const stats = week.map((d, i) => {
     const day = qs[i]?.data as FishingIndexDay | undefined;
-    return day && day.points.length ? dayStat(day, inScopeId) : null;
+    return day && day.points.length ? dayStat(day, inScopeId, species) : null;
   });
   const short = (d: string) => (d === today ? '오늘' : d === week[1] ? '내일' : `${W[new Date(`${d}T00:00:00`).getDay()]}요일`);
   const headline = weekHeadline(
@@ -73,15 +80,18 @@ export function WeekCard({
   date,
   today,
   onDate,
+  species,
 }: {
   x: ReturnType<typeof useExplore>;
   dates: string[];
   date: string | undefined;
   today: string | undefined;
   onDate: (d: string) => void;
+  /** 이 어종 기준 막대 (null = 전체) */
+  species?: SpeciesItem | null;
 }) {
   const theme = useTheme();
-  const { week, stats, short, headline, bestDate, maxRatio, loading } = useWeekBriefing(x, dates, date, today);
+  const { week, stats, short, headline, bestDate, maxRatio, loading } = useWeekBriefing(x, dates, date, today, species?.indexName);
   return (
     <View style={[styles.card, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
       {/* 결론 한 줄이 곧 제목 (「언제 갈까」) */}
@@ -156,9 +166,9 @@ export function SpotsCard({
   onOpen?: () => void;
 }) {
   const theme = useTheme();
-  const { day, loading, inScopeId, stats, short, week } = useWeekBriefing(x, dates, date, today);
-  const isToday = date === today;
   const sel = speciesProp === undefined ? x.species : speciesProp;
+  const { day, loading, inScopeId, stats, short, week } = useWeekBriefing(x, dates, date, today, sel?.indexName);
+  const isToday = date === today;
   const opts = {
     species: sel?.indexName ?? null,
     excluded: (id: number) => isToday && x.summaryById.get(id)?.warning_level === 'warning',

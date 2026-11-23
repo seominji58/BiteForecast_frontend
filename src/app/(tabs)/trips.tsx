@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/app-text';
 
@@ -19,6 +19,8 @@ import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { dayLabel, dayList } from '@/lib/compare';
 import { useExplore } from '@/lib/explore';
+import { SPECIES, type SpeciesItem } from '@/lib/species';
+import { SpeciesImage } from '@/components/species';
 import { read, useCriteria, write } from '@/lib/prefs';
 import { dday, outlookLine, periodLabel } from '@/lib/trip';
 import { useTripDraft } from '@/lib/trip-draft';
@@ -56,23 +58,49 @@ export default function TripsTab() {
  * 언제 갈까 (2026-11-23, 홈에서 옮김): 앞으로 7일 공식 낚시지수 「좋음 이상」 지점 수를 날짜별 막대로.
  * 날짜를 누르면 그날 좋은 곳과 「이 날로 계획 만들기」. 어종·지역은 홈에서 고른 것을 그대로 쓴다
  */
+/** 공식 지수 어종만 (막대가 그 어종 지점 수로 계산된다) */
+const INDEX_SPECIES = SPECIES.filter((s) => s.indexName);
+
 function WhenToGo() {
+  const theme = useTheme();
   const range = useDateRange();
   const today = range.data?.today;
   const [sel, setSel] = useState<string | undefined>();
+  // 어종 칩: 막대·낚시터 모두 이 어종 기준 (null = 전체 어종 합계)
+  const [fish, setFish] = useState<SpeciesItem | null>(null);
   const date = sel ?? today;
   // 지역 범위·특보는 오늘 기준으로 고정 (날짜를 바꿀 때마다 그날 요약을 다시 받느라 막대가 잠깐 비던 문제)
   const x = useExplore(today, today);
   const dates = range.data ? dayList(range.data.today, range.data.max) : [];
   if (!today) return null;
+  const chips: (SpeciesItem | null)[] = [null, ...INDEX_SPECIES];
   return (
     <>
-      <SectionHeader title={`언제 갈까${x.species ? ` · ${x.species.name}` : ''}`} />
-      <WeekCard x={x} dates={dates} date={date} today={today} onDate={setSel} />
-      <SpotsCard x={x} dates={dates} date={date} today={today} />
+      <SectionHeader title={`언제 갈까 · ${x.scopeName} 기준`} />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipBleed} contentContainerStyle={styles.chipRow}>
+        {chips.map((sp) => {
+          const on = (sp?.code ?? null) === (fish?.code ?? null);
+          return (
+            <Pressable
+              key={sp?.code ?? 'all'}
+              accessibilityRole="button"
+              accessibilityState={{ selected: on }}
+              onPress={() => setFish(sp)}
+              style={[
+                styles.fishChip,
+                { backgroundColor: on ? Brand.teal : theme.backgroundElement, borderColor: on ? Brand.teal : theme.border },
+              ]}>
+              {sp ? <SpeciesImage code={sp.code} size={20} /> : null}
+              <Text style={[styles.fishChipText, { color: on ? '#FFFFFF' : theme.text }]}>{sp ? sp.name : '전체 어종'}</Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+      <WeekCard x={x} dates={dates} date={date} today={today} onDate={setSel} species={fish} />
+      <SpotsCard x={x} dates={dates} date={date} today={today} species={fish} />
       <Button
         label={`${date ? dayLabel(date) : ''} 계획 만들기`}
-        onPress={() => router.push({ pathname: '/trip/new', params: { date, ...(x.species ? { species: x.species.code } : {}) } })}
+        onPress={() => router.push({ pathname: '/trip/new', params: { date, ...(fish ? { species: fish.code } : {}) } })}
       />
     </>
   );
@@ -358,6 +386,10 @@ function InfoLine({ icon, text }: { icon: 'calendar' | 'pin' | 'people'; text: s
 }
 
 const styles = StyleSheet.create({
+  chipBleed: { marginHorizontal: -16 },
+  chipRow: { gap: 6, paddingHorizontal: 16 },
+  fishChip: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, minHeight: 36 },
+  fishChipText: { fontSize: 14, fontWeight: '700' },
   flex: { flex: 1 },
   center: { textAlign: 'center' },
   pressed: { opacity: 0.7 },

@@ -51,3 +51,9 @@ test('topSpots minRank: 좋음 이상이 없는 날 「보통」까지, 나쁨�
   assert.deepEqual(topSpots(dull, all, { minRank: 3 }).map((s) => [s.placeId, s.picks[0].grade]), [[101, '보통']]);
   assert.deepEqual(topSpots(d24, all, { minRank: 3 }), []);
 });
+
+test('dayStat species: 그 어종 등급만 센다', () => {
+  const s = dayStat(d25, all, '감성돔');
+  assert.deepEqual([s.good, s.total], [2, 2]);
+  assert.equal(dayStat(d25, all, '돌돔').total, 0);
+});
