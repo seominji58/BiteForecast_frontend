@@ -313,7 +313,7 @@ export function FishingIndexCard({ pc }: { pc: PlaceCompare }) {
         </View>
       ))}
       <ThemedText type="small" themeColor="textSecondary">
-        국립해양조사원 발표 ·{' '}
+        국립해양조사원 발표{f.fetched_at ? ` · ${timeLabel(f.fetched_at)} 받음` : ''} ·{' '}
         {f.source && f.source.distance_km != null && f.source.distance_km >= 1
           ? `${f.source.station_name} 지점 ${f.source.distance_km}km`
           : '이 지점 발표'}{' '}
