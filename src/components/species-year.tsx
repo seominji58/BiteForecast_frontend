@@ -75,7 +75,8 @@ export function SpeciesYear({ species, today }: { species: SpeciesItem; today: s
           🌡 {t.text}
         </ThemedText>
       ))}
-      {!s ? (
+      {/* 자료를 받았는데 그 어종이 없을 때만 「없음」 (못 받았으면 단정하지 않음) */}
+      {seasons && !s ? (
         <ThemedText type="small" themeColor="textSecondary">
           {word}: 국내 연구 자료를 찾지 못했어요
         </ThemedText>
