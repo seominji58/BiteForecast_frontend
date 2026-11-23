@@ -62,7 +62,9 @@ export function MarineWarningBanner({ w, compact }: { w: Warning; compact?: bool
   const issued = w.issued_at ? `기상청 ${timeLabel(w.issued_at)} 발표` : '기상청';
   // 참고용(좌표 불일치 의심 곳): 실제 위치의 특보는 확인 안 됨 — 「특보 없음」이라고 하지 않는다
   // 상태별 제목. 「특보 없음」·「해역 모름」·「자료 만료」·「수집 실패」를 서로 다른 말로 보여준다
-  const statusTitle = STATUS_TITLE[w.status] ?? TITLE[w.level];
+  // 「인근」인데 바다 특보(풍랑·해일·태풍)가 없으면 도 단위 육상 특보(강풍 등) → 「해역」이라고 하지 않는다 (2026-11-23)
+  const landOnly = w.level === 'nearby' && w.active.length > 0 && !w.active.some((x) => /풍랑|해일|태풍/.test(x.type));
+  const statusTitle = landOnly ? '주변 육상 특보 발효 중' : (STATUS_TITLE[w.status] ?? TITLE[w.level]);
   const title = w.reference_only
     ? w.level === 'unknown'
       ? '실제 위치 특보 확인 안 됨'

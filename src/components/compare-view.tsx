@@ -82,8 +82,6 @@ export function CompareVerdict({
   const split = wave?.winner && wind?.winner && wave.winner !== wind.winner;
   const what = leader ? [wave?.winner === leader ? '파고' : null, wind?.winner === leader ? '풍속' : null].filter(Boolean).join('·') : '';
   const kind = wave?.kind ?? wind?.kind;
-  const warn = [a, b].filter((p) => ['warning', 'nearby', 'preliminary'].includes(p.warning.level));
-  const unknownWarn = [a, b].some((p) => p.warning.level === 'unknown');
   const metrics = [wave ? { label: '파고', unit: 'm', r: wave } : null, wind ? { label: '풍속', unit: 'm/s', r: wind } : null].filter(
     (x): x is { label: string; unit: string; r: NonNullable<typeof wave> } => !!x,
   );
@@ -176,19 +174,30 @@ export function CompareVerdict({
             ))}
           </Pressable>
         ) : null}
-        {warn.length ? (
-          <View style={[styles.chip, { backgroundColor: theme.dangerSoft, borderColor: 'transparent' }]}>
-            <ThemedText type="smallBold" themeColor="danger">
-              ⚠ 특보 확인 필요 {warn.map((p) => (p === a ? 'A' : 'B')).join('·')}
-            </ThemedText>
-          </View>
-        ) : unknownWarn ? (
-          <View style={[styles.chip, { backgroundColor: theme.warningSoft, borderColor: 'transparent' }]}>
-            <ThemedText type="smallBold" themeColor="warning">
-              특보 자료 확인 안 됨
-            </ThemedText>
-          </View>
-        ) : null}
+        {/* 특보: 장소마다 등급별 색 (발효=빨강, 인근 해역·예비=주황). 무엇이 걸렸는지 종류를 함께 */}
+        {[a, b].map((p, i) => {
+          const side = i === 0 ? 'A' : 'B';
+          const w = p.warning;
+          const types = [...new Set(w.active.map((x) => x.type))].join('·');
+          const t =
+            w.level === 'warning'
+              ? { text: `${side} ${types || '해상 특보'} 발효`, fg: 'danger' as const, bg: theme.dangerSoft }
+              : w.level === 'nearby'
+                ? { text: `${side} 인근 ${types || '특보'}`, fg: 'warning' as const, bg: theme.warningSoft }
+                : w.level === 'preliminary'
+                  ? { text: `${side} 예비특보`, fg: 'warning' as const, bg: theme.warningSoft }
+                  : w.level === 'unknown'
+                    ? { text: `${side} 특보 확인 안 됨`, fg: 'textSecondary' as const, bg: theme.background }
+                    : null;
+          return t ? (
+            <View key={side} style={[styles.chip, { backgroundColor: t.bg, borderColor: 'transparent' }]}>
+              <ThemedText type="smallBold" themeColor={t.fg} numberOfLines={1}>
+                {w.level === 'warning' ? '⚠ ' : ''}
+                {t.text}
+              </ThemedText>
+            </View>
+          ) : null;
+        })}
       </View>
       {fit ? (
         <ThemedText type="small" themeColor="textSecondary">
