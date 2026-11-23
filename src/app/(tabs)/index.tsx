@@ -1,7 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Image, Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Keyboard, Pressable, StyleSheet, View } from 'react-native';
+
+import { Text } from '@/components/app-text';
 
 import { useDateRange } from '@/api/queries';
 import type { Place } from '@/api/types';
@@ -268,7 +270,9 @@ function HeroButton({ icon, label, onPress }: { icon: AppIconName; label: string
       <View style={styles.heroIcon}>
         <AppIcon name={icon} size={18} />
       </View>
-      <Text style={styles.heroBtnText}>{label}</Text>
+      <Text style={styles.heroBtnText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
+        {label}
+      </Text>
     </Pressable>
   );
 }

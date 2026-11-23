@@ -26,15 +26,15 @@ export function scopedPoints(day: FishingIndexDay | undefined, inScope: (placeId
 
 export type DayStat = { date: string; good: number; veryGood: number; bad: number; total: number; ratio: number };
 
-/** 그날 (지점×어종) 중 좋음 이상·나쁨 이하 개수 */
-export function dayStat(day: FishingIndexDay, inScope: (placeId: number) => boolean): DayStat {
+/** 그날 (지점×어종) 중 좋음 이상·나쁨 이하 개수. species 를 주면 그 어종만 */
+export function dayStat(day: FishingIndexDay, inScope: (placeId: number) => boolean, species?: string | null): DayStat {
   let good = 0;
   let veryGood = 0;
   let bad = 0;
   let total = 0;
   for (const p of scopedPoints(day, inScope))
     for (const s of p.species) {
-      if (SKIP.has(s.species)) continue;
+      if (SKIP.has(s.species) || (species && s.species !== species)) continue;
       const g = bestGrade(s.grades);
       if (!g) continue;
       total++;

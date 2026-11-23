@@ -8,7 +8,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+
+import { Text } from '@/components/app-text';
 
 import { api } from '@/api';
 import type { FishingIndexDay } from '@/api/types';
@@ -17,7 +19,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { dayStat, speciesRanking, topSpots, weekHeadline } from '@/lib/briefing';
-import { dayLabel, timeLabel } from '@/lib/compare';
+import { dayLabel, tideIsRef, timeLabel } from '@/lib/compare';
 import type { useExplore } from '@/lib/explore';
 import { placeName } from '@/lib/place';
 
@@ -25,7 +27,14 @@ import { type SpeciesItem, speciesByIndexName } from '@/lib/species';
 
 const W = ['일', '월', '화', '수', '목', '금', '토'];
 
-function useWeekBriefing(x: ReturnType<typeof useExplore>, dates: string[], date: string | undefined, today: string | undefined) {
+function useWeekBriefing(
+  x: ReturnType<typeof useExplore>,
+  dates: string[],
+  date: string | undefined,
+  today: string | undefined,
+  /** 이 어종만 센다 (공식 지수 어종 이름). 없으면 전체 */
+  species?: string | null,
+) {
   const week = dates.slice(0, 7);
   // 7일치를 한 번에 받는다 (예전 날짜별 7번 요청은 서버가 깨어날 때 20~60초 밀렸다). 서버가 옛 버전이면 날짜별로
   const weekQ = useQuery({
@@ -47,7 +56,7 @@ function useWeekBriefing(x: ReturnType<typeof useExplore>, dates: string[], date
   const inScopeId = useMemo(() => (id: number) => !!x.byId.get(id) && x.inScope(x.byId.get(id)!), [x]);
   const stats = week.map((d, i) => {
     const day = qs[i]?.data as FishingIndexDay | undefined;
-    return day && day.points.length ? dayStat(day, inScopeId) : null;
+    return day && day.points.length ? dayStat(day, inScopeId, species) : null;
   });
   const short = (d: string) => (d === today ? '오늘' : d === week[1] ? '내일' : `${W[new Date(`${d}T00:00:00`).getDay()]}요일`);
   const headline = weekHeadline(
@@ -71,15 +80,18 @@ export function WeekCard({
   date,
   today,
   onDate,
+  species,
 }: {
   x: ReturnType<typeof useExplore>;
   dates: string[];
   date: string | undefined;
   today: string | undefined;
   onDate: (d: string) => void;
+  /** 이 어종 기준 막대 (null = 전체) */
+  species?: SpeciesItem | null;
 }) {
   const theme = useTheme();
-  const { week, stats, short, headline, bestDate, maxRatio, loading } = useWeekBriefing(x, dates, date, today);
+  const { week, stats, short, headline, bestDate, maxRatio, loading } = useWeekBriefing(x, dates, date, today, species?.indexName);
   return (
     <View style={[styles.card, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
       {/* 결론 한 줄이 곧 제목 (「언제 갈까」) */}
@@ -154,9 +166,9 @@ export function SpotsCard({
   onOpen?: () => void;
 }) {
   const theme = useTheme();
-  const { day, loading, inScopeId, stats, short, week } = useWeekBriefing(x, dates, date, today);
-  const isToday = date === today;
   const sel = speciesProp === undefined ? x.species : speciesProp;
+  const { day, loading, inScopeId, stats, short, week } = useWeekBriefing(x, dates, date, today, sel?.indexName);
+  const isToday = date === today;
   const opts = {
     species: sel?.indexName ?? null,
     excluded: (id: number) => isToday && x.summaryById.get(id)?.warning_level === 'warning',
@@ -229,7 +241,9 @@ export function SpotsCard({
                   {[
                     place?.region_name,
                     // 다음 만조·간조 (같은 바다 조위관측소 예보일 때만, 오늘만) — 물 돌이 전후가 입질 시간
-                    isToday && s?.next_tide ? `${s.next_tide.type === 'high' ? '만조' : '간조'} ${timeLabel(s.next_tide.t)}` : sp.tide,
+                    isToday && s?.next_tide
+                      ? `${s.next_tide.type === 'high' ? '만조' : '간조'} ${timeLabel(s.next_tide.t)}${tideIsRef(s.next_tide.station_km) ? '(참고)' : ''}`
+                      : sp.tide,
                     isToday && s?.wave_fc_max ? `파고 ${s.wave_fc_max.v}m` : null,
                     sp.picks.length > 1 ? `외 ${sp.picks.length - 1}종 ${noGood ? '보통' : '좋음'}` : null,
                   ]
@@ -239,7 +253,9 @@ export function SpotsCard({
               </View>
               <View style={[styles.pick, { backgroundColor: very ? Brand.teal : noGood ? theme.backgroundSelected : theme.tintSoft }]}>
                 {speciesByIndexName(p0.species) ? <SpeciesImage code={speciesByIndexName(p0.species)!.code} size={18} /> : null}
-                <Text style={[styles.pickText, { color: very ? '#FFFFFF' : noGood ? theme.textSecondary : Brand.teal }]}>
+                <Text
+                  numberOfLines={1}
+                  style={[styles.pickText, { flexShrink: 1, color: very ? '#FFFFFF' : noGood ? theme.textSecondary : Brand.teal }]}>
                   {sel ? p0.grade : `${p0.species} ${p0.grade}`}
                 </Text>
               </View>
@@ -284,7 +300,15 @@ const styles = StyleSheet.create({
   bar: { width: 20, borderRadius: 5 },
   count: { fontSize: 11, lineHeight: 14 },
   rank: { fontSize: 20, fontWeight: '800', width: 18, textAlign: 'center' },
-  pick: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
+  pick: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    maxWidth: '52%',
+  },
   pickText: { fontSize: 12, fontWeight: '700' },
   carHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   arrow: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
@@ -428,7 +452,9 @@ export function IndexCarousel({
                 <ThemedText type="smallBold" numberOfLines={1} style={styles.flex}>
                   {r.species}
                 </ThemedText>
-                <Text style={[styles.word, { color: tone }]}>{word}</Text>
+                <Text style={[styles.word, { color: tone }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                  {word}
+                </Text>
               </View>
               {/* 등급 분포: 좋음 이상 · 보통 · 나쁨 이하 */}
               <View style={[styles.dist, { backgroundColor: theme.border }]}>

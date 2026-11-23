@@ -7,7 +7,9 @@
  * - 신고정보에는 연락처·출항 시간이 없어 업체에 직접 확인하라고 늘 적는다. 예약·결제는 하지 않는다
  */
 import { useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
+
+import { Text } from '@/components/app-text';
 
 import type { BoatPort, Place, PlaceSummary } from '@/api/types';
 import { BottomSheet } from '@/components/bottom-sheet';

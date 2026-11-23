@@ -1,6 +1,8 @@
 /** 예비 지도: react-native-maps (iOS 애플 지도 · Android 구글 지도). 카카오맵을 쓸 수 없을 때(Expo Go 등) */
 import { forwardRef, useImperativeHandle, useRef } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
+
+import { Text } from '@/components/app-text';
 import MapView, { Marker } from 'react-native-maps';
 
 import { BADGE_CATCH, BADGE_WARN, PIN } from '@/components/map/pin-assets';

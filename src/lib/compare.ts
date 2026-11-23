@@ -1,12 +1,4 @@
-import type {
-  DataKind,
-  FishingIndex,
-  PlaceCompare,
-  RegulationStatus,
-  Series,
-  SeriesReason,
-  SeriesSource,
-} from '@/api/types';
+import type { DataKind, FishingIndex, PlaceCompare, RegulationStatus, Series, SeriesReason, SeriesSource } from '@/api/types';
 
 /** 'YYYY-MM-DD' → 기기 로컬 자정 Date (시간대 밀림 방지) */
 export function parseDay(s: string): Date {
@@ -35,6 +27,10 @@ export function dayLabel(s: string): string {
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
 /** 기기 로컬 시각 HH:mm (OS·엔진별 로캘 형식 차이를 피하려고 직접 만든다) */
+/** 조석 지점이 30km 넘게 떨어져 있으면 참고 자료 (2026-11-23 60km까지 연결) */
+export const TIDE_NEAR_KM = 30;
+export const tideIsRef = (km: number | null | undefined) => km != null && km > TIDE_NEAR_KM;
+
 export function timeLabel(iso: string): string {
   const d = new Date(iso);
   return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
@@ -140,7 +136,9 @@ export function currentIndexPeriod(f: FishingIndex, now = new Date()) {
 export function lowerOf(a: PlaceCompare, b: PlaceCompare, metric: 'wave_height' | 'wind_speed') {
   const pick = (p: PlaceCompare) => {
     const fc = findSeries(p, metric, 'forecast');
-    return rangeOf(fc) ? { r: rangeOf(fc)!, kind: 'forecast' as const } : { r: rangeOf(findSeries(p, metric, 'observed')), kind: 'observed' as const };
+    return rangeOf(fc)
+      ? { r: rangeOf(fc)!, kind: 'forecast' as const }
+      : { r: rangeOf(findSeries(p, metric, 'observed')), kind: 'observed' as const };
   };
   const pa = pick(a);
   const pb = pick(b);

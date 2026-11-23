@@ -6,7 +6,9 @@
  */
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
+
+import { Text } from '@/components/app-text';
 
 import { useCatchSeasons, useFishingRules, useSpeciesSeasons } from '@/api/queries';
 import { ThemedText } from '@/components/themed-text';
@@ -46,7 +48,11 @@ export function SpeciesYear({
     <View style={[styles.box, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
       {banNow ? (
         <ThemedText type="smallBold" themeColor="danger">
-          ⚠ 지금 {species.name} 금어기예요 · {banNow.periods.filter((p) => inPeriod(p, today)).map(periodText).join(' · ')}
+          ⚠ 지금 {species.name} 금어기예요 ·{' '}
+          {banNow.periods
+            .filter((p) => inPeriod(p, today))
+            .map(periodText)
+            .join(' · ')}
         </ThemedText>
       ) : null}
 
@@ -115,9 +121,7 @@ export function SpeciesYear({
       ) : null}
 
       {sizes.length ? (
-        <ThemedText type="small">
-          📏 {sizes.map((z) => `${z.limit}(${z.measure})`).join(' · ')}는 놓아주세요
-        </ThemedText>
+        <ThemedText type="small">📏 {sizes.map((z) => `${z.limit}(${z.measure})`).join(' · ')}는 놓아주세요</ThemedText>
       ) : null}
       {s?.text ? <ThemedText type="small">{s.text}</ThemedText> : null}
       {s?.temps.map((t) => (
@@ -152,7 +156,9 @@ export function SpeciesYear({
             </Pressable>
           ))}
           {bans.length ? (
-            <Pressable accessibilityRole="link" onPress={() => {
+            <Pressable
+              accessibilityRole="link"
+              onPress={() => {
                 onLeave?.();
                 router.push({ pathname: '/rules', params: { name: bans[0].name } });
               }}>

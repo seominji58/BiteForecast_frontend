@@ -8,7 +8,9 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+
+import { Text } from '@/components/app-text';
 
 import { API_URL } from '@/api/client';
 import { usePlaceKakao, usePlacePhotoIndex, usePlacePhotos, usePosts } from '@/api/queries';

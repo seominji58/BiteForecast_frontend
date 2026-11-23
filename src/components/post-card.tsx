@@ -1,6 +1,8 @@
 import { Image } from 'expo-image';
 import { type ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+
+import { Text } from '@/components/app-text';
 
 import type { Author, PostSummary } from '@/api/types';
 import { usePhotoSource } from '@/api/upload';
@@ -179,7 +181,16 @@ const styles = StyleSheet.create({
   post: { borderWidth: 1, borderRadius: 16, padding: 14, gap: 6 },
   photo: { width: '100%', aspectRatio: 16 / 9, borderRadius: 12, marginTop: 4 },
   foot: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
-  chip2: { flexDirection: 'row', alignItems: 'center', gap: 3, borderWidth: 1, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, maxWidth: 150 },
+  chip2: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    maxWidth: 150,
+  },
   chip2Text: { flexShrink: 1 },
   count: { flexDirection: 'row', alignItems: 'center', gap: 3, marginLeft: 6 },
   more: {
