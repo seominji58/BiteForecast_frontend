@@ -91,7 +91,14 @@ export type Spot = {
 export function topSpots(
   day: FishingIndexDay | undefined,
   inScope: (placeId: number) => boolean,
-  opts: { species?: string | null; excluded?: (placeId: number) => boolean; dist?: (placeId: number) => number | null; limit?: number } = {},
+  opts: {
+    species?: string | null;
+    excluded?: (placeId: number) => boolean;
+    dist?: (placeId: number) => number | null;
+    limit?: number;
+    /** 이 등급 이상만 (기본 4 = 좋음). 좋은 곳이 없는 날 「보통」까지 보여줄 때 3 */
+    minRank?: number;
+  } = {},
 ): Spot[] {
   const out: (Spot & { d: number })[] = [];
   for (const p of scopedPoints(day, inScope)) {
@@ -100,12 +107,15 @@ export function topSpots(
     const picks = p.species
       .filter((s) => !SKIP.has(s.species) && (!opts.species || s.species === opts.species))
       .map((s) => ({ species: s.species, grade: bestGrade(s.grades) ?? '' }))
-      .filter((x) => isGood(x.grade))
+      .filter((x) => (GRADE_RANK[x.grade] ?? 0) >= (opts.minRank ?? 4))
       .sort((a, b) => GRADE_RANK[b.grade] - GRADE_RANK[a.grade] || a.species.localeCompare(b.species, 'ko'));
     if (!picks.length) continue;
     const tide = Object.values(p.tide_phase).find(Boolean) ?? null;
     out.push({ point: p, placeId: link.place_id, picks, top: GRADE_RANK[picks[0].grade], tide, d: opts.dist?.(link.place_id) ?? Infinity });
   }
-  out.sort((a, b) => b.top - a.top || b.picks.length - a.picks.length || a.d - b.d || a.point.station_name.localeCompare(b.point.station_name, 'ko'));
+  out.sort(
+    (a, b) =>
+      b.top - a.top || b.picks.length - a.picks.length || a.d - b.d || a.point.station_name.localeCompare(b.point.station_name, 'ko'),
+  );
   return out.slice(0, opts.limit ?? 3).map(({ d: _d, ...s }) => s);
 }

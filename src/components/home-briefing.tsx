@@ -153,26 +153,53 @@ export function SpotsCard({
   onOpen?: () => void;
 }) {
   const theme = useTheme();
-  const { day, loading, inScopeId } = useWeekBriefing(x, dates, date, today);
+  const { day, loading, inScopeId, stats, short, week } = useWeekBriefing(x, dates, date, today);
   const isToday = date === today;
   const sel = speciesProp === undefined ? x.species : speciesProp;
-  const spots = topSpots(day, inScopeId, {
+  const opts = {
     species: sel?.indexName ?? null,
-    excluded: (id) => isToday && x.summaryById.get(id)?.warning_level === 'warning',
+    excluded: (id: number) => isToday && x.summaryById.get(id)?.warning_level === 'warning',
     dist: x.distOf,
     limit,
-  });
+  };
+  const good = topSpots(day, inScopeId, opts);
+  // 좋음 이상이 한 곳도 없는 날: 지어내지 않고 그대로 말한다 → 그나마 「보통」인 곳 · 이번 주 좋은 날 · 범위 넓히기
+  const noGood = !loading && good.length === 0 && !(sel && !sel.indexName) && !!day?.points.length;
+  const spots = noGood ? topSpots(day, inScopeId, { ...opts, minRank: 3 }) : good;
+  // 이번 주 다른 날 중 좋음 이상이 가장 많은 날 (전체 기준 — 어종을 고른 시트에선 범위가 달라 생략)
+  const better =
+    noGood && !sel
+      ? week
+          .map((d, i) => ({ d, s: stats[i] }))
+          .filter((v) => v.d !== date && v.s && v.s.good > 0)
+          .sort((a, b) => b.s!.good - a.s!.good)[0]
+      : undefined;
+  const wide = noGood && !x.near && x.region !== '전국';
   return (
     <View style={[styles.listCard, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
       {/* ③ 그날 가장 좋은 곳: 한 곳에 한 줄 (이름 · 최고 등급 칩), 아래 작은 글씨로 지역·물때 */}
+      {noGood ? (
+        <View style={styles.noGood}>
+          <ThemedText type="smallBold">
+            {isToday ? '오늘' : '이날'} {x.scopeName}에는 「좋음」 이상인 곳이 없어요
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {spots.length
+              ? '아래는 그나마 「보통」인 곳이에요.'
+              : '모든 지점이 「나쁨」 이하예요. 무리한 출조는 쉬어 가는 것도 방법이에요.'}
+          </ThemedText>
+        </View>
+      ) : null}
       {spots.length === 0 ? (
-        <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
-          {loading
-            ? '불러오는 중…'
-            : sel && !sel.indexName
-              ? `${sel.name}은 공식 지수가 없는 어종이에요`
-              : '이날 「좋음」 이상인 곳이 없어요'}
-        </ThemedText>
+        noGood ? null : (
+          <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
+            {loading
+              ? '불러오는 중…'
+              : sel && !sel.indexName
+                ? `${sel.name}은 공식 지수가 없는 어종이에요`
+                : '이날 공식 낚시지수 자료가 없어요'}
+          </ThemedText>
+        )
       ) : (
         spots.map((sp, i) => {
           const place = x.byId.get(sp.placeId);
@@ -202,15 +229,15 @@ export function SpotsCard({
                     place?.region_name,
                     sp.tide,
                     isToday && s?.wave_fc_max ? `파고 ${s.wave_fc_max.v}m` : null,
-                    sp.picks.length > 1 ? `외 ${sp.picks.length - 1}종 좋음` : null,
+                    sp.picks.length > 1 ? `외 ${sp.picks.length - 1}종 ${noGood ? '보통' : '좋음'}` : null,
                   ]
                     .filter(Boolean)
                     .join(' · ')}
                 </ThemedText>
               </View>
-              <View style={[styles.pick, { backgroundColor: very ? Brand.teal : theme.tintSoft }]}>
+              <View style={[styles.pick, { backgroundColor: very ? Brand.teal : noGood ? theme.backgroundSelected : theme.tintSoft }]}>
                 {speciesByIndexName(p0.species) ? <SpeciesImage code={speciesByIndexName(p0.species)!.code} size={18} /> : null}
-                <Text style={[styles.pickText, { color: very ? '#FFFFFF' : Brand.teal }]}>
+                <Text style={[styles.pickText, { color: very ? '#FFFFFF' : noGood ? theme.textSecondary : Brand.teal }]}>
                   {sel ? p0.grade : `${p0.species} ${p0.grade}`}
                 </Text>
               </View>
@@ -218,6 +245,24 @@ export function SpotsCard({
           );
         })
       )}
+      {better || wide ? (
+        <View style={styles.alts}>
+          {better ? (
+            <Pressable accessibilityRole="button" hitSlop={6} onPress={() => router.push('/trips')}>
+              <ThemedText type="smallBold" themeColor="tint">
+                {short(better.d)}에는 좋음 이상 {better.s!.good}곳 · 날짜별 보기 ›
+              </ThemedText>
+            </Pressable>
+          ) : null}
+          {wide ? (
+            <Pressable accessibilityRole="button" hitSlop={6} onPress={() => x.setRegion('전국')}>
+              <ThemedText type="smallBold" themeColor="tint">
+                전국으로 넓혀 보기 ›
+              </ThemedText>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
       <ThemedText type="small" themeColor="textSecondary" style={styles.foot}>
         공식 바다낚시지수 기준{isToday ? ' · 지금 특보 발효 곳 제외' : ' · 그날 특보는 발표 전'}
       </ThemedText>
@@ -256,6 +301,8 @@ const styles = StyleSheet.create({
   listCard: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 4 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
   empty: { paddingVertical: 10 },
+  noGood: { paddingTop: 10, paddingBottom: 4, gap: 2 },
+  alts: { gap: 8, paddingVertical: 8 },
   foot: { paddingVertical: 6, fontSize: 11 },
 });
 /**

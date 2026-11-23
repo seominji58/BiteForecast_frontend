@@ -44,3 +44,10 @@ test('좋은 곳: 최고 등급 순, 특보 곳 제외, 어종 지정', () => {
   assert.deepEqual(topSpots(d25, all, { excluded: (id) => id === 101 }).map((s) => s.placeId), [102]);
   assert.deepEqual(topSpots(d25, all, { species: '벵에돔' }).map((s) => [s.placeId, s.picks[0].species]), [[102, '벵에돔']]);
 });
+
+test('topSpots minRank: 좋음 이상이 없는 날 「보통」까지, 나쁨만 있으면 빈 목록', () => {
+  const dull = day('2026-11-26', [pt(1, 101, [['우럭', '보통', '나쁨']]), pt(2, 102, [['감성돔', '나쁨', '나쁨']])]);
+  assert.deepEqual(topSpots(dull, all), []);
+  assert.deepEqual(topSpots(dull, all, { minRank: 3 }).map((s) => [s.placeId, s.picks[0].grade]), [[101, '보통']]);
+  assert.deepEqual(topSpots(d24, all, { minRank: 3 }), []);
+});

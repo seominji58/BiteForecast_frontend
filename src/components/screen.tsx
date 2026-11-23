@@ -52,8 +52,11 @@ export function TabScreen({
   const insets = useSafeAreaInsets();
   return (
     <ThemedView style={styles.flex}>
-      <View style={[styles.appBar, immersive && styles.immersiveAppBar, { paddingTop: insets.top }]}>
-        <View style={styles.appBarInner}>
+      {/* immersive: 위에 떠 있는 상단바의 빈 곳은 아래 콘텐츠로 터치를 넘긴다 */}
+      <View
+        pointerEvents={immersive ? 'box-none' : 'auto'}
+        style={[styles.appBar, immersive && styles.immersiveAppBar, { paddingTop: insets.top }]}>
+        <View pointerEvents={immersive ? 'box-none' : 'auto'} style={styles.appBarInner}>
           {logo || title ? (
             <View style={styles.titleRow}>
               {logo ? <AppIcon name="fishing-index" size={16} badge /> : null}
@@ -63,13 +66,11 @@ export function TabScreen({
                 </Text>
               ) : null}
             </View>
-          ) : <View />}
+          ) : (
+            <View />
+          )}
           {right ?? (
-            <Pressable
-              accessibilityRole="button"
-              hitSlop={12}
-              onPress={() => router.push('/settings')}
-              style={styles.pill}>
+            <Pressable accessibilityRole="button" hitSlop={12} onPress={() => router.push('/settings')} style={styles.pill}>
               <Text style={styles.pillText}>설정</Text>
             </Pressable>
           )}
@@ -111,15 +112,7 @@ export function Card({ children, style }: { children: ReactNode; style?: StylePr
 }
 
 /** 섹션 제목: 15pt 굵게 + 오른쪽 「더보기 ›」 (장식 밑줄·아이콘 없음) */
-export function SectionHeader({
-  title,
-  actionLabel,
-  onAction,
-}: {
-  title: string;
-  actionLabel?: string;
-  onAction?: () => void;
-}) {
+export function SectionHeader({ title, actionLabel, onAction }: { title: string; actionLabel?: string; onAction?: () => void }) {
   return (
     <View style={styles.sectionHeader}>
       <ThemedText type="sectionTitle" accessibilityRole="header">
