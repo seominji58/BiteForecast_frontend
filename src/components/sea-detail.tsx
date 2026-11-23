@@ -5,20 +5,18 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import type { FishingIndex, Place, PlaceCompare } from '@/api/types';
-import { AppIcon } from '@/components/app-icon';
+import type { FishingIndex, PlaceCompare } from '@/api/types';
 import { LEVEL_COLOR } from '@/components/compare-view';
 import { Card } from '@/components/screen';
 import { SpeciesImage } from '@/components/species';
 import { TermLinks } from '@/components/term-sheet';
 import { ThemedText } from '@/components/themed-text';
-import { Brand, Layout } from '@/constants/theme';
+import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { KIND_TEXT, REASON_TEXT, timeLabel } from '@/lib/compare';
 import { distanceGrade } from '@/lib/describe';
 import { useHomeSpecies } from '@/lib/prefs';
 import { speciesByCode, speciesByIndexName } from '@/lib/species';
-import { distLabel, isApprox, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
 
 export function distText(km: number | null) {
   return km == null ? '거리 확인 불가' : `${km < 1 ? '1km 미만' : `${Math.round(km)}km`}·${distanceGrade(km)}`;
@@ -185,7 +183,7 @@ export function IndexChips({ pc, onMore }: { pc: PlaceCompare; onMore: () => voi
         </ThemedText>
       </View>
       {items.length ? (
-        <View style={styles.chips}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
           {items.map(([sp, g]) => {
             const good = (RANK[g] ?? 0) >= 4;
             return (
@@ -208,7 +206,7 @@ export function IndexChips({ pc, onMore }: { pc: PlaceCompare; onMore: () => voi
               </View>
             );
           })}
-        </View>
+        </ScrollView>
       ) : (
         <ThemedText type="small" themeColor="textSecondary">
           {f.reason ? REASON_TEXT[f.reason] : '오늘 발표 없음'}
@@ -216,47 +214,6 @@ export function IndexChips({ pc, onMore }: { pc: PlaceCompare; onMore: () => voi
         </ThemedText>
       )}
     </Pressable>
-  );
-}
-
-/** 가까운 낚시터 가로 목록 */
-export function NearbyPlaces({
-  items,
-  currentId,
-  onPress,
-}: {
-  items: { place: Place; km: number }[];
-  currentId: number;
-  onPress: (p: Place) => void;
-}) {
-  const theme = useTheme();
-  const baseApprox = isApprox(items.find((x) => x.place.id === currentId)?.place);
-  return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.placeRow}>
-      {items.map(({ place: p, km }) => {
-        const current = p.id === currentId;
-        return (
-          <Pressable
-            key={p.id}
-            accessibilityRole="button"
-            accessibilityLabel={`${p.name}${current ? ', 현재 보는 낚시터' : ''}`}
-            onPress={() => onPress(p)}
-            style={[styles.placeCard, { borderColor: current ? Brand.orange : theme.border, backgroundColor: theme.backgroundElement }]}>
-            <View style={styles.placeArt}>
-              <AppIcon name={PLACE_IMAGE[p.type]} size={40} />
-            </View>
-            <View style={styles.placeInfo}>
-              <ThemedText type="smallBold" numberOfLines={1}>
-                {p.name}
-              </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                {current ? '현재 낚시터' : `${PLACE_TYPE_LABEL[p.type]} · ${distLabel(km, p, baseApprox)}`}
-              </ThemedText>
-            </View>
-          </Pressable>
-        );
-      })}
-    </ScrollView>
   );
 }
 
@@ -281,7 +238,7 @@ const styles = StyleSheet.create({
   indexItem: { flexDirection: 'row', width: '46%', gap: 6 },
   chipCard: { borderWidth: 1, borderRadius: 16, padding: 12, gap: 8 },
   chipHead: { flexDirection: 'row', justifyContent: 'space-between' },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  chips: { flexDirection: 'row', gap: 6 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -292,8 +249,4 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   onTeal: { color: '#FFFFFF' },
-  placeRow: { gap: 8, paddingRight: Layout.screenPadding },
-  placeCard: { width: 112, borderRadius: Layout.cardRadius, borderWidth: 1.5, overflow: 'hidden' },
-  placeArt: { height: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F6F9' },
-  placeInfo: { padding: 8, gap: 2 },
 });

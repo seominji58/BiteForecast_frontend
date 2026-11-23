@@ -1,6 +1,6 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Modal, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -19,14 +19,15 @@ import { BottomSheet } from '@/components/bottom-sheet';
 import { CatchStrip } from '@/components/catch-strip';
 import { CoordNote } from '@/components/coord-note';
 import { Button } from '@/components/form';
-import { MarineWarningBanner } from '@/components/marine-warning-banner';
+import { MarineWarningBanner, warningSummary } from '@/components/marine-warning-banner';
+import { useNavPicker } from '@/components/nav-picker';
+import { UiIcon, type UiIconName } from '@/components/ui-icon';
 import { NearbyShops } from '@/components/nearby-shops';
 import { nearestPort } from '@/components/boat-ports';
-import { NearbyCompact } from '@/components/place-compact';
-import { PlaceNavigate } from '@/components/place-navigate';
+import { NearbySummary } from '@/components/place-compact';
 import { PlaceGallery } from '@/components/place-photo';
 import { Card, ErrorView, Loading } from '@/components/screen';
-import { DataBasis, FishingIndexCard, IndexChips, NearbyPlaces } from '@/components/sea-detail';
+import { DataBasis, FishingIndexCard, IndexChips } from '@/components/sea-detail';
 import { SeaChart } from '@/components/sea-chart';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -34,11 +35,12 @@ import { ZoneNotice } from '@/components/zone-notice';
 import { Brand, Layout } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
-import { nearLabel } from '@/lib/navigate';
+import { nearLabel, navTarget } from '@/lib/navigate';
 import { nearby, PLACE_TYPE_LABEL, placeKindNote, placeName } from '@/lib/place';
 import { pushRecentPlace, useHomePlace } from '@/lib/prefs';
+import type { Place, PlaceCompare } from '@/api/types';
 
-type Sheet = 'index' | 'source' | 'around' | 'photo' | null;
+type Sheet = 'index' | 'source' | 'around' | 'photo' | 'safety' | null;
 
 /**
  * 위치 상세 (2026-11-23 v2): ① 장소·작은 지도/사진 ② 위험구역·특보 ③ 공식 낚시지수 칩
@@ -96,88 +98,34 @@ export default function PlaceDetailScreen() {
                 </View>
                 <FavoriteStar placeId={place.id} />
               </View>
-              {/* 기관 지정 대표 지점 ↔ 실제 낚시 자리 구분, 위치 정확도는 짧게 */}
               {placeKindNote(place) ? (
-                <ThemedText type="small" themeColor="tint">
+                <ThemedText type="small" themeColor="tint" numberOfLines={1}>
                   {placeKindNote(place)}
                 </ThemedText>
               ) : null}
               <CoordNote place={pc?.place ?? place} compact kakaoMoved={kakao.data?.moved} />
-              <PlaceNavigate place={place} name={placeName(place)} compact />
-              {/* 배를 타고 가는 지점: 가까운 낚시어선 출항항으로 이어준다 */}
-              {place.type === 'boat' || place.type === 'point' ? <NearestPortRow place={place} /> : null}
-              <View style={styles.links}>
-                <Pressable
-                  accessibilityRole="button"
-                  hitSlop={6}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/journal/new',
-                      params: { place: String(place.id) },
-                    })
-                  }>
-                  <ThemedText type="smallBold" themeColor="tint">
-                    기록 남기기
-                  </ThemedText>
-                </Pressable>
-                {place.id !== homeId ? (
-                  <Pressable
-                    accessibilityRole="button"
-                    hitSlop={6}
-                    onPress={() => {
-                      setHomeId(place.id);
-                    }}>
-                    <ThemedText type="smallBold" themeColor="tint">
-                      기준으로 설정
-                    </ThemedText>
-                  </Pressable>
-                ) : (
-                  <ThemedText type="small" themeColor="textSecondary">
-                    내 기준 낚시터
-                  </ThemedText>
-                )}
-                {kakao.data ? (
-                  <Pressable accessibilityRole="link" hitSlop={6} onPress={() => Linking.openURL(kakao.data!.url).catch(() => {})}>
-                    <ThemedText type="smallBold" themeColor="tint">
-                      카카오맵
-                    </ThemedText>
-                  </Pressable>
-                ) : null}
-                <Pressable accessibilityRole="button" hitSlop={6} onPress={() => setSheet('source')}>
-                  <ThemedText type="smallBold" themeColor="tint">
-                    자료 출처
-                  </ThemedText>
-                </Pressable>
-              </View>
+              {/* 행동은 아이콘 한 줄: 길안내(배 지점은 출항항)·공유·기록·기준·출처 */}
+              <ActionRow
+                place={place}
+                isHome={place.id === homeId}
+                onHome={() => setHomeId(place.id)}
+                onSource={() => setSheet('source')}
+                kakaoUrl={kakao.data?.url ?? null}
+              />
             </View>
           </Card>
         ) : null}
 
         {pc ? (
           <>
-            {/* 안전 정보는 기본 화면에: 출입통제·위험구역, 해상 특보(누르면 발표 시각·해역) */}
-            <ZoneNotice regulation={pc.regulation} compact />
-            <MarineWarningBanner w={pc.warning} />
-
-            {/* 공식 낚시지수: 어종 칩 (누르면 시간대·환경 범위 시트) */}
+            {/* 안전: 위험구역·특보를 한 줄씩, 누르면 자세히 */}
+            <SafetyStrip pc={pc} onOpen={() => setSheet('safety')} />
+            {/* 공식 낚시지수: 어종 칩 한 줄 (누르면 시간대·환경 범위 시트) */}
             <IndexChips pc={pc} onMore={() => setSheet('index')} />
             {/* 오늘 바다: 물때·파고·바람·날씨 하루 그래프 (지금 값 크게) */}
             {today ? <SeaChart pc={pc} date={today} cal={cal} updated={cond.data?.generated_at} /> : null}
-
-            {/* 주변: 가까운 낚시터 · 주변 시설 (탭 없이 한 번에) */}
-            {place && places.data && !place.location_suspect && !place.coord?.recommend_hold ? (
-              <>
-                <ThemedText type="smallBold">근처 낚시터</ThemedText>
-                <NearbyPlaces
-                  items={nearby(place, places.data, 8)}
-                  currentId={place.id}
-                  onPress={(p) => router.replace({ pathname: '/place/[id]', params: { id: String(p.id) } })}
-                />
-              </>
-            ) : null}
-            <Card>
-              <NearbyCompact placeId={placeId} onAll={() => setSheet('around')} />
-            </Card>
+            {/* 주변: 근처 낚시터 이름 + 시설 거리 요약, 누르면 전체 */}
+            <NearbyCard place={place} all={places.data} onAll={() => setSheet('around')} />
             <CatchStrip
               title="이 낚시터 이용자 조황"
               filter={{ placeId }}
@@ -221,6 +169,10 @@ export default function PlaceDetailScreen() {
       ) : null}
       {pc ? (
         <>
+          <BottomSheet open={sheet === 'safety'} title="안전 정보" onClose={() => setSheet(null)}>
+            <ZoneNotice regulation={pc.regulation} />
+            <MarineWarningBanner w={pc.warning} />
+          </BottomSheet>
           <BottomSheet open={sheet === 'index'} title="공식 바다낚시지수" onClose={() => setSheet(null)}>
             <FishingIndexCard pc={pc} />
           </BottomSheet>
@@ -257,27 +209,146 @@ export default function PlaceDetailScreen() {
   );
 }
 
-/** 선상·지수 지점 → 가장 가까운 낚시어선 출항항 (지도에서 항구 카드로) */
-function NearestPortRow({ place }: { place: import('@/api/types').Place }) {
+/**
+ * 상단 행동 한 줄 (2026-11-23): 아이콘 + 짧은 글자. 길안내(배 지점이면 가까운 출항항) · 공유 · 기록 · 기준 · 출처
+ * 길안내 정확도 안내는 길안내 시트에서 (상단을 짧게)
+ */
+function ActionRow({
+  place,
+  isHome,
+  onHome,
+  onSource,
+  kakaoUrl,
+}: {
+  place: Place;
+  isHome: boolean;
+  onHome: () => void;
+  onSource: () => void;
+  kakaoUrl: string | null;
+}) {
   const theme = useTheme();
+  const name = placeName(place);
+  const t = navTarget(place, name);
+  const nav = useNavPicker(t);
   const ports = useBoatPorts();
-  const n = nearestPort(ports.data?.ports, place);
-  if (!n || n.km > 60) return null;
+  const port = t.kind === 'none' ? nearestPort(ports.data?.ports, place) : null;
+  const share = () => Share.share({ message: [name, place.address ?? place.region_name].filter(Boolean).join('\n') }).catch(() => {});
+  const items: { icon: UiIconName; label: string; onPress: () => void; on?: boolean }[] = [
+    t.kind !== 'none'
+      ? { icon: 'navigate', label: t.kind === 'route' ? '길안내' : '주소 찾기', onPress: nav.open }
+      : port && port.km <= 60
+        ? {
+            icon: 'boat',
+            label: `출항항 ${Math.round(port.km)}km`,
+            onPress: () => router.push({ pathname: '/explore', params: { port: String(port.port.id) } }),
+          }
+        : { icon: 'map', label: '카카오맵', onPress: () => kakaoUrl && Linking.openURL(kakaoUrl).catch(() => {}) },
+    { icon: 'share', label: '공유', onPress: share },
+    { icon: 'edit', label: '기록', onPress: () => router.push({ pathname: '/journal/new', params: { place: String(place.id) } }) },
+    { icon: isHome ? 'homeOn' : 'home', label: isHome ? '내 기준' : '기준 설정', onPress: onHome, on: isHome },
+    { icon: 'info', label: '자료 출처', onPress: onSource },
+  ];
+  return (
+    <View style={[styles.actions, { borderColor: theme.border }]}>
+      {items.map((it) => (
+        <Pressable
+          key={it.label}
+          accessibilityRole="button"
+          accessibilityState={it.on != null ? { selected: it.on } : undefined}
+          onPress={it.onPress}
+          style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}>
+          <UiIcon name={it.icon} size={22} color={it.on ? Brand.orange : Brand.teal} />
+          <ThemedText type="small" numberOfLines={1} style={styles.actionText}>
+            {it.label}
+          </ThemedText>
+        </Pressable>
+      ))}
+      {nav.sheet}
+    </View>
+  );
+}
+
+/** 안전 한 카드: 위험구역·특보를 한 줄씩. 누르면 자세한 안내 시트 */
+function SafetyStrip({ pc, onOpen }: { pc: PlaceCompare; onOpen: () => void }) {
+  const theme = useTheme();
+  const zones = pc.regulation.items.filter((i) => i.restriction_type === 'access' || i.restriction_type === 'coastal_danger');
+  const w = warningSummary(pc.warning);
+  const danger = pc.warning.level === 'warning' || zones.some((z) => z.restriction_type === 'access');
+  const caution = danger || zones.length > 0 || pc.warning.level === 'nearby' || pc.warning.level === 'preliminary';
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={() => router.push({ pathname: '/explore', params: { port: String(n.port.id) } })}
-      style={({ pressed }) => [styles.portRow, { backgroundColor: theme.tintSoft }, pressed && { opacity: 0.8 }]}>
+      onPress={onOpen}
+      style={({ pressed }) => [
+        styles.safety,
+        { backgroundColor: danger ? theme.dangerSoft : caution ? theme.warningSoft : theme.backgroundElement, borderColor: theme.border },
+        pressed && { opacity: 0.85 },
+      ]}>
       <View style={styles.flex}>
-        <ThemedText type="smallBold" themeColor="tint">
-          ⚓ 가까운 출항항 · {n.port.kakao_name} {Math.round(n.km)}km
-        </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          낚시어선 {n.port.boats}척 · 업체 연락·길안내
+        {zones.map((z, i) => {
+          const [, near] = (z.remarks ?? '').split(' · ');
+          const control = z.restriction_type === 'access';
+          return (
+            <ThemedText key={i} type="small" numberOfLines={1}>
+              <ThemedText type="smallBold" themeColor={control ? 'danger' : 'warning'}>
+                {control ? '출입통제구역' : '연안사고 위험구역'}
+              </ThemedText>
+              {near ? ` · ${near}` : ''}
+            </ThemedText>
+          );
+        })}
+        <ThemedText type="small" numberOfLines={1}>
+          <ThemedText type="smallBold" themeColor={w.fg}>
+            {w.title}
+          </ThemedText>
+          {w.sub ? ` · ${w.sub}` : ''}
         </ThemedText>
       </View>
-      <ThemedText themeColor="tint">›</ThemedText>
+      <ThemedText themeColor="textSecondary">›</ThemedText>
     </Pressable>
+  );
+}
+
+/** 주변 한 카드: 근처 낚시터 이름(누르면 그곳) + 시설 거리 요약, 「전체」는 시트 */
+function NearbyCard({ place, all, onAll }: { place: Place | null; all: Place[] | undefined; onAll: () => void }) {
+  const theme = useTheme();
+  if (!place) return null;
+  const near =
+    all && !place.location_suspect && !place.coord?.recommend_hold ? nearby(place, all, 6).filter((x) => x.place.id !== place.id) : [];
+  return (
+    <View style={[styles.nearCard, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+      <View style={styles.nearHead}>
+        <ThemedText type="smallBold">주변</ThemedText>
+        <Pressable accessibilityRole="button" hitSlop={8} onPress={onAll}>
+          <ThemedText type="smallBold" themeColor="tint">
+            시설 전체 · 전화·지도 ›
+          </ThemedText>
+        </Pressable>
+      </View>
+      {near.length ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.nearRow}>
+          {near.map(({ place: p, km }) => (
+            <Pressable
+              key={p.id}
+              accessibilityRole="button"
+              onPress={() => router.replace({ pathname: '/place/[id]', params: { id: String(p.id) } })}
+              style={({ pressed }) => [
+                styles.nearPill,
+                { borderColor: theme.border, backgroundColor: theme.background },
+                pressed && { opacity: 0.7 },
+              ]}>
+              <ThemedText type="smallBold" numberOfLines={1}>
+                {p.name}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {PLACE_TYPE_LABEL[p.type]} · {km < 1 ? '1km 안' : `${Math.round(km)}km`}
+              </ThemedText>
+            </Pressable>
+          ))}
+        </ScrollView>
+      ) : null}
+      <NearbySummary placeId={place.id} />
+    </View>
   );
 }
 
@@ -320,28 +391,22 @@ const styles = StyleSheet.create({
   headCard: { padding: 0, overflow: 'hidden', gap: 0 },
   headBody: { padding: 12, gap: 8 },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  portRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 },
-  links: {
+  actions: { flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10, marginTop: 2 },
+  action: { flex: 1, alignItems: 'center', gap: 3, minHeight: 48 },
+  actionText: { fontSize: 12 },
+  safety: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
     alignItems: 'center',
-    minHeight: 32,
-  },
-  between: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-  },
-  rowLink: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    minHeight: 48,
-    borderWidth: 1,
+    gap: 8,
+    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 12,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
+  nearCard: { borderWidth: 1, borderRadius: 16, padding: 12, gap: 10 },
+  nearHead: { flexDirection: 'row', justifyContent: 'space-between' },
+  nearRow: { gap: 6 },
+  nearPill: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6, maxWidth: 160 },
   footer: {
     flexDirection: 'row',
     gap: 8,

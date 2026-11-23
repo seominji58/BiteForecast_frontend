@@ -41,6 +41,21 @@ function unknownReason(w: Warning): string {
   return `${why.join(' · ')}.`;
 }
 
+/** 특보 한 줄 요약 (상세 「안전」 줄): 제목과 색 */
+export function warningSummary(w: Warning): { title: string; fg: 'danger' | 'warning' | 'textSecondary'; sub: string } {
+  const fg = w.level === 'warning' ? 'danger' : w.level === 'nearby' || w.level === 'preliminary' ? 'warning' : 'textSecondary';
+  const landOnly = w.level === 'nearby' && w.active.length > 0 && !w.active.some((x) => /풍랑|해일|태풍/.test(x.type));
+  const statusTitle = landOnly ? '주변 육상 특보 발효 중' : (STATUS_TITLE[w.status] ?? TITLE[w.level]);
+  const title = w.reference_only
+    ? w.level === 'unknown'
+      ? '실제 위치 특보 확인 안 됨'
+      : `참고 · 주소 기준 ${TITLE[w.level]}`
+    : statusTitle;
+  const types = w.active.length ? w.active.map((x) => x.type).join(', ') : w.preliminary.length ? w.preliminary[0].when : '';
+  const sub = [types, w.seas.length ? `${w.seas.join('·')} 해역` : ''].filter(Boolean).join(' · ');
+  return { title, fg, sub };
+}
+
 /**
  * 기상청 해상 특보 (UX 검토 P0-1). 앱이 안전을 판정하지 않고 공식 발표만 전달한다.
  * - unknown 은 「특보 없음」과 다르게 보여준다 (자료가 없을 때 없다고 단정하지 않음)
@@ -141,8 +156,7 @@ export function MarineWarningBanner({ w, compact }: { w: Warning; compact?: bool
           ) : null}
           {w.level === 'unknown' ? (
             <ThemedText type="small" themeColor="textSecondary">
-              {unknownReason(w)}{' '}
-              출조 전 기상청 날씨누리(weather.go.kr)에서 특보를 꼭 확인하세요.
+              {unknownReason(w)} 출조 전 기상청 날씨누리(weather.go.kr)에서 특보를 꼭 확인하세요.
             </ThemedText>
           ) : (
             <ThemedText type="small" themeColor="textSecondary">

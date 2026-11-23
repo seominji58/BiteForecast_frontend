@@ -35,6 +35,12 @@ const NAMES = {
   wind: 'flag-outline',
   moon: 'moon-outline',
   alert: 'warning-outline',
+  navigate: 'navigate-outline',
+  share: 'share-outline',
+  boat: 'boat-outline',
+  info: 'information-circle-outline',
+  home: 'home-outline',
+  homeOn: 'home',
 } as const;
 
 export type UiIconName = keyof typeof NAMES;
