@@ -62,10 +62,11 @@ export default function HomeScreen() {
   // 어종 카드를 누르면 그 어종 오늘 시트
   const [fish, setFish] = useState<SpeciesItem | null>(null);
   // 「전체 어종」에서 고르고 돌아오면 (?fish=code) 그 어종 시트를 연다
-  const params = useLocalSearchParams<{ fish?: string }>();
+  const params = useLocalSearchParams<{ fish?: string; t?: string }>();
+  const req = params.fish ? `${params.fish}:${params.t ?? ''}` : undefined;
   const [seenFish, setSeenFish] = useState<string | undefined>();
-  if (params.fish !== seenFish) {
-    setSeenFish(params.fish);
+  if (req !== seenFish) {
+    setSeenFish(req);
     const sp = speciesByCode(params.fish);
     if (sp) setFish(sp);
   }
@@ -188,10 +189,20 @@ export default function HomeScreen() {
       <SpotsCard x={x} dates={dates} date={today} today={today} species={null} />
 
       {/* 어종 카드 → 그 어종 오늘: 좋은 곳 5 · 금어기·체장 · [지도에서 보기] [이 어종으로 계획] */}
-      <BottomSheet open={!!fish} title={fish ? `오늘 ${fish.name} 좋은 곳` : ''} onClose={() => setFish(null)}>
+      <BottomSheet
+        open={!!fish}
+        title={fish ? (fish.indexName ? `오늘 ${fish.name} 좋은 곳` : `${fish.name} · 금어기·채비`) : ''}
+        onClose={() => setFish(null)}>
         {fish ? (
           <View style={styles.sheet}>
-            <SpotsCard x={x} dates={dates} date={today} today={today} species={fish} limit={5} onOpen={() => setFish(null)} />
+            {fish.indexName ? (
+              <SpotsCard x={x} dates={dates} date={today} today={today} species={fish} limit={5} onOpen={() => setFish(null)} />
+            ) : (
+              <ThemedText type="small" themeColor="textSecondary">
+                공식 낚시지수가 없는 어종이라 「좋은 곳」 순위는 없어요. 「지도에서 보기」로 이 어종을 대상 어종으로 알린 낚시터를 볼 수
+                있어요.
+              </ThemedText>
+            )}
             {TACKLE[fish.code] ? (
               <View style={[styles.tackle, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
                 <ThemedText type="smallBold">🎣 {TACKLE[fish.code].how}</ThemedText>

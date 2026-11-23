@@ -21,7 +21,8 @@ export default function SpeciesScreen() {
   const all = useMemo(() => mergeWithApi(api.data), [api.data]);
   const [selected] = useHomeSpecies();
   const pick = (code: string) => {
-    router.navigate({ pathname: '/', params: { fish: code } });
+    // t: 같은 어종을 다시 골라도 홈이 새 요청으로 알아보게 (예전엔 두 번째부터 반응 없음)
+    router.navigate({ pathname: '/', params: { fish: code, t: String(Date.now()) } });
   };
   const indexed = all.filter((s) => s.indexName);
   const others = all.filter((s) => !s.indexName);
