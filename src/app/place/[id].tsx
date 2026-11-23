@@ -24,7 +24,7 @@ import { useNavPicker } from '@/components/nav-picker';
 import { UiIcon, type UiIconName } from '@/components/ui-icon';
 import { NearbyShops } from '@/components/nearby-shops';
 import { nearestPort } from '@/components/boat-ports';
-import { NearbySummary } from '@/components/place-compact';
+import { useNearbyLine } from '@/components/place-compact';
 import { PlaceGallery } from '@/components/place-photo';
 import { Card, ErrorView, Loading } from '@/components/screen';
 import { DataBasis, FishingIndexCard, IndexChips } from '@/components/sea-detail';
@@ -69,6 +69,10 @@ export default function PlaceDetailScreen() {
   const [sheet, setSheet] = useState<Sheet>(null);
   const [trip, setTrip] = useState(false);
 
+  const nearList =
+    place && places.data && !place.location_suspect && !place.coord?.recommend_hold
+      ? nearby(place, places.data, 7).filter((x) => x.place.id !== place.id)
+      : [];
   const address = place ? (place.address ?? (place.near_address ? nearLabel(place.near_address, place.near_address_kind) : null)) : null;
 
   return (
@@ -125,7 +129,7 @@ export default function PlaceDetailScreen() {
             {/* 오늘 바다: 물때·파고·바람·날씨 하루 그래프 (지금 값 크게) */}
             {today ? <SeaChart pc={pc} date={today} cal={cal} updated={cond.data?.generated_at} /> : null}
             {/* 주변: 근처 낚시터 이름 + 시설 거리 요약, 누르면 전체 */}
-            <NearbyCard place={place} all={places.data} onAll={() => setSheet('around')} />
+            {place ? <NearbyRow place={place} nearCount={nearList.length} onOpen={() => setSheet('around')} /> : null}
             <CatchStrip
               title="이 낚시터 이용자 조황"
               filter={{ placeId }}
@@ -190,7 +194,14 @@ export default function PlaceDetailScreen() {
         </>
       ) : null}
       {place ? (
-        <BottomSheet open={sheet === 'around'} title="주변 시설" onClose={() => setSheet(null)}>
+        <BottomSheet open={sheet === 'around'} title="주변" onClose={() => setSheet(null)}>
+          <NearbyList
+            items={nearList}
+            onPick={(p) => {
+              setSheet(null);
+              router.replace({ pathname: '/place/[id]', params: { id: String(p.id) } });
+            }}
+          />
           <NearbyShops placeId={place.id} area={place.region_name} />
           <Amenities placeId={place.id} />
         </BottomSheet>
@@ -309,45 +320,53 @@ function SafetyStrip({ pc, onOpen }: { pc: PlaceCompare; onOpen: () => void }) {
   );
 }
 
-/** 주변 한 카드: 근처 낚시터 이름(누르면 그곳) + 시설 거리 요약, 「전체」는 시트 */
-function NearbyCard({ place, all, onAll }: { place: Place | null; all: Place[] | undefined; onAll: () => void }) {
+/** 주변 한 줄: 근처 낚시터 수 + 가까운 시설 거리. 누르면 주변 시트 (근처 낚시터·시설 전체) */
+function NearbyRow({ place, nearCount, onOpen }: { place: Place; nearCount: number; onOpen: () => void }) {
   const theme = useTheme();
-  if (!place) return null;
-  const near =
-    all && !place.location_suspect && !place.coord?.recommend_hold ? nearby(place, all, 6).filter((x) => x.place.id !== place.id) : [];
+  const line = useNearbyLine(place.id);
   return (
-    <View style={[styles.nearCard, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
-      <View style={styles.nearHead}>
-        <ThemedText type="smallBold">주변</ThemedText>
-        <Pressable accessibilityRole="button" hitSlop={8} onPress={onAll}>
-          <ThemedText type="smallBold" themeColor="tint">
-            시설 전체 · 전화·지도 ›
+    <Pressable
+      accessibilityRole="button"
+      onPress={onOpen}
+      style={({ pressed }) => [
+        styles.safety,
+        { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+        pressed && { opacity: 0.85 },
+      ]}>
+      <View style={styles.flex}>
+        <ThemedText type="smallBold">주변{nearCount ? ` · 근처 낚시터 ${nearCount}곳` : ''}</ThemedText>
+        {line ? (
+          <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+            {line}
+          </ThemedText>
+        ) : null}
+      </View>
+      <ThemedText themeColor="textSecondary">›</ThemedText>
+    </Pressable>
+  );
+}
+
+/** 주변 시트 안: 근처 낚시터 목록 (누르면 그곳으로) */
+function NearbyList({ items, onPick }: { items: { place: Place; km: number }[]; onPick: (p: Place) => void }) {
+  const theme = useTheme();
+  if (!items.length) return null;
+  return (
+    <View style={styles.nearList}>
+      <ThemedText type="smallBold">근처 낚시터</ThemedText>
+      {items.map(({ place: p, km }) => (
+        <Pressable
+          key={p.id}
+          accessibilityRole="button"
+          onPress={() => onPick(p)}
+          style={({ pressed }) => [styles.nearItem, { borderColor: theme.border }, pressed && { opacity: 0.7 }]}>
+          <ThemedText type="smallBold" numberOfLines={1} style={styles.flex}>
+            {p.name}
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {PLACE_TYPE_LABEL[p.type]} · {km < 1 ? '1km 안' : `${Math.round(km)}km`} ›
           </ThemedText>
         </Pressable>
-      </View>
-      {near.length ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.nearRow}>
-          {near.map(({ place: p, km }) => (
-            <Pressable
-              key={p.id}
-              accessibilityRole="button"
-              onPress={() => router.replace({ pathname: '/place/[id]', params: { id: String(p.id) } })}
-              style={({ pressed }) => [
-                styles.nearPill,
-                { borderColor: theme.border, backgroundColor: theme.background },
-                pressed && { opacity: 0.7 },
-              ]}>
-              <ThemedText type="smallBold" numberOfLines={1}>
-                {p.name}
-              </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                {PLACE_TYPE_LABEL[p.type]} · {km < 1 ? '1km 안' : `${Math.round(km)}km`}
-              </ThemedText>
-            </Pressable>
-          ))}
-        </ScrollView>
-      ) : null}
-      <NearbySummary placeId={place.id} />
+      ))}
     </View>
   );
 }
@@ -394,6 +413,8 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10, marginTop: 2 },
   action: { flex: 1, alignItems: 'center', gap: 3, minHeight: 48 },
   actionText: { fontSize: 12 },
+  nearList: { gap: 4 },
+  nearItem: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, borderBottomWidth: StyleSheet.hairlineWidth },
   safety: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -403,10 +424,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
-  nearCard: { borderWidth: 1, borderRadius: 16, padding: 12, gap: 10 },
-  nearHead: { flexDirection: 'row', justifyContent: 'space-between' },
-  nearRow: { gap: 6 },
-  nearPill: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6, maxWidth: 160 },
   footer: {
     flexDirection: 'row',
     gap: 8,
