@@ -46,7 +46,7 @@ import { mergeWithApi, SPECIES } from '@/lib/species';
 import { sortByCount, speciesPlaceCounts } from '@/lib/species-rank';
 import { SearchBar } from '@/components/search-bar';
 import { PlaceThumb } from '@/components/place-photo';
-import { PORT_MAX_DELTA, PortCard, portMarkers, PortToggle } from '@/components/boat-ports';
+import { PORT_MAX_DELTA, PortCard, portClusters, portMarkers, PortToggle } from '@/components/boat-ports';
 import { ROCK_MAX_DELTA, RockCard, rockMarkers, RockToggle } from '@/components/rock-points';
 import { useCriteria, useExploreRegion, useHomePlace } from '@/lib/prefs';
 
@@ -187,6 +187,7 @@ export default function ExploreScreen() {
   const [portId, setPortId] = useState<number | null>(params.port ? Number(params.port) : null);
   const ports = useBoatPorts(portOn);
   const port = portOn && portId != null ? (ports.data?.ports.find((p) => p.id === portId) ?? null) : null;
+  const portGroups = portOn ? portClusters(ports.data?.ports, view, portId) : [];
 
   const locate = async () => {
     setGps({ loading: true, coords: null, error: null });
@@ -484,6 +485,12 @@ export default function ExploreScreen() {
     mapRef.current?.moveTo({ latitude: p.lat, longitude: p.lon, latitudeDelta: d, longitudeDelta: d }, 300);
   };
   const pressMarker = (id: string) => {
+    if (id.startsWith('hc')) {
+      // 항구 묶음 → 그 항구들이 다 보이게 확대
+      const g = portGroups.find((x) => `hc${x.key}` === id);
+      if (g) mapRef.current?.fitTo(g.ports.map((p) => ({ lat: p.lat, lon: p.lon })));
+      return;
+    }
     if (id.startsWith('h')) {
       setSelectedId(null);
       setRockId(null);
@@ -575,9 +582,10 @@ export default function ExploreScreen() {
             style={StyleSheet.absoluteFill}
             initialRegion={initialRegion}
             markers={[
-              ...(portOn ? portMarkers(ports.data?.ports, view, portId) : []),
+              ...(portOn ? portMarkers(portGroups, portId) : []),
               ...(rockOn ? rockMarkers(rocks.data?.points, view, rockId) : []),
-              ...markers,
+              // 출항항 보기에서는 낚시터 핀을 숨긴다 (배낚시 항구만 보이게)
+              ...(portOn ? [] : markers),
             ]}
             userLocation={gps.coords}
             onMarkerPress={pressMarker}

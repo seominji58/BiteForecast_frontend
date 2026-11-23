@@ -1,7 +1,7 @@
 /**
  * 배낚시: 낚시어선 출항항 (2026-11-23).
- * - 지도 「출항항」 켜기 → 닻 핀(아래 척수). 위도 폭 3° 이하일 때 화면 안 것만, 최대 200개.
- *   넓게 볼 때는 10척 이상, 중간은 3척 이상, 가까이 보면 전부
+ * - 지도 「출항항」 켜기 → 닻 핀(아래 척수). 켜면 낚시터 핀은 숨긴다 (두 종류가 섞여 지저분하지 않게)
+ * - 가까운 항구는 닻 하나로 묶고(「4곳 · 63척」) 누르면 그 지역으로 확대
  * - 항구 카드: 척수·최대 승객·배 이름 일부 · 그 앞바다(가장 가까운 낚시터 요약) 특보·파고·풍속 ·
  *   [선상낚시 업체](카카오, 전화) [길안내] [카카오맵]
  * - 신고정보에는 연락처·출항 시간이 없어 업체에 직접 확인하라고 늘 적는다. 예약·결제는 하지 않는다
@@ -22,28 +22,64 @@ import { useTheme } from '@/hooks/use-theme';
 export const PORT_MAX_DELTA = 3;
 const MAX_MARKERS = 200;
 
-export function portMarkers(ports: BoatPort[] | undefined, view: MapRegion | null, selectedId: number | null): MapMarker[] {
+export type PortCluster = { key: string; ports: BoatPort[] };
+
+/**
+ * 화면 안 항구를 화면 거리로 묶는다: 척수 많은 항구부터 자리를 잡고, 핀 하나 크기(약 64pt) 안의 항구는 그 핀에 합친다.
+ * 지도 화면을 대략 세로 600pt·가로 400pt로 보고 위경도 폭을 나눈다 → 확대할수록 갈라진다. 고른 항구는 늘 따로
+ */
+const NEAR_PT = 64;
+export function portClusters(ports: BoatPort[] | undefined, view: MapRegion | null, selectedId: number | null): PortCluster[] {
   if (!ports || !view || view.latitudeDelta > PORT_MAX_DELTA) return [];
   const lat0 = view.latitude - view.latitudeDelta / 2;
   const lat1 = view.latitude + view.latitudeDelta / 2;
   const lon0 = view.longitude - view.longitudeDelta / 2;
   const lon1 = view.longitude + view.longitudeDelta / 2;
-  // 넓게 볼 때는 큰 항구만 (겹쳐서 지도를 덮지 않게). 확대할수록 작은 항구까지. 고른 항구는 늘 표시
-  const min = view.latitudeDelta > 0.6 ? 10 : view.latitudeDelta > 0.25 ? 3 : 1;
-  return ports
+  const dLat = (view.latitudeDelta * NEAR_PT) / 600;
+  const dLon = (view.longitudeDelta * NEAR_PT) / 400;
+  const inView = ports
     .filter((p) => p.lat >= lat0 && p.lat <= lat1 && p.lon >= lon0 && p.lon <= lon1)
-    .filter((p) => p.boats >= min || p.id === selectedId)
-    .slice(0, MAX_MARKERS)
-    .map((p) => ({
-      id: `h${p.id}`,
-      lat: p.lat,
-      lon: p.lon,
-      tone: 'teal',
-      kind: 'port',
-      caption: `${p.boats}척`,
-      label: `${p.name} 낚시어선 ${p.boats}척`,
-      selected: p.id === selectedId,
-    }));
+    .sort((a, b) => (a.id === selectedId ? -1 : b.id === selectedId ? 1 : b.boats - a.boats));
+  const out: (PortCluster & { lat: number; lon: number })[] = [];
+  for (const p of inView) {
+    const hit =
+      p.id === selectedId
+        ? null
+        : out.find((c) => c.key !== `s${selectedId}` && Math.abs(c.lat - p.lat) < dLat && Math.abs(c.lon - p.lon) < dLon);
+    if (hit) hit.ports.push(p);
+    else out.push({ key: p.id === selectedId ? `s${p.id}` : `${p.id}`, ports: [p], lat: p.lat, lon: p.lon });
+  }
+  return out.slice(0, MAX_MARKERS).map(({ key, ports: ps }) => ({ key, ports: ps }));
+}
+
+export function portMarkers(clusters: PortCluster[], selectedId: number | null): MapMarker[] {
+  return clusters.map(({ key, ports }) => {
+    if (ports.length === 1) {
+      const p = ports[0];
+      return {
+        id: `h${p.id}`,
+        lat: p.lat,
+        lon: p.lon,
+        tone: 'teal' as const,
+        kind: 'port' as const,
+        caption: `${p.boats}척`,
+        label: `${p.name} 낚시어선 ${p.boats}척`,
+        selected: p.id === selectedId,
+      };
+    }
+    // 묶음: 척수가 가장 많은 항구 자리에 「4곳 · 63척」
+    const top = ports.reduce((m, p) => (p.boats > m.boats ? p : m), ports[0]);
+    const boats = ports.reduce((n, p) => n + p.boats, 0);
+    return {
+      id: `hc${key}`,
+      lat: top.lat,
+      lon: top.lon,
+      tone: 'teal' as const,
+      kind: 'port' as const,
+      caption: `${boats}척 · ${ports.length}곳`,
+      label: `출항항 ${ports.length}곳, 낚시어선 ${boats}척, 눌러서 확대`,
+    };
+  });
 }
 
 const km = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) => {
@@ -146,7 +182,8 @@ export function PortCard({
             {seaParts.join(' · ') || '오늘 예보 자료 없음'}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-            {sea.km < 1 ? `이 항구(${sea.place.name}) 예보 기준` : `가까운 ${sea.place.name} ${Math.round(sea.km)}km 기준`} · 먼바다는 다를 수 있어요
+            {sea.km < 1 ? `이 항구(${sea.place.name}) 예보 기준` : `가까운 ${sea.place.name} ${Math.round(sea.km)}km 기준`} · 먼바다는 다를
+            수 있어요
           </ThemedText>
         </View>
       ) : null}
