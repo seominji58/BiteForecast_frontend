@@ -509,6 +509,18 @@
       ],
       "in_index": false,
       "view": "strict side view (lateral profile), head facing left"
+    },
+    {
+      "code": "unknown_fish",
+      "name_ko": "기타 어종",
+      "index_name": null,
+      "species_code": null,
+      "scientific": "-",
+      "english": "generic fish silhouette",
+      "features": [],
+      "in_index": false,
+      "view": "strict side view, head facing left",
+      "prompt": "Flat vector icon-style silhouette of one generic fish, for a mobile fishing app default picture. Classic neutral bony-fish shape: pointed snout with a small mouth on the left, a small round white eye near the front of the head, one spiny dorsal fin, small pectoral fin, pelvic and anal fins, clearly forked tail on the right. Strict side view, head facing left, centered, filling about 80% of a square frame. Single solid fill color muted slate-teal (#4E7C80), very slightly lighter belly. Perfectly crisp hard edges like a sticker cut-out. NO glow, NO halo, NO blur, NO soft edges, NO shadow, NO gradient background, NO outline stroke, no scales or texture. Fully transparent background around the fish. No water, no hooks, no lines, no other objects. Absolutely no text or letters."
     }
   ]
 }

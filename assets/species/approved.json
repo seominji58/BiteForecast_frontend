@@ -1137,5 +1137,37 @@
     "asset_px": 384,
     "asset_kb": 88,
     "applied_at": "2026-11-23T06:10:59.271490+00:00"
+  },
+  "unknown_fish": {
+    "code": "unknown_fish",
+    "name_ko": "기타 어종",
+    "scientific": "-",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "c4e4dffc9770eb71",
+    "usage": {
+      "input_tokens": 186,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 186
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1635
+    },
+    "created_at": "2026-11-23T10:44:50.458Z",
+    "review": {
+      "checklist": [],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/unknown_fish.png",
+    "asset_px": 384,
+    "asset_kb": 40,
+    "applied_at": "2026-11-23T10:44:54.162578+00:00"
   }
 }

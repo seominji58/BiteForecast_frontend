@@ -47,8 +47,9 @@ export function SpeciesField({
           accessibilityLabel={name ? `어종: ${name}, 바꾸기` : placeholder}
           onPress={() => setOpen(true)}
           style={styles.main}>
-          {speciesForRecord(value.code, value.etc) ? (
-            <SpeciesImage code={speciesForRecord(value.code, value.etc)!.code} size={36} />
+          {name ? (
+            // 목록 어종은 그 그림, 직접 입력한 어종은 기본 실루엣
+            <SpeciesImage code={speciesForRecord(value.code, value.etc)?.code ?? null} size={36} />
           ) : (
             <AppIcon name="total-fish" size={22} />
           )}

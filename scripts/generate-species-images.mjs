@@ -52,7 +52,9 @@ const STYLE = [
   'Must stay recognizable when shown as small as 56 pixels.',
 ].join(' ');
 
+// 항목에 prompt 가 있으면 그대로 쓴다 (예: 목록에 없는 어종용 기본 실루엣 unknown_fish)
 const promptFor = (s) =>
+  s.prompt ??
   `${STYLE}\nSubject: ${s.english} (${s.scientific}), known in Korea as ${s.name_ko}. View: ${s.view}. ` +
   `Key features to depict: ${s.features.join('; ')}.`;
 const sha = (t) => createHash('sha256').update(t).digest('hex').slice(0, 16);

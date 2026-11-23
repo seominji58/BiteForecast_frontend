@@ -30,6 +30,7 @@ export const SPECIES_IMAGES: Partial<Record<string, number>> = {
   rockfish: require('@/assets/species/rockfish.png'),
   seabass: require('@/assets/species/seabass.png'),
   spanish_mackerel: require('@/assets/species/spanish_mackerel.png'),
+  unknown_fish: require('@/assets/species/unknown_fish.png'),
   webfoot_octopus: require('@/assets/species/webfoot_octopus.png'),
   yellowtail: require('@/assets/species/yellowtail.png'),
 };
