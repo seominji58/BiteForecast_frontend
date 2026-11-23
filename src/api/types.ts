@@ -717,6 +717,21 @@ export type NearbyShops = {
   skipped: string | null;
 };
 
+/** 낚시어선 출항항 (해양수산부 낚시 어선업 신고정보, 2026-11-23). 연락처·출항 시간은 자료에 없다 */
+export type BoatPort = {
+  id: number;
+  name: string;
+  sgg: string;
+  lat: number;
+  lon: number;
+  kakao_name: string;
+  kakao_url: string | null;
+  boats: number;
+  max_passengers: number;
+  boat_names: string[];
+};
+export type BoatPorts = { source: string; as_of: string; boats_total: number; boats_on_map: number; notice: string; ports: BoatPort[] };
+
 /** 금어기·금지체장 (수산자원관리법 시행령 별표1·2 요약, 2026-11-23) */
 export type FishingRules = {
   source: string;

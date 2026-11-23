@@ -3,7 +3,16 @@ import { useEffect, useState } from 'react';
 import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useConditions, useDateRange, useFavorites, usePlaceKakao, usePlaces, usePlacesSummary, useSetFavorite } from '@/api/queries';
+import {
+  useBoatPorts,
+  useConditions,
+  useDateRange,
+  useFavorites,
+  usePlaceKakao,
+  usePlaces,
+  usePlacesSummary,
+  useSetFavorite,
+} from '@/api/queries';
 import { TripAddModal } from '@/components/add-to-trip';
 import { Amenities } from '@/components/amenities';
 import { BottomSheet } from '@/components/bottom-sheet';
@@ -12,6 +21,7 @@ import { CoordNote } from '@/components/coord-note';
 import { Button } from '@/components/form';
 import { MarineWarningBanner } from '@/components/marine-warning-banner';
 import { NearbyShops } from '@/components/nearby-shops';
+import { nearestPort } from '@/components/boat-ports';
 import { MetricTiles, NearbyCompact } from '@/components/place-compact';
 import { PlaceNavigate } from '@/components/place-navigate';
 import { PlaceGallery } from '@/components/place-photo';
@@ -102,6 +112,8 @@ export default function PlaceDetailScreen() {
               ) : null}
               <CoordNote place={pc?.place ?? place} compact kakaoMoved={kakao.data?.moved} />
               <PlaceNavigate place={place} name={placeName(place)} compact />
+              {/* 배를 타고 가는 지점: 가까운 낚시어선 출항항으로 이어준다 */}
+              {place.type === 'boat' || place.type === 'point' ? <NearestPortRow place={place} /> : null}
               <View style={styles.links}>
                 <Pressable
                   accessibilityRole="button"
@@ -311,6 +323,30 @@ export default function PlaceDetailScreen() {
   );
 }
 
+/** 선상·지수 지점 → 가장 가까운 낚시어선 출항항 (지도에서 항구 카드로) */
+function NearestPortRow({ place }: { place: import('@/api/types').Place }) {
+  const theme = useTheme();
+  const ports = useBoatPorts();
+  const n = nearestPort(ports.data?.ports, place);
+  if (!n || n.km > 60) return null;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => router.push({ pathname: '/explore', params: { port: String(n.port.id) } })}
+      style={({ pressed }) => [styles.portRow, { backgroundColor: theme.tintSoft }, pressed && { opacity: 0.8 }]}>
+      <View style={styles.flex}>
+        <ThemedText type="smallBold" themeColor="tint">
+          ⚓ 가까운 출항항 · {n.port.kakao_name} {Math.round(n.km)}km
+        </ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">
+          낚시어선 {n.port.boats}척 · 업체 연락·길안내
+        </ThemedText>
+      </View>
+      <ThemedText themeColor="tint">›</ThemedText>
+    </Pressable>
+  );
+}
+
 /** 물때(음력)·일출·일몰 출처 한 줄. 한국천문연구원 자료를 못 받았으면 「계산」이라고 그대로 쓴다 */
 function calendarSource(c: { mulddae?: string | null; lunar_source?: string | null; sunrise?: string | null; sun_source?: string | null }) {
   const parts = [
@@ -350,6 +386,7 @@ const styles = StyleSheet.create({
   headCard: { padding: 0, overflow: 'hidden', gap: 0 },
   headBody: { padding: 12, gap: 8 },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  portRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 },
   links: {
     flexDirection: 'row',
     flexWrap: 'wrap',

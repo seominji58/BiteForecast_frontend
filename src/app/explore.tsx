@@ -2,7 +2,17 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Keyboard, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { useCatchSummary, useDateRange, useGeoSearch, useFishingIndex, usePlaces, usePlacesSummary, useRockPoints, useSpecies } from '@/api/queries';
+import {
+  useCatchSummary,
+  useDateRange,
+  useGeoSearch,
+  useFishingIndex,
+  usePlaces,
+  usePlacesSummary,
+  useRockPoints,
+  useSpecies,
+  useBoatPorts,
+} from '@/api/queries';
 import type { CatchSummary, Place, PlaceSummary } from '@/api/types';
 import { AddToTripButton } from '@/components/add-to-trip';
 import { dayLabel } from '@/lib/compare';
@@ -16,23 +26,27 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, IconSize, Layout } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import {
-  CHECK_TEXT,
-  checkPlace,
-  type Criteria,
-  criteriaLabel,
-  INDEX_STEPS,
-  WAVE_STEPS,
-  WARNING_SHORT,
-  WIND_STEPS,
-} from '@/lib/criteria';
+import { CHECK_TEXT, checkPlace, type Criteria, criteriaLabel, INDEX_STEPS, WAVE_STEPS, WARNING_SHORT, WIND_STEPS } from '@/lib/criteria';
 import { type Coords, getCurrentCoords } from '@/lib/location';
 import { CoordNote, SameCoordSheet } from '@/components/coord-note';
-import { coordKey, distLabel, km, matches, PLACE_IMAGE, PLACE_TYPE_LABEL, placeKindNote, placeName, recommendable, sidoOf, usableForLocation } from '@/lib/place';
+import {
+  coordKey,
+  distLabel,
+  km,
+  matches,
+  PLACE_IMAGE,
+  PLACE_TYPE_LABEL,
+  placeKindNote,
+  placeName,
+  recommendable,
+  sidoOf,
+  usableForLocation,
+} from '@/lib/place';
 import { mergeWithApi, SPECIES } from '@/lib/species';
 import { sortByCount, speciesPlaceCounts } from '@/lib/species-rank';
 import { SearchBar } from '@/components/search-bar';
 import { PlaceThumb } from '@/components/place-photo';
+import { PORT_MAX_DELTA, PortCard, portMarkers, PortToggle } from '@/components/boat-ports';
 import { ROCK_MAX_DELTA, RockCard, rockMarkers, RockToggle } from '@/components/rock-points';
 import { useCriteria, useExploreRegion, useHomePlace } from '@/lib/prefs';
 
@@ -60,7 +74,16 @@ const GRADE_RANK: Record<string, number> = { 매우좋음: 5, 좋음: 4, 보통:
  */
 export default function ExploreScreen() {
   // pick=compare: 비교 화면에서 「지도에서 고르기」로 들어옴 (a = 이미 고른 A)
-  const params = useLocalSearchParams<{ near?: string; mode?: string; pick?: string; a?: string; region?: string; fish?: string; date?: string }>();
+  const params = useLocalSearchParams<{
+    near?: string;
+    mode?: string;
+    pick?: string;
+    a?: string;
+    region?: string;
+    fish?: string;
+    date?: string;
+    port?: string;
+  }>();
   const theme = useTheme();
   const places = usePlaces();
   const range = useDateRange();
@@ -95,8 +118,7 @@ export default function ExploreScreen() {
     );
     const index = new Set<number>();
     if (fishIsIndex && fi.data)
-      for (const pt of fi.data.points)
-        if (pt.species.some((x) => x.species === fish)) for (const l of pt.places) index.add(l.place_id);
+      for (const pt of fi.data.points) if (pt.species.some((x) => x.species === fish)) for (const l of pt.places) index.add(l.place_id);
     const names = [fish, fishItem?.alias].filter((x): x is string => !!x);
     const info = new Set(
       (places.data ?? []).filter((p) => p.info_species && names.some((n) => p.info_species!.includes(n))).map((p) => p.id),
@@ -160,16 +182,18 @@ export default function ExploreScreen() {
   const [rockOn, setRockOn] = useState(false);
   const [rockId, setRockId] = useState<number | null>(null);
   const rocks = useRockPoints(rockOn);
+  // 배낚시 출항항 (선상 지점 상세의 「가까운 출항항」에서 ?port=ID 로 열 수 있다)
+  const [portOn, setPortOn] = useState(!!params.port);
+  const [portId, setPortId] = useState<number | null>(params.port ? Number(params.port) : null);
+  const ports = useBoatPorts(portOn);
+  const port = portOn && portId != null ? (ports.data?.ports.find((p) => p.id === portId) ?? null) : null;
 
   const locate = async () => {
     setGps({ loading: true, coords: null, error: null });
     const r = await getCurrentCoords();
     if ('coords' in r) {
       setGps({ loading: false, coords: r.coords, error: null });
-      mapRef.current?.moveTo(
-        { latitude: r.coords.lat, longitude: r.coords.lon, latitudeDelta: 0.8, longitudeDelta: 0.8 },
-        400,
-      );
+      mapRef.current?.moveTo({ latitude: r.coords.lat, longitude: r.coords.lon, latitudeDelta: 0.8, longitudeDelta: 0.8 }, 400);
     } else setGps({ loading: false, coords: null, error: r.error });
   };
 
@@ -186,19 +210,13 @@ export default function ExploreScreen() {
   }, [params.near]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 거리 기준은 현재 위치(GPS 허용 시)뿐이다. 최근 본 낚시터를 기준으로 「가까운 순」이라 하지 않는다
-  const origin: Origin = useMemo(
-    () => (gps.coords ? { kind: 'gps', coords: gps.coords, label: '현재 위치' } : null),
-    [gps.coords],
-  );
+  const origin: Origin = useMemo(() => (gps.coords ? { kind: 'gps', coords: gps.coords, label: '현재 위치' } : null), [gps.coords]);
   const [lastRegionParam, setLastRegionParam] = useState<string | undefined>(undefined);
   if (params.region && params.region !== lastRegionParam) {
     setLastRegionParam(params.region);
     setRegion(params.region);
   }
-  const seaOf = useMemo(
-    () => new Map((summary.data?.places ?? []).map((s) => [s.place_id, s.sea_group])),
-    [summary.data],
-  );
+  const seaOf = useMemo(() => new Map((summary.data?.places ?? []).map((s) => [s.place_id, s.sea_group])), [summary.data]);
   const inRegion = (p: Place) =>
     region === 'all' || (region.startsWith(SEA) ? seaOf.get(p.id) === region.slice(SEA.length) : sidoOf(p) === region);
   const regionOptions = useMemo<DropdownOption<string>[]>(() => {
@@ -276,7 +294,12 @@ export default function ExploreScreen() {
   const [samePick, setSamePick] = useState<Place[] | null>(null);
 
   // 조건 맞는 곳만 볼 때: 가까운 결과들이 지도에 보이도록 화면을 맞춘다
-  const fitKey = onlyMatching ? rows.slice(0, 8).map((r) => r.place.id).join(',') : '';
+  const fitKey = onlyMatching
+    ? rows
+        .slice(0, 8)
+        .map((r) => r.place.id)
+        .join(',')
+    : '';
   const [mapReady, setMapReady] = useState(false);
   useEffect(() => {
     if (!fitKey || !mapReady) return;
@@ -290,9 +313,7 @@ export default function ExploreScreen() {
 
   useEffect(() => {
     if (!mapReady || region === 'all' || origin) return;
-    const pts = (places.data ?? [])
-      .filter((p) => inRegion(p) && usableForLocation(p))
-      .map((p) => ({ lat: p.lat!, lon: p.lon! }));
+    const pts = (places.data ?? []).filter((p) => inRegion(p) && usableForLocation(p)).map((p) => ({ lat: p.lat!, lon: p.lon! }));
     if (pts.length) mapRef.current?.fitTo(pts);
   }, [region, mapReady, seaOf]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -349,7 +370,7 @@ export default function ExploreScreen() {
       lon: gs.reduce((a, g) => a + g[0].place.lon!, 0) / gs.length,
     });
     let merged = [...cells.entries()].map(([key, groups]) => ({ key, groups }));
-    for (let changed = true; changed; ) {
+    for (let changed = true; changed;) {
       changed = false;
       outer: for (let i = 0; i < merged.length; i++)
         for (let j = i + 1; j < merged.length; j++) {
@@ -451,6 +472,12 @@ export default function ExploreScreen() {
     mapRef.current?.moveTo({ latitude: p.lat, longitude: p.lon, latitudeDelta: d, longitudeDelta: d }, 300);
   };
   const pressMarker = (id: string) => {
+    if (id.startsWith('h')) {
+      setSelectedId(null);
+      setRockId(null);
+      return setPortId(Number(id.slice(1)));
+    }
+    setPortId(null);
     if (id.startsWith('r')) {
       setSelectedId(null);
       return setRockId(Number(id.slice(1)));
@@ -485,23 +512,23 @@ export default function ExploreScreen() {
     ? { text: gps.error, color: 'warning' as const }
     : summary.isError || places.isError
       ? { text: '낚시터·해황 자료를 불러오지 못했어요. 잠시 후 다시 열어 주세요', color: 'warning' as const }
-    : summary.isSuccess && stale
-      ? { text: `⚠ ${summary.data.data_status.stale_reason}`, color: 'warning' as const }
-      : fish && fishMatch
-        ? {
-            text:
-              fishIsIndex && fi.isLoading
-                ? `${fish} 지수 불러오는 중…`
-                : rows.length === 0
-                  ? `${fish}: 이 지역엔 표시할 곳이 없어요`
-                  : fishIsIndex
-                    ? `${fish} · ${day === today ? '오늘' : day ? dayLabel(day) : ''}${period ? ` ${period}` : ''} 지수 좋음 ${rows.filter((r) => goodGrade(r.place.id)).length}곳 (바다 조건)`
-                    : `${fish} · 낚시터가 알린 대상 어종 ${rows.length}곳`,
-            color: 'textSecondary' as const,
-          }
-        : onlyMatching && summary.isSuccess && rows.length === 0
-          ? { text: '지금 내 조건에 맞는 곳이 없어요 · 「기준 바꾸기」로 조건을 넓혀 보세요', color: 'warning' as const }
-          : null;
+      : summary.isSuccess && stale
+        ? { text: `⚠ ${summary.data.data_status.stale_reason}`, color: 'warning' as const }
+        : fish && fishMatch
+          ? {
+              text:
+                fishIsIndex && fi.isLoading
+                  ? `${fish} 지수 불러오는 중…`
+                  : rows.length === 0
+                    ? `${fish}: 이 지역엔 표시할 곳이 없어요`
+                    : fishIsIndex
+                      ? `${fish} · ${day === today ? '오늘' : day ? dayLabel(day) : ''}${period ? ` ${period}` : ''} 지수 좋음 ${rows.filter((r) => goodGrade(r.place.id)).length}곳 (바다 조건)`
+                      : `${fish} · 낚시터가 알린 대상 어종 ${rows.length}곳`,
+              color: 'textSecondary' as const,
+            }
+          : onlyMatching && summary.isSuccess && rows.length === 0
+            ? { text: '지금 내 조건에 맞는 곳이 없어요 · 「기준 바꾸기」로 조건을 넓혀 보세요', color: 'warning' as const }
+            : null;
   // 지역·장소 (카카오): 입력이 잠깐 멈추면 검색 (글자마다 부르지 않게)
   const [geoQ, setGeoQ] = useState('');
   useEffect(() => {
@@ -515,9 +542,7 @@ export default function ExploreScreen() {
     setQuery('');
     mapRef.current?.moveTo({ latitude: g.lat, longitude: g.lon, latitudeDelta: 0.3, longitudeDelta: 0.3 }, 300);
   };
-  const searchHits = query.trim()
-    ? (places.data ?? []).filter((p) => usableForLocation(p) && matches(p, query)).slice(0, 6)
-    : [];
+  const searchHits = query.trim() ? (places.data ?? []).filter((p) => usableForLocation(p) && matches(p, query)).slice(0, 6) : [];
   const pickPlace = (p: Place) => {
     Keyboard.dismiss();
     setQuery('');
@@ -537,7 +562,11 @@ export default function ExploreScreen() {
             ref={mapRef}
             style={StyleSheet.absoluteFill}
             initialRegion={initialRegion}
-            markers={rockOn ? [...rockMarkers(rocks.data?.points, view, rockId), ...markers] : markers}
+            markers={[
+              ...(portOn ? portMarkers(ports.data?.ports, view, portId) : []),
+              ...(rockOn ? rockMarkers(rocks.data?.points, view, rockId) : []),
+              ...markers,
+            ]}
             userLocation={gps.coords}
             onMarkerPress={pressMarker}
             onCameraIdle={setView}
@@ -599,7 +628,11 @@ export default function ExploreScreen() {
             <Dropdown label="지역" value={region} options={regionOptions} onChange={setRegion} compact />
             {params.mode === 'criteria' ? (
               <>
-                <Chip label={onlyMatching ? '내 조건만 ✓' : '내 조건만'} selected={onlyMatching} onPress={() => setOnlyMatching((v) => !v)} />
+                <Chip
+                  label={onlyMatching ? '내 조건만 ✓' : '내 조건만'}
+                  selected={onlyMatching}
+                  onPress={() => setOnlyMatching((v) => !v)}
+                />
                 <Chip label="기준 바꾸기" selected={false} onPress={() => setEditCriteria(true)} />
               </>
             ) : null}
@@ -649,6 +682,14 @@ export default function ExploreScreen() {
           ) : null}
         </View>
 
+        <PortToggle
+          on={portOn}
+          onPress={() => {
+            setPortOn((v) => !v);
+            setPortId(null);
+          }}
+          zoomHint={(view?.latitudeDelta ?? KOREA.latitudeDelta) > PORT_MAX_DELTA}
+        />
         <RockToggle
           on={rockOn}
           onPress={() => {
@@ -668,7 +709,25 @@ export default function ExploreScreen() {
       </View>
 
       {/* 아래에는 목록을 두지 않는다 — 핀이나 검색으로 고른 곳만 카드로 */}
-      {rockOn && rockId != null && selectedId == null && rocks.data?.points.find((x) => x.id === rockId) ? (
+      {port && selectedId == null ? (
+        <View style={[styles.panel, { backgroundColor: theme.background, borderColor: theme.border }]}>
+          <PortCard
+            port={port}
+            notice={ports.data!.notice}
+            // 항구 앞바다: 20km 안 가장 가까운 낚시터의 오늘 요약 (없으면 표시 안 함)
+            sea={(() => {
+              let best: { place: Place; s: PlaceSummary | undefined; km: number } | null = null;
+              for (const r of rows) {
+                if (r.place.lat == null || r.place.lon == null) continue;
+                const d = km({ lat: port.lat, lon: port.lon }, r.place);
+                if (Number.isFinite(d) && d <= 20 && (!best || d < best.km)) best = { place: r.place, s: r.s, km: d };
+              }
+              return best;
+            })()}
+            onClose={() => setPortId(null)}
+          />
+        </View>
+      ) : rockOn && rockId != null && selectedId == null && rocks.data?.points.find((x) => x.id === rockId) ? (
         <View style={[styles.panel, { backgroundColor: theme.background, borderColor: theme.border }]}>
           <RockCard
             point={rocks.data.points.find((x) => x.id === rockId)!}
@@ -711,8 +770,7 @@ export default function ExploreScreen() {
             <View style={[styles.grabber, { backgroundColor: theme.border }]} />
             <View style={styles.listHeadRow}>
               <ThemedText type="smallBold" style={styles.flex} numberOfLines={1}>
-                {fish} 낚시터 {ranked.length}곳
-                {fishIsIndex ? ` · 좋음 ${ranked.filter((r) => ringOf(r) === 'good').length}` : ''}
+                {fish} 낚시터 {ranked.length}곳{fishIsIndex ? ` · 좋음 ${ranked.filter((r) => ringOf(r) === 'good').length}` : ''}
               </ThemedText>
               <ThemedText type="smallBold" themeColor="tint">
                 {listOpen ? '접기 ▾' : '목록 보기 ▴'}
@@ -744,7 +802,10 @@ export default function ExploreScreen() {
                       <ThemedText type="smallBold" numberOfLines={1}>
                         {placeName(r.place)}
                       </ThemedText>
-                      <ThemedText type="small" themeColor={ring === 'good' ? 'success' : ring === 'bad' ? 'danger' : 'textSecondary'} numberOfLines={1}>
+                      <ThemedText
+                        type="small"
+                        themeColor={ring === 'good' ? 'success' : ring === 'bad' ? 'danger' : 'textSecondary'}
+                        numberOfLines={1}>
                         {g ? g.text : fishIsIndex ? '공식 지수 지점과 멀어요' : '공식 지수 없음 · 낚시터가 알린 대상 어종'}
                       </ThemedText>
                       {isWarn(r) ? (
@@ -753,7 +814,12 @@ export default function ExploreScreen() {
                         </ThemedText>
                       ) : null}
                       <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                        {[r.place.region_name, wave != null ? `파고 ${wave}m` : null, catchById.has(r.place.id) ? '최근 조황 있음' : null, distLabel(r.dist, r.place)]
+                        {[
+                          r.place.region_name,
+                          wave != null ? `파고 ${wave}m` : null,
+                          catchById.has(r.place.id) ? '최근 조황 있음' : null,
+                          distLabel(r.dist, r.place),
+                        ]
                           .filter(Boolean)
                           .join(' · ')}
                       </ThemedText>
@@ -849,7 +915,12 @@ function CriteriaEditor({ c, onChange }: { c: Criteria; onChange: (c: Criteria) 
       </ThemedText>
       <View style={styles.wrap}>
         {INDEX_STEPS.map((v) => (
-          <Chip key={v ?? 'none'} label={v ? `${v} 이상` : '조건 없음'} selected={c.minIndex === v} onPress={() => onChange({ ...c, minIndex: v })} />
+          <Chip
+            key={v ?? 'none'}
+            label={v ? `${v} 이상` : '조건 없음'}
+            selected={c.minIndex === v}
+            onPress={() => onChange({ ...c, minIndex: v })}
+          />
         ))}
       </View>
     </View>
@@ -1022,11 +1093,29 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.8 },
   top: { position: 'absolute', top: 8, left: 0, right: 0, gap: 6 },
   chipRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: Layout.screenPadding },
-  legend: { marginHorizontal: Layout.screenPadding, alignSelf: 'flex-start', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 10, rowGap: 2, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, marginTop: 4 },
+  legend: {
+    marginHorizontal: Layout.screenPadding,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    columnGap: 10,
+    rowGap: 2,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginTop: 4,
+  },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   legendRing: { width: 12, height: 12, borderRadius: 6, borderWidth: 3, backgroundColor: '#FFFFFF' },
   legendDotSmall: { width: 9, height: 9, borderRadius: 5 },
-  notePill: { marginHorizontal: Layout.screenPadding, alignSelf: 'flex-start', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
+  notePill: {
+    marginHorizontal: Layout.screenPadding,
+    alignSelf: 'flex-start',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
   gpsBtn: {
     position: 'absolute',
     right: Layout.screenPadding,

@@ -225,13 +225,17 @@ export const usePlacePhotos = (placeId: number | null, enabled = true) =>
 
 /** 낚시터 근처 낚시점·낚시배 (서버가 1시간 캐시, 앱도 30분 보관) */
 /** 낚시터(placeId) 또는 갯바위 참고 포인트(rockId) 주변 낚시점·낚시배 */
-export const useNearbyShops = (placeId: number | null, rockId: number | null = null) =>
+export const useNearbyShops = (placeId: number | null, rockId: number | null = null, portId: number | null = null) =>
   useQuery({
-    queryKey: rockId != null ? ['rock-nearby', rockId] : ['nearby-shops', placeId],
-    queryFn: () => (rockId != null ? api.rockNearby(rockId) : api.nearbyShops(placeId!)),
-    enabled: rockId != null || (placeId != null && Number.isFinite(placeId)),
+    queryKey: portId != null ? ['port-nearby', portId] : rockId != null ? ['rock-nearby', rockId] : ['nearby-shops', placeId],
+    queryFn: () => (portId != null ? api.portNearby(portId) : rockId != null ? api.rockNearby(rockId) : api.nearbyShops(placeId!)),
+    enabled: portId != null || rockId != null || (placeId != null && Number.isFinite(placeId)),
     staleTime: 30 * 60_000,
   });
+
+/** 낚시어선 출항항 (지도 켜기·선상 지점의 가까운 항구) */
+export const useBoatPorts = (enabled = true) =>
+  useQuery({ queryKey: ['boat-ports'], queryFn: api.boatPorts, enabled, staleTime: 6 * 3600_000, gcTime: 24 * 3600_000 });
 
 /** 어종별 산란기 (잘 바뀌지 않음) */
 export const useSpeciesSeasons = () =>

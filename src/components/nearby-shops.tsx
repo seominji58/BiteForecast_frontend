@@ -18,9 +18,9 @@ const naverSearch = (q: string) => `https://map.naver.com/p/search/${encodeURICo
 
 const km = (m: number) => (m < 1000 ? `${m}m` : `${(m / 1000).toFixed(m < 10_000 ? 1 : 0)}km`);
 
-export function NearbyShops({ placeId, rockId, area }: { placeId?: number; rockId?: number; area: string }) {
+export function NearbyShops({ placeId, rockId, portId, area }: { placeId?: number; rockId?: number; portId?: number; area: string }) {
   const theme = useTheme();
-  const q = useNearbyShops(placeId ?? null, rockId ?? null);
+  const q = useNearbyShops(placeId ?? null, rockId ?? null, portId ?? null);
   if (q.isPending) {
     return (
       <Card>
