@@ -41,6 +41,9 @@ const NAMES = {
   info: 'information-circle-outline',
   home: 'home-outline',
   homeOn: 'home',
+  swap: 'swap-vertical-outline',
+  trash: 'trash-outline',
+  book: 'book-outline',
 } as const;
 
 export type UiIconName = keyof typeof NAMES;

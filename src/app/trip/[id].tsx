@@ -20,7 +20,7 @@ import { PlacePicker } from '@/components/place-picker';
 import { Card, ErrorView, Loading, SectionHeader } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { UiIcon } from '@/components/ui-icon';
+import { UiIcon, type UiIconName } from '@/components/ui-icon';
 import { CatchStrip } from '@/components/catch-strip';
 import { ownerName, participants, TripMembers } from '@/components/trip-members';
 import { PlaceThumb } from '@/components/place-photo';
@@ -666,30 +666,34 @@ function StopCard({
       <View style={styles.stopActions}>
         {canEdit ? (
           <>
-            <TextAction label="시간·메모" onPress={onEdit} />
-            <TextAction label={stop.role === 'main' ? '예비로' : '주 장소로'} onPress={onToggleRole} />
-            <TextAction label="빼기" onPress={onDelete} />
+            <ActionChip icon="edit" label="시간·메모" onPress={onEdit} />
+            <ActionChip icon="swap" label={stop.role === 'main' ? '예비로' : '주 장소로'} onPress={onToggleRole} />
+            <ActionChip icon="trash" label="빼기" tone="danger" onPress={onDelete} />
           </>
         ) : null}
-        <View style={styles.flex} />
-        {stop.journal_ids.length ? (
-          <TextAction
-            label={stop.journal_ids.length > 1 ? `첫 기록 보기 · ${stop.journal_ids.length}개 ›` : '기록 보기 ›'}
-            strong
-            onPress={() => router.push({ pathname: '/journal/[id]', params: { id: String(stop.journal_ids[0]) } })}
-          />
-        ) : canRecord ? (
-          <TextAction
-            label="기록 남기기 ›"
-            strong
-            onPress={() =>
-              router.push({
-                pathname: '/journal/new',
-                params: { place: String(stop.place.id), date: stop.day, trip_stop: String(stop.id) },
-              })
-            }
-          />
-        ) : null}
+        {/* 기록 버튼은 늘 오른쪽 (줄이 넘어가도) */}
+        <View style={styles.pushRight}>
+          {stop.journal_ids.length ? (
+            <ActionChip
+              icon="book"
+              label={stop.journal_ids.length > 1 ? `기록 ${stop.journal_ids.length}개` : '기록 보기'}
+              tone="primary"
+              onPress={() => router.push({ pathname: '/journal/[id]', params: { id: String(stop.journal_ids[0]) } })}
+            />
+          ) : canRecord ? (
+            <ActionChip
+              icon="pencil"
+              label="기록 남기기"
+              tone="primary"
+              onPress={() =>
+                router.push({
+                  pathname: '/journal/new',
+                  params: { place: String(stop.place.id), date: stop.day, trip_stop: String(stop.id) },
+                })
+              }
+            />
+          ) : null}
+        </View>
       </View>
     </Card>
   );
@@ -913,12 +917,33 @@ function SmallButton({ icon, label, onPress }: { icon: 'find-sea' | 'find-compar
   );
 }
 
-function TextAction({ label, onPress, strong }: { label: string; onPress: () => void; strong?: boolean }) {
+/** 낚시터 카드의 행동 버튼: 아이콘 + 글자 알약 (2026-11-23, 글자만 있어 버튼인지 몰랐던 것) */
+function ActionChip({
+  icon,
+  label,
+  onPress,
+  tone = 'default',
+}: {
+  icon: UiIconName;
+  label: string;
+  onPress: () => void;
+  tone?: 'default' | 'danger' | 'primary';
+}) {
+  const theme = useTheme();
+  const fg = tone === 'danger' ? theme.danger : tone === 'primary' ? '#FFFFFF' : theme.text;
+  const bg = tone === 'primary' ? Brand.orange : tone === 'danger' ? theme.dangerSoft : theme.backgroundElement;
+  const border = tone === 'primary' ? Brand.orange : tone === 'danger' ? theme.dangerSoft : theme.border;
   return (
-    <Pressable accessibilityRole="button" hitSlop={6} onPress={onPress} style={styles.link}>
-      <ThemedText type={strong ? 'smallBold' : 'small'} themeColor={strong ? 'tint' : 'textSecondary'}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      hitSlop={4}
+      onPress={onPress}
+      style={({ pressed }) => [styles.chipBtn, { backgroundColor: bg, borderColor: border }, pressed && { opacity: 0.7 }]}>
+      <UiIcon name={icon} size={15} color={fg} />
+      <Text style={[styles.chipBtnText, { color: fg }]} numberOfLines={1}>
         {label}
-      </ThemedText>
+      </Text>
     </Pressable>
   );
 }
@@ -1024,8 +1049,11 @@ const styles = StyleSheet.create({
   stopHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   stopThumb: { width: 48, height: 48, borderRadius: 10 },
   link: { minHeight: 32, justifyContent: 'center', paddingHorizontal: 4 },
+  chipBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, minHeight: 34 },
+  chipBtnText: { fontSize: 13, fontWeight: '700' },
+  pushRight: { marginLeft: 'auto' },
   sea: { gap: 10 },
-  stopActions: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
+  stopActions: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 2 },
   sheet: { flex: 1, padding: 20, gap: 14 },
   check: { gap: 2 },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
