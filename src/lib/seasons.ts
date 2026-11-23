@@ -10,7 +10,7 @@ import { inPeriod, rulesForSpecies } from './rules.ts';
 
 export type MonthCell = { month: number; spawn: boolean; peak: boolean; ban: boolean };
 
-function monthHasBan(p: { from: string; to: string; year?: number | null }, year: number, month: number): boolean {
+export function monthHasBan(p: { from: string; to: string; year?: number | null }, year: number, month: number): boolean {
   const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
   for (let d = 1; d <= last; d++) {
     if (inPeriod(p, `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`)) return true;
