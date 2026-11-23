@@ -93,6 +93,7 @@ export const api = {
   rockPoints: () => request<RockPoints>('/rock-points'),
   nearbyShops: (placeId: number) => request<NearbyShops>(`/places/${placeId}/nearby`),
   catchSeasons: () => request<CatchSeasons>('/meta/catch-seasons'),
+  fishingIndexWeek: (start: string, days: number) => request<FishingIndexDay[]>(`/fishing-index/week?start=${start}&days=${days}`),
   boatPorts: () => request<BoatPorts>('/boat-ports'),
   portNearby: (portId: number) => request<NearbyShops>(`/boat-ports/${portId}/nearby`),
   speciesSeasons: () => request<SpeciesSeasons>('/meta/species-seasons'),

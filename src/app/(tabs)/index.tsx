@@ -8,7 +8,7 @@ import type { Place } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { HomeActions, SeaLine } from '@/components/home-explore';
 import { OptionSheet } from '@/components/option-sheet';
-import { HomeBriefing } from '@/components/home-briefing';
+import { SpotsCard, WeekCard } from '@/components/home-briefing';
 import { RulesLine } from '@/components/rules-line';
 import { speciesRanking } from '@/lib/briefing';
 import { BottomSheet } from '@/components/bottom-sheet';
@@ -21,14 +21,12 @@ import { SpeciesImage, SpeciesRail } from '@/components/species';
 import { ThemedText } from '@/components/themed-text';
 import type { AppIconName } from '@/constants/icons';
 import { Brand, IconSize } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
 import { dayLabel, dayList } from '@/lib/compare';
 import { freshnessLine } from '@/lib/criteria';
 import { useExplore } from '@/lib/explore';
 import { matches, PLACE_IMAGE, PLACE_TYPE_LABEL, placeName, usableForLocation } from '@/lib/place';
 import { sortByCount, speciesPlaceCounts } from '@/lib/species-rank';
 import { type Region, REGIONS, SEA_GROUPS } from '@/lib/prefs';
-import { josa } from '@/lib/species';
 import { SPECIES_IMAGES } from '@/lib/species-images';
 
 const HERO_RATIO = 1672 / 941; // 배경 사진 가로/세로
@@ -124,7 +122,6 @@ export default function HomeScreen() {
       pathname: '/trip/new',
       params: { ...(date ? { date } : {}), ...(x.species ? { species: x.species.code } : {}), ...(sea ? { region: sea } : {}) },
     });
-  const points = () => router.push({ pathname: '/points', params: date ? { date } : {} });
   // 지도는 홈에서 고른 지역 그대로 연다: 내 주변 → 현재 위치, 해역 → 그 해역 전체, 전국 → 전국
   // 고른 어종이 있으면 지도도 그 어종 관련 낚시터만 보여준다 (?fish=), 날짜는 「출조계획에 추가」로 이어진다
   const openMap = () =>
@@ -141,19 +138,6 @@ export default function HomeScreen() {
   const refresh = () =>
     Promise.all(['places-summary', 'fishing-index', 'conditions', 'meta'].map((k) => qc.invalidateQueries({ queryKey: [k] })));
 
-  // 미리보기 아래 한 줄: 고른 어종의 공식 지수 제공 여부 (등급은 추천 낚시터에서)
-  const n = x.species?.indexName ? x.indexCount(x.species.indexName) : null;
-  // 자료(해황 요약·공식 지수)를 다 불러오기 전에는 「지점이 없어요」로 단정하지 않는다
-  const ready = x.summary.isSuccess && (!x.species?.indexName || x.fi.isSuccess);
-  const speciesLine = !x.species
-    ? null
-    : !ready
-      ? `${x.species.name} 정보를 불러오는 중이에요…`
-    : x.species.indexName
-      ? n
-        ? `${x.species.name} 공식 낚시지수 · ${x.scopeName} ${n}곳 발표`
-        : `${x.scopeName}에는 ${dateText} ${x.species.name} 공식 지수 지점이 없어요`
-      : `${josa(x.species.name, '은', '는')} 공식 낚시지수가 없는 어종이에요`;
 
   return (
     <TabScreen title="" immersive onRefresh={refresh}>
@@ -172,15 +156,15 @@ export default function HomeScreen() {
         <View pointerEvents="none" style={styles.heroShade} />
         <View style={styles.heroCopy}>
           <Text style={styles.heroTitle}>오늘은 어떤 낚시를 떠나세요?</Text>
-          <Text style={styles.heroSubtitle}>어종과 지역을 고르고 바다 조건을 확인해 보세요.</Text>
+          <Text style={styles.heroSubtitle}>이번 주 언제, 무엇을, 어디서 — 공식 낚시지수로 골라 드려요.</Text>
         </View>
         <SearchBar value={query} onChangeText={setQuery} onClear={() => setQuery('')} placeholder="어종·지역·낚시터 검색" />
         <View style={styles.heroActions}>
           {/* 지도는 아래 「지도에서 찾기」 버튼 하나로 (중복 정리) */}
           <HeroButton
             icon="find-gps"
-            label="내 주변"
-            onPress={() => router.push({ pathname: '/explore', params: { near: '1' } })}
+            label={`${x.near ? (x.nearArea ? `내 주변 · ${x.nearArea.area}` : '내 주변') : x.region} ▾`}
+            onPress={() => setSheet('region')}
           />
         </View>
       </View>
@@ -227,17 +211,16 @@ export default function HomeScreen() {
         </Card>
       ) : null}
 
-      {/* ① 이번 주 조황 (서비스 개선 v2 H-A): 이용자가 올린 글. 예보와 구분, 글이 없으면 칸을 숨긴다 */}
-      <CatchStrip
-        title={x.species ? `요즘 ${x.species.name} 조황` : '요즘 이용자 조황'}
-        filter={{ species: x.species ? (x.species.speciesCode ?? x.species.name) : null }}
+
+      {/* ① 언제 갈까: 이번 주 날짜 막대 (날짜는 여기서만 고른다) */}
+      <WeekCard x={x} dates={dates} date={date} today={today} onDate={setDate} />
+
+      {/* ② 무엇을 노릴까: 그날 공식 지수 좋음 이상 지점 수 순서 */}
+      <SectionHeader
+        title={`무엇을 노릴까 · ${date === today ? '오늘' : dateText}`}
+        actionLabel="전체 어종 보기"
+        onAction={() => router.push('/species')}
       />
-
-      {/* 어종 */}
-      {/* 이번 주 언제 갈까 · 그날 가장 좋은 곳 (공식 지수 등급 기준) */}
-      <HomeBriefing x={x} dates={dates} date={date} today={today} onDate={setDate} />
-
-      <SectionHeader title="어떤 어종을 잡으러 가세요?" actionLabel="전체 어종 보기" onAction={() => router.push('/species')} />
       <SpeciesRail items={railSpecies} selected={x.speciesCode} onSelect={x.setSpeciesCode} badges={railBadges} />
       {/* 금어기·금지체장 한 줄. 어종을 골랐으면 누를 때 그 어종 시트(1년 달력·근거), 아니면 금어기 화면 */}
       <RulesLine species={x.species} today={range.data?.today} onOpenSpecies={x.species ? () => setYearOpen(true) : undefined} />
@@ -247,21 +230,12 @@ export default function HomeScreen() {
         </BottomSheet>
       ) : null}
 
-      {/* 출조 날짜 | 지역 */}
-      <ConditionBox
-        dateText={dateText}
-        regionText={x.near ? (x.gps.loading ? '내 주변 · 위치 확인 중' : x.gps.error ? '내 주변 · 위치 확인 안 됨' : x.nearArea ? `내 주변 · ${x.nearArea.area} 부근` : x.scopeName) : x.region}
-        onDate={() => setSheet('date')}
-        onRegion={() => setSheet('region')}
-      />
+      {/* ③ 어디로 갈까: 그날 가장 좋은 곳 (고른 어종 기준, 없으면 전체) */}
+      <SectionHeader title={`어디로 갈까${x.species ? ` · ${x.species.name}` : ''}`} />
+      <SpotsCard x={x} dates={dates} date={date} today={today} />
 
       {/* 지도 · 출조계획 */}
-      <HomeActions
-        onMap={openMap}
-        onPlan={plan}
-        speciesName={x.species?.name}
-        summary={[date ? dayLabel(date) : null, x.near ? '내 주변' : x.region, x.species?.name].filter(Boolean).join(' · ')}
-      />
+      <HomeActions onMap={openMap} onPlan={plan} speciesName={x.species?.name} />
 
       {/* 바다 한 줄 (4칸 → 1줄, 서비스 개선 v2 H-B). 누르면 지도 */}
       {x.near && (x.gps.loading || x.gps.error) ? (
@@ -276,18 +250,17 @@ export default function HomeScreen() {
           {x.summary.isError ? '해황 자료를 잠시 확인할 수 없어요.' : '바다 정보를 불러오는 중이에요…'}
         </ThemedText>
       )}
-      {speciesLine ? (
-        <Pressable accessibilityRole="button" onPress={points}>
-          <ThemedText type="small" themeColor="tint" style={styles.bold}>
-            {speciesLine} ›
-          </ThemedText>
-        </Pressable>
-      ) : null}
       {x.summary.isSuccess && x.summary.data.data_status.stale ? (
         <ThemedText type="small" themeColor="warning">
           {freshnessLine(x.summary.data.data_status)}
         </ThemedText>
       ) : null}
+
+      {/* 이번 주 조황 (서비스 개선 v2 H-A): 이용자가 올린 글. 예보와 구분, 글이 없으면 칸을 숨긴다 */}
+      <CatchStrip
+        title={x.species ? `요즘 ${x.species.name} 조황` : '요즘 이용자 조황'}
+        filter={{ species: x.species ? (x.species.speciesCode ?? x.species.name) : null }}
+      />
 
       <OptionSheet
         open={sheet === 'date'}
@@ -306,39 +279,6 @@ export default function HomeScreen() {
         onClose={() => setSheet(null)}
       />
     </TabScreen>
-  );
-}
-
-function ConditionBox({ dateText, regionText, onDate, onRegion }: { dateText: string; regionText: string; onDate: () => void; onRegion: () => void }) {
-  const theme = useTheme();
-  return (
-    <View style={[styles.cond, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
-      <Pressable accessibilityRole="button" accessibilityLabel={`출조 날짜 ${dateText}, 바꾸기`} onPress={onDate} style={({ pressed }) => [styles.condHalf, pressed && styles.pressed]}>
-        <AppIcon name="trips" size={26} />
-        <View style={styles.flex}>
-          <ThemedText type="small" themeColor="textSecondary">
-            출조 날짜
-          </ThemedText>
-          <ThemedText type="smallBold" numberOfLines={1}>
-            {dateText}
-          </ThemedText>
-        </View>
-        <ThemedText themeColor="textSecondary">›</ThemedText>
-      </Pressable>
-      <View style={[styles.condLine, { backgroundColor: theme.border }]} />
-      <Pressable accessibilityRole="button" accessibilityLabel={`지역 ${regionText}, 바꾸기`} onPress={onRegion} style={({ pressed }) => [styles.condHalf, pressed && styles.pressed]}>
-        <AppIcon name="find-gps" size={26} />
-        <View style={styles.flex}>
-          <ThemedText type="small" themeColor="textSecondary">
-            지역
-          </ThemedText>
-          <ThemedText type="smallBold" numberOfLines={1}>
-            {regionText}
-          </ThemedText>
-        </View>
-        <ThemedText themeColor="textSecondary">›</ThemedText>
-      </Pressable>
-    </View>
   );
 }
 
@@ -375,7 +315,5 @@ const styles = StyleSheet.create({
   dateTextPending: { opacity: 0.6 },
   dateTextOn: { color: '#fff', fontWeight: '800' },
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 },
-  cond: { flexDirection: 'row', alignItems: 'stretch', borderWidth: 1, borderRadius: 16, minHeight: 68 },
-  condHalf: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14 },
   condLine: { width: 1, marginVertical: 14 },
 });

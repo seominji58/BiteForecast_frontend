@@ -5,7 +5,7 @@
  *   ③ 그날 가장 좋은 곳 3곳 — 공식 등급 순, 지금 특보 발효 곳 제외, 고른 어종이 있으면 그 어종만
  * 앱이 점수를 지어내지 않고 국립해양조사원 등급을 세고 줄 세운다 (lib/briefing.ts).
  */
-import { useQueries } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -24,7 +24,44 @@ import { speciesByIndexName } from '@/lib/species';
 
 const W = ['일', '월', '화', '수', '목', '금', '토'];
 
-export function HomeBriefing({
+export function useWeekBriefing(x: ReturnType<typeof useExplore>, dates: string[], date: string | undefined, today: string | undefined) {
+  const week = dates.slice(0, 7);
+  // 7일치를 한 번에 받는다 (예전 날짜별 7번 요청은 서버가 깨어날 때 20~60초 밀렸다). 서버가 옛 버전이면 날짜별로
+  const weekQ = useQuery({
+    queryKey: ['fishing-index-week', week[0], week.length],
+    queryFn: async () => {
+      try {
+        return await api.fishingIndexWeek(week[0], week.length);
+      } catch {
+        // 서버가 아직 옛 버전이면 날짜별로 하나씩 (동시에 몰리지 않게 차례로)
+        const out = [];
+        for (const d of week) out.push(await api.fishingIndex(d).catch(() => null));
+        return out.filter((x): x is FishingIndexDay => !!x);
+      }
+    },
+    enabled: week.length > 0,
+    staleTime: 10 * 60_000,
+  });
+  const qs = week.map((d) => ({ data: weekQ.data?.find((x) => x.date === d), isPending: weekQ.isPending }));
+  const inScopeId = useMemo(() => (id: number) => !!x.byId.get(id) && x.inScope(x.byId.get(id)!), [x]);
+  const stats = week.map((d, i) => {
+    const day = qs[i]?.data as FishingIndexDay | undefined;
+    return day && day.points.length ? dayStat(day, inScopeId) : null;
+  });
+  const short = (d: string) => (d === today ? '오늘' : d === week[1] ? '내일' : `${W[new Date(`${d}T00:00:00`).getDay()]}요일`);
+  const headline = weekHeadline(stats.filter((s): s is NonNullable<typeof s> => !!s), (d) => short(d));
+  const bestDate = [...stats]
+    .filter((s): s is NonNullable<typeof s> => !!s && s.good > 0)
+    .sort((a, b) => b.ratio - a.ratio || b.veryGood - a.veryGood)[0]?.date;
+  const maxRatio = Math.max(0.01, ...stats.map((s) => s?.ratio ?? 0));
+  const dayIdx = week.indexOf(date ?? '');
+  const day = (dayIdx >= 0 ? qs[dayIdx]?.data : x.day) as FishingIndexDay | undefined;
+  const loading = qs.some((q) => q.isPending);
+  return { week, stats, short, headline, bestDate, maxRatio, day, loading, inScopeId };
+}
+
+/** ① 언제 갈까: 이번 주 날짜 막대 (날짜 고르기도 여기서) */
+export function WeekCard({
   x,
   dates,
   date,
@@ -38,40 +75,11 @@ export function HomeBriefing({
   onDate: (d: string) => void;
 }) {
   const theme = useTheme();
-  const week = dates.slice(0, 7);
-  const qs = useQueries({
-    queries: week.map((d) => ({ queryKey: ['fishing-index', d], queryFn: () => api.fishingIndex(d), staleTime: 10 * 60_000 })),
-  });
-  const inScopeId = useMemo(() => (id: number) => !!x.byId.get(id) && x.inScope(x.byId.get(id)!), [x]);
-  const stats = week.map((d, i) => {
-    const day = qs[i]?.data as FishingIndexDay | undefined;
-    return day && day.points.length ? dayStat(day, inScopeId) : null;
-  });
-  const short = (d: string) => (d === today ? '오늘' : d === week[1] ? '내일' : `${W[new Date(`${d}T00:00:00`).getDay()]}요일`);
-  const headline = weekHeadline(stats.filter((s): s is NonNullable<typeof s> => !!s), (d) => short(d));
-  const bestDate = [...stats]
-    .filter((s): s is NonNullable<typeof s> => !!s && s.good > 0)
-    .sort((a, b) => b.ratio - a.ratio || b.veryGood - a.veryGood)[0]?.date;
-
-  const maxRatio = Math.max(0.01, ...stats.map((s) => s?.ratio ?? 0));
-  const dayIdx = week.indexOf(date ?? '');
-  const day = (dayIdx >= 0 ? qs[dayIdx]?.data : x.day) as FishingIndexDay | undefined;
-  const isToday = date === today;
-  const spots = topSpots(day, inScopeId, {
-    species: x.species?.indexName ?? null,
-    // 지금 발효 중인 특보는 오늘 날짜에만 판단 (그날 특보는 발표 전)
-    excluded: (id) => isToday && x.summaryById.get(id)?.warning_level === 'warning',
-    dist: x.distOf,
-  });
-  const loading = qs.some((q) => q.isPending);
-
+  const { week, stats, short, headline, bestDate, maxRatio, loading } = useWeekBriefing(x, dates, date, today);
   return (
     <View style={[styles.card, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
       <View style={styles.head}>
-        <ThemedText type="sectionTitle">이번 주 언제 갈까</ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          {x.scopeName}
-        </ThemedText>
+        <ThemedText type="sectionTitle">언제 갈까</ThemedText>
       </View>
       <ThemedText type="smallBold" themeColor={headline ? 'tint' : 'textSecondary'}>
         {headline ?? (loading ? '공식 낚시지수를 불러오는 중이에요…' : '이 범위에는 공식 낚시지수 지점이 없어요')}
@@ -112,11 +120,36 @@ export function HomeBriefing({
         숫자 = 공식 지수 「좋음」 이상 개수 · ★ 가장 좋은 날
       </ThemedText>
 
+    </View>
+  );
+}
+
+/**
+ * ③ 어디로 갈까: 그날 가장 좋은 곳 3곳. 어종을 골랐으면 그 어종 등급 기준, 안 골랐으면 전체.
+ * 지금 특보 발효 곳은 오늘 날짜에만 뺀다
+ */
+export function SpotsCard({
+  x,
+  dates,
+  date,
+  today,
+}: {
+  x: ReturnType<typeof useExplore>;
+  dates: string[];
+  date: string | undefined;
+  today: string | undefined;
+}) {
+  const theme = useTheme();
+  const { day, loading, inScopeId } = useWeekBriefing(x, dates, date, today);
+  const isToday = date === today;
+  const spots = topSpots(day, inScopeId, {
+    species: x.species?.indexName ?? null,
+    excluded: (id) => isToday && x.summaryById.get(id)?.warning_level === 'warning',
+    dist: x.distOf,
+  });
+  return (
+    <View style={styles.list}>
       {/* ③ 그날 가장 좋은 곳 */}
-      <View style={[styles.divider, { backgroundColor: theme.border }]} />
-      <ThemedText type="smallBold">
-        {date ? dayLabel(date) : ''} 가장 좋은 곳{x.species?.indexName ? ` · ${x.species.name}` : ''}
-      </ThemedText>
       {spots.length === 0 ? (
         <ThemedText type="small" themeColor="textSecondary">
           {loading ? '불러오는 중…' : x.species && !x.species.indexName ? `${x.species.name}은 공식 지수가 없는 어종이에요` : '이날 「좋음」 이상인 곳이 없어요'}
@@ -188,4 +221,5 @@ const styles = StyleSheet.create({
   pick: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
   pickText: { fontSize: 12, fontWeight: '700' },
   more: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 32 },
+  list: { gap: 8 },
 });
