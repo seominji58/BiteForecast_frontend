@@ -16,7 +16,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { areaPath, type Box, dayPoints, linePath, nowX, px, py, valueAt, type XY, yRange } from '@/lib/chart';
-import { currentIndexPeriod, findSeries, latestPoint, nextExtreme, rangeText, REASON_TEXT, timeLabel } from '@/lib/compare';
+import { currentIndexPeriod, findSeries, latestPoint, nextExtreme, rangeText, REASON_TEXT, tideIsRef, timeLabel } from '@/lib/compare';
 import { seaState, windName } from '@/lib/describe';
 import { ptyLabel, SKY_TEXT } from '@/lib/format';
 
@@ -79,9 +79,19 @@ export function SeaChart({ pc, date, cal, updated }: { pc: PlaceCompare; date: s
     });
     // 만조·간조 높이가 곡선과 단위가 같을 때만 곡선 위에, 아니면 곡선 값으로
     marks = marks.map((m) => ({ ...m, v: valueAt(fc, m.x) ?? m.v }));
-    src = ex?.source ? `예보 · ${ex.source.agency} ${ex.source.station_name}` : '';
+    const km = ex?.source?.distance_km;
+    src = ex?.source
+      ? `예보 · ${ex.source.agency} ${ex.source.station_name}${km != null ? ` ${Math.round(km)}km` : ''}${tideIsRef(km) ? ' · 먼 관측소라 참고만 하세요' : ''}`
+      : '';
+    if (tideIsRef(km)) sub = `참고 · ${sub}`;
     terms = [['tide', '물때란?']];
-    if (!fc.length) empty = ex?.reason ? REASON_TEXT[ex.reason] : '조위 예보 자료 없음';
+    if (!fc.length)
+      empty =
+        ex?.reason === 'NO_STATION'
+          ? '60km 안에 조석 예보 지점이 없어 물때를 표시하지 않아요'
+          : ex?.reason
+            ? REASON_TEXT[ex.reason]
+            : '조위 예보 자료 없음';
   } else if (tab === 'wave' || tab === 'wind') {
     const metric = tab === 'wave' ? 'wave_height' : 'wind_speed';
     const fs = findSeries(pc, metric, 'forecast');

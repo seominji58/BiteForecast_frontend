@@ -4,7 +4,7 @@
  * - 실측과 예보를 한 칸에 섞지 않는다. 값이 없으면 null → 「자료 없음」
  */
 import type { PlaceCompare } from '@/api/types';
-import { currentIndexPeriod, findSeries, latestPoint, nextExtreme, timeLabel } from '@/lib/compare';
+import { tideIsRef, currentIndexPeriod, findSeries, latestPoint, nextExtreme, timeLabel } from '@/lib/compare';
 import { seaState, windName } from '@/lib/describe';
 
 export type KeyMetric = {
@@ -50,7 +50,8 @@ export function tideLine(pc: PlaceCompare, now = new Date()): string {
   const ext = nextExtreme(findSeries(pc, 'tide_extreme', 'forecast'), now);
   const phase = currentIndexPeriod(pc.fishing_index, now)?.tide_phase;
   if (!ext) return '자료 없음';
-  return `다음 ${ext.type === 'high' ? '만조' : '간조'} ${timeLabel(ext.t)}${phase ? ` · ${phase}` : ''}`;
+  const ref = tideIsRef(findSeries(pc, 'tide_extreme', 'forecast')?.source?.distance_km) ? '(참고)' : '';
+  return `다음 ${ext.type === 'high' ? '만조' : '간조'} ${timeLabel(ext.t)}${ref}${phase ? ` · ${phase}` : ''}`;
 }
 
 /** 「감성돔 좋음 · 우럭 보통 외 3」 (공식 지수, 한 줄) */
