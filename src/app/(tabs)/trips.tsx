@@ -59,7 +59,8 @@ function WhenToGo() {
   const today = range.data?.today;
   const [sel, setSel] = useState<string | undefined>();
   const date = sel ?? today;
-  const x = useExplore(date, today);
+  // 지역 범위·특보는 오늘 기준으로 고정 (날짜를 바꿀 때마다 그날 요약을 다시 받느라 막대가 잠깐 비던 문제)
+  const x = useExplore(today, today);
   const dates = range.data ? dayList(range.data.today, range.data.max) : [];
   if (!today) return null;
   return (
