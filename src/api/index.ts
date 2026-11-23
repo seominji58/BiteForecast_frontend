@@ -1,5 +1,60 @@
 import { request } from '@/api/client';
-import type { Account, Amenities, BoatPorts, CatchSeasons, FishingRules, SpeciesSeasons, Agreements, AuthConfig, AuthResult, BlockedUser, ChecklistItem, CompareResult, DataSource, DateRange, CatchSummary, FishingIndexDay, GoogleSignupNeeded, Health, Journal, JournalInput, JournalMutation, MemberStatus, MergeInfo, MyPoints, MyTitle, Place, PlaceConditions, PlacesSummary, PostCategory, PostDetail, PostFilter, PostEdit, PostInput, PostSummary, RecordSummary, Region, ReportResult, SignupNeeded, Species, Trip, TripInput, TripInvite, TripInvitePreview, TripListItem, TripOutlook, TripPatch, TripStopInput, TripStopPatch, NearbyShops, PlacePhotoIndex, PlacePhotos, PlaceKakao, RockPoints } from '@/api/types';
+import type {
+  Account,
+  Amenities,
+  BoatPorts,
+  CatchSeasons,
+  FishingRules,
+  SpeciesSeasons,
+  Agreements,
+  AuthConfig,
+  AuthResult,
+  BlockedUser,
+  ChecklistItem,
+  CompareResult,
+  DataSource,
+  DateRange,
+  CatchSummary,
+  FishingIndexDay,
+  GoogleSignupNeeded,
+  Health,
+  Journal,
+  JournalInput,
+  JournalMutation,
+  MemberStatus,
+  MergeInfo,
+  MyPoints,
+  MyTitle,
+  Place,
+  PlaceConditions,
+  PlacesSummary,
+  PostCategory,
+  PostDetail,
+  PostFilter,
+  PostEdit,
+  PostInput,
+  PostSummary,
+  RecordSummary,
+  Region,
+  ReportResult,
+  SignupNeeded,
+  Species,
+  Trip,
+  TripInput,
+  TripInvite,
+  TripInvitePreview,
+  TripListItem,
+  TripOutlook,
+  TripPatch,
+  TripStopInput,
+  TripStopPatch,
+  NearbyShops,
+  PlacePhotoIndex,
+  PlacePhotos,
+  PlaceKakao,
+  RockPoints,
+  UserSpot,
+} from '@/api/types';
 
 export const api = {
   health: () => request<Health>('/health'),
@@ -15,8 +70,7 @@ export const api = {
 
   journals: () => request<Journal[]>('/journals', { auth: true }),
   journal: (id: number) => request<Journal>(`/journals/${id}`, { auth: true }),
-  createJournal: (input: JournalInput) =>
-    request<JournalMutation>('/journals', { method: 'POST', body: input, auth: true }),
+  createJournal: (input: JournalInput) => request<JournalMutation>('/journals', { method: 'POST', body: input, auth: true }),
   updateJournal: (id: number, input: JournalInput) =>
     request<JournalMutation>(`/journals/${id}`, { method: 'PUT', body: input, auth: true }),
   deleteJournal: (id: number) => request<JournalMutation>(`/journals/${id}`, { method: 'DELETE', auth: true }),
@@ -27,8 +81,7 @@ export const api = {
   sources: () => request<DataSource[]>('/meta/sources'),
   placesSummary: (date: string) => request<PlacesSummary>(`/places-summary?date=${date}`),
   fishingIndex: (date: string) => request<FishingIndexDay>(`/fishing-index?date=${date}`),
-  conditions: (placeId: number, date: string) =>
-    request<PlaceConditions>(`/places/${placeId}/conditions?date=${date}`),
+  conditions: (placeId: number, date: string) => request<PlaceConditions>(`/places/${placeId}/conditions?date=${date}`),
   compare: (placeA: number, placeB: number, date: string) =>
     request<CompareResult>(`/compare?place_a=${placeA}&place_b=${placeB}&date=${date}`),
 
@@ -48,20 +101,22 @@ export const api = {
     return request<PostSummary[]>(`/community/posts?${qs.toString()}`);
   },
   favorites: () => request<Place[]>('/me/favorites'),
+  mySpots: () => request<UserSpot[]>('/me/spots'),
+  addSpot: (body: { name: string; lat: number; lon: number; memo?: string | null }) =>
+    request<UserSpot>('/me/spots', { method: 'POST', body }),
+  editSpot: (id: number, body: { name?: string; memo?: string | null }) => request<UserSpot>(`/me/spots/${id}`, { method: 'PATCH', body }),
+  deleteSpot: (id: number) => request<void>(`/me/spots/${id}`, { method: 'DELETE' }),
 
   // --- 출조계획 ---
   trips: (when: 'upcoming' | 'past') => request<TripListItem[]>(`/me/trips?when=${when}`, { auth: true }),
   trip: (id: number) => request<Trip>(`/me/trips/${id}`, { auth: true }),
   createTrip: (input: TripInput) => request<Trip>('/me/trips', { method: 'POST', body: input, auth: true }),
-  updateTrip: (id: number, patch: TripPatch) =>
-    request<Trip>(`/me/trips/${id}`, { method: 'PATCH', body: patch, auth: true }),
+  updateTrip: (id: number, patch: TripPatch) => request<Trip>(`/me/trips/${id}`, { method: 'PATCH', body: patch, auth: true }),
   deleteTrip: (id: number) => request<void>(`/me/trips/${id}`, { method: 'DELETE', auth: true }),
-  addTripStop: (id: number, stop: TripStopInput) =>
-    request<Trip>(`/me/trips/${id}/stops`, { method: 'POST', body: stop, auth: true }),
+  addTripStop: (id: number, stop: TripStopInput) => request<Trip>(`/me/trips/${id}/stops`, { method: 'POST', body: stop, auth: true }),
   updateTripStop: (id: number, stopId: number, patch: TripStopPatch) =>
     request<Trip>(`/me/trips/${id}/stops/${stopId}`, { method: 'PATCH', body: patch, auth: true }),
-  deleteTripStop: (id: number, stopId: number) =>
-    request<Trip>(`/me/trips/${id}/stops/${stopId}`, { method: 'DELETE', auth: true }),
+  deleteTripStop: (id: number, stopId: number) => request<Trip>(`/me/trips/${id}/stops/${stopId}`, { method: 'DELETE', auth: true }),
   setTripChecklist: (id: number, items: { label: string; checked: boolean; assignee_user_id: number | null }[]) =>
     request<Trip>(`/me/trips/${id}/checklist`, { method: 'PUT', body: items, auth: true }),
   tripOutlook: (id: number) => request<TripOutlook>(`/me/trips/${id}/outlook`, { auth: true }),
@@ -70,18 +125,14 @@ export const api = {
   revokeTripInvite: (id: number) => request<void>(`/me/trips/${id}/invite`, { method: 'DELETE' }),
   tripInvite: (code: string) => request<TripInvitePreview>(`/trip-invites/${encodeURIComponent(code)}`),
   joinTrip: (code: string) => request<Trip>(`/trip-invites/${encodeURIComponent(code)}/join`, { method: 'POST' }),
-  setMyTripStatus: (id: number, status: MemberStatus) =>
-    request<Trip>(`/me/trips/${id}/members/me`, { method: 'PATCH', body: { status } }),
-  removeTripMember: (id: number, userId: number) =>
-    request<void>(`/me/trips/${id}/members/${userId}`, { method: 'DELETE' }),
+  setMyTripStatus: (id: number, status: MemberStatus) => request<Trip>(`/me/trips/${id}/members/me`, { method: 'PATCH', body: { status } }),
+  removeTripMember: (id: number, userId: number) => request<void>(`/me/trips/${id}/members/${userId}`, { method: 'DELETE' }),
   patchChecklistItem: (id: number, itemId: number, patch: Partial<Pick<ChecklistItem, 'checked' | 'assignee_user_id'>>) =>
     request<Trip>(`/me/trips/${id}/checklist/${itemId}`, { method: 'PATCH', body: patch }),
-  setFavorite: (placeId: number, on: boolean) =>
-    request<void>(`/me/favorites/${placeId}`, { method: on ? 'PUT' : 'DELETE' }),
+  setFavorite: (placeId: number, on: boolean) => request<void>(`/me/favorites/${placeId}`, { method: on ? 'PUT' : 'DELETE' }),
   post: (id: number) => request<PostDetail>(`/community/posts/${id}`, { auth: true }),
   createPost: (input: PostInput) => request<PostDetail>('/community/posts', { method: 'POST', body: input, auth: true }),
-  updatePost: (id: number, input: PostEdit) =>
-    request<PostDetail>(`/community/posts/${id}`, { method: 'PATCH', body: input, auth: true }),
+  updatePost: (id: number, input: PostEdit) => request<PostDetail>(`/community/posts/${id}`, { method: 'PATCH', body: input, auth: true }),
   /** 지역·장소 검색 (카카오 로컬, 서버 대행) */
   geoSearch: (q: string) =>
     request<{ name: string; address: string; lat: number; lon: number; category: string | null }[]>(
@@ -136,18 +187,15 @@ export const api = {
   signup: (b: { email: string; password: string; nickname: string; agreements: Agreements }) =>
     request<AuthResult>('/auth/signup', { method: 'POST', body: b }),
   login: (b: { email: string; password: string }) => request<AuthResult>('/auth/login', { method: 'POST', body: b }),
-  google: (idToken: string) =>
-    request<AuthResult | GoogleSignupNeeded>('/auth/google', { method: 'POST', body: { id_token: idToken } }),
+  google: (idToken: string) => request<AuthResult | GoogleSignupNeeded>('/auth/google', { method: 'POST', body: { id_token: idToken } }),
   googleSignup: (b: { id_token: string; nickname: string; agreements: Agreements }) =>
     request<AuthResult>('/auth/google/signup', { method: 'POST', body: b }),
   /** 소셜 로그인 직전 일회성 값 (카카오 ID 토큰에 넣는다, 5분) */
   authNonce: () => request<{ nonce: string; expires_in: number }>('/auth/nonce', { method: 'POST' }),
   social: (provider: 'google' | 'kakao', b: { token: string; nonce?: string | null }) =>
     request<AuthResult | SignupNeeded>(`/auth/social/${provider}`, { method: 'POST', body: b }),
-  socialSignup: (
-    provider: 'google' | 'kakao',
-    b: { token: string; nonce?: string | null; nickname: string; agreements: Agreements },
-  ) => request<AuthResult>(`/auth/social/${provider}/signup`, { method: 'POST', body: b }),
+  socialSignup: (provider: 'google' | 'kakao', b: { token: string; nonce?: string | null; nickname: string; agreements: Agreements }) =>
+    request<AuthResult>(`/auth/social/${provider}/signup`, { method: 'POST', body: b }),
   nicknameCheck: (nickname: string) =>
     request<{ available: boolean; message: string | null }>(`/auth/nickname-check?nickname=${encodeURIComponent(nickname)}`),
   logout: () => request<void>('/auth/logout', { method: 'POST' }),

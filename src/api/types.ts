@@ -784,7 +784,15 @@ export type SpeciesSeasons = {
 };
 
 /** 주변 편의시설 (카카오 로컬, 반경 2km 가까운 순 3곳씩, 2026-11-20) */
-export type Amenity = { name: string; address: string; phone: string | null; lat: number; lon: number; distance_m: number; kakao_url: string | null };
+export type Amenity = {
+  name: string;
+  address: string;
+  phone: string | null;
+  lat: number;
+  lon: number;
+  distance_m: number;
+  kakao_url: string | null;
+};
 export type Amenities = {
   stores: Amenity[];
   parking: Amenity[];
@@ -797,7 +805,15 @@ export type Amenities = {
 
 /** 낚시터 실제 사진 (한국관광공사 TourAPI 매칭, 공공누리 제3유형 — 출처 표시·변경 금지) */
 /** 카카오 장소 매칭 (도로명 주소·장소 링크). 매칭된 낚시터만 있음 */
-export type PlaceKakao = { name: string; url: string; road_address: string; category: string; phone: string | null; moved: boolean; source: string };
+export type PlaceKakao = {
+  name: string;
+  url: string;
+  road_address: string;
+  category: string;
+  phone: string | null;
+  moved: boolean;
+  source: string;
+};
 
 export type PlacePhotos = { title: string; source: string; license: string; images: { url: string; thumb: string }[] };
 export type PlacePhotoIndex = { source: string; license: string; thumbs: Record<string, string> };
@@ -821,3 +837,14 @@ export type RockPoint = {
   near_address_kind?: 'address' | 'region' | null;
 };
 export type RockPoints = { source: string; excluded: string; notice: string; points: RockPoint[] };
+
+/** 내 낚시터: 사용자가 직접 찍은 비공개 포인트 (2026-11-23). near = 30km 안 가장 가까운 공식 낚시터 (해황 기준) */
+export type UserSpot = {
+  id: number;
+  name: string;
+  lat: number;
+  lon: number;
+  memo: string | null;
+  created_at: string;
+  near: { id: number; name: string; km: number } | null;
+};

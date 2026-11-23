@@ -28,8 +28,7 @@ export const usePlaces = (q?: string, regionId?: number) =>
     select: (list) => list.filter((p) => !isClosed(p.name)),
   });
 
-export const useSpecies = () =>
-  useQuery({ queryKey: queryKeys.species, queryFn: api.species, staleTime: Infinity });
+export const useSpecies = () => useQuery({ queryKey: queryKeys.species, queryFn: api.species, staleTime: Infinity });
 
 /** 내 기록·포인트·칭호는 로그인했을 때만 불러온다 (손님이면 401 대신 요청 안 함) */
 export const useJournals = () => {
@@ -49,8 +48,7 @@ export const useJournal = (id: number) => {
 export const useRegions = () => useQuery({ queryKey: ['regions'], queryFn: api.regions });
 
 // 오늘 날짜는 자정에 바뀐다 — 앱을 켜 둔 채 날이 바뀌어도 따라가게 10분마다 확인
-export const useDateRange = () =>
-  useQuery({ queryKey: ['meta', 'date-range'], queryFn: api.dateRange, refetchInterval: 10 * 60_000 });
+export const useDateRange = () => useQuery({ queryKey: ['meta', 'date-range'], queryFn: api.dateRange, refetchInterval: 10 * 60_000 });
 
 export const useCompare = (placeA: number, placeB: number, date: string) =>
   useQuery({
@@ -96,8 +94,7 @@ export const useMyPoints = () => {
   return useQuery({ queryKey: queryKeys.myPoints, queryFn: api.myPoints, enabled: signedIn });
 };
 
-export const useAuthConfig = () =>
-  useQuery({ queryKey: ['auth', 'config'], queryFn: api.authConfig, staleTime: 10 * 60_000 });
+export const useAuthConfig = () => useQuery({ queryKey: ['auth', 'config'], queryFn: api.authConfig, staleTime: 10 * 60_000 });
 
 /** 일지가 바뀌면 일지 목록과 포인트·칭호를 함께 갱신한다 */
 function useInvalidateJournalData() {
@@ -139,12 +136,7 @@ const postKey = (category: PostCategory | null, sort: string, filter: PostFilter
   ['community', 'posts', category, sort, filter.sido ?? null, filter.species ?? null, filter.placeId ?? null] as const;
 
 /** 글 목록 한 번 (홈·상세 등 미리보기용, limit 건) */
-export const usePosts = (
-  category: PostCategory | null,
-  sort: 'latest' | 'popular',
-  filter: PostFilter = {},
-  limit?: number,
-) =>
+export const usePosts = (category: PostCategory | null, sort: 'latest' | 'popular', filter: PostFilter = {}, limit?: number) =>
   useQuery({
     queryKey: [...postKey(category, sort, filter), limit ?? null],
     queryFn: () => api.posts(category, sort, filter, { limit }),
@@ -157,10 +149,8 @@ export const usePostPages = (category: PostCategory | null, sort: 'latest' | 'po
   useInfiniteQuery({
     queryKey: [...postKey(category, sort, filter), 'pages'],
     initialPageParam: undefined as number | undefined,
-    queryFn: ({ pageParam }) =>
-      api.posts(category, sort, filter, { limit: sort === 'latest' ? POST_PAGE : 50, beforeId: pageParam }),
-    getNextPageParam: (last) =>
-      sort === 'latest' && last.length === POST_PAGE ? last[last.length - 1].id : undefined,
+    queryFn: ({ pageParam }) => api.posts(category, sort, filter, { limit: sort === 'latest' ? POST_PAGE : 50, beforeId: pageParam }),
+    getNextPageParam: (last) => (sort === 'latest' && last.length === POST_PAGE ? last[last.length - 1].id : undefined),
   });
 
 /** 즐겨찾기 낚시터 (로그인했을 때만) */
@@ -168,6 +158,31 @@ export const useFavorites = () => {
   const { signedIn } = useAuth();
   return useQuery({ queryKey: ['me', 'favorites'], queryFn: api.favorites, enabled: signedIn });
 };
+
+/** 내 낚시터 (직접 찍은 비공개 포인트, 로그인했을 때만) */
+export const useMySpots = () => {
+  const { signedIn } = useAuth();
+  return useQuery({ queryKey: ['me', 'spots'], queryFn: api.mySpots, enabled: signedIn });
+};
+
+export function useSaveSpot() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id?: number; name: string; memo: string | null; lat?: number; lon?: number }) =>
+      v.id != null
+        ? api.editSpot(v.id, { name: v.name, memo: v.memo })
+        : api.addSpot({ name: v.name, memo: v.memo, lat: v.lat!, lon: v.lon! }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['me', 'spots'] }),
+  });
+}
+
+export function useDeleteSpot() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.deleteSpot(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['me', 'spots'] }),
+  });
+}
 
 export function useSetFavorite() {
   const qc = useQueryClient();
