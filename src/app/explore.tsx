@@ -83,6 +83,8 @@ export default function ExploreScreen() {
     fish?: string;
     date?: string;
     port?: string;
+    /** 홈 「배낚시 항구」: 출항항 켜고 연다 */
+    ports?: string;
   }>();
   const theme = useTheme();
   const places = usePlaces();
@@ -183,7 +185,7 @@ export default function ExploreScreen() {
   const [rockId, setRockId] = useState<number | null>(null);
   const rocks = useRockPoints(rockOn);
   // 배낚시 출항항 (선상 지점 상세의 「가까운 출항항」에서 ?port=ID 로 열 수 있다)
-  const [portOn, setPortOn] = useState(!!params.port);
+  const [portOn, setPortOn] = useState(!!params.port || params.ports === '1');
   const [portId, setPortId] = useState<number | null>(params.port ? Number(params.port) : null);
   const ports = useBoatPorts(portOn);
   const port = portOn && portId != null ? (ports.data?.ports.find((p) => p.id === portId) ?? null) : null;

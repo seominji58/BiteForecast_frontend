@@ -7,8 +7,8 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { api } from '@/api';
 import type { FishingIndexDay } from '@/api/types';
@@ -20,7 +20,7 @@ import { dayStat, speciesRanking, topSpots, weekHeadline } from '@/lib/briefing'
 import { dayLabel } from '@/lib/compare';
 import type { useExplore } from '@/lib/explore';
 import { placeName } from '@/lib/place';
-import { speciesByIndexName } from '@/lib/species';
+import { type SpeciesItem, speciesByIndexName } from '@/lib/species';
 
 const W = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -49,7 +49,10 @@ export function useWeekBriefing(x: ReturnType<typeof useExplore>, dates: string[
     return day && day.points.length ? dayStat(day, inScopeId) : null;
   });
   const short = (d: string) => (d === today ? '오늘' : d === week[1] ? '내일' : `${W[new Date(`${d}T00:00:00`).getDay()]}요일`);
-  const headline = weekHeadline(stats.filter((s): s is NonNullable<typeof s> => !!s), (d) => short(d));
+  const headline = weekHeadline(
+    stats.filter((s): s is NonNullable<typeof s> => !!s),
+    (d) => short(d),
+  );
   const bestDate = [...stats]
     .filter((s): s is NonNullable<typeof s> => !!s && s.good > 0)
     .sort((a, b) => b.ratio - a.ratio || b.veryGood - a.veryGood)[0]?.date;
@@ -91,7 +94,15 @@ export function WeekCard({
           const best = d === bestDate;
           // 그 주 가장 좋은 날을 꽉 찬 막대로 (날짜끼리 비교가 잘 보이게)
           const h = s ? Math.max(4, Math.round(30 * (s.ratio / maxRatio))) : 4;
-          const color = !s ? theme.border : s.ratio >= 0.5 ? Brand.teal : s.ratio >= 0.25 ? '#5EAAA0' : s.bad / Math.max(1, s.total) >= 0.6 ? '#E57373' : '#B7C3CF';
+          const color = !s
+            ? theme.border
+            : s.ratio >= 0.5
+              ? Brand.teal
+              : s.ratio >= 0.25
+                ? '#5EAAA0'
+                : s.bad / Math.max(1, s.total) >= 0.6
+                  ? '#E57373'
+                  : '#B7C3CF';
           return (
             <Pressable
               key={d}
@@ -114,7 +125,6 @@ export function WeekCard({
           );
         })}
       </View>
-
     </View>
   );
 }
@@ -128,26 +138,37 @@ export function SpotsCard({
   dates,
   date,
   today,
+  species: speciesProp,
+  limit,
 }: {
   x: ReturnType<typeof useExplore>;
   dates: string[];
   date: string | undefined;
   today: string | undefined;
+  /** 이 어종 기준 (null = 전체). 안 주면 x 에서 고른 어종 */
+  species?: SpeciesItem | null;
+  limit?: number;
 }) {
   const theme = useTheme();
   const { day, loading, inScopeId } = useWeekBriefing(x, dates, date, today);
   const isToday = date === today;
+  const sel = speciesProp === undefined ? x.species : speciesProp;
   const spots = topSpots(day, inScopeId, {
-    species: x.species?.indexName ?? null,
+    species: sel?.indexName ?? null,
     excluded: (id) => isToday && x.summaryById.get(id)?.warning_level === 'warning',
     dist: x.distOf,
+    limit,
   });
   return (
     <View style={[styles.listCard, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
       {/* ③ 그날 가장 좋은 곳: 한 곳에 한 줄 (이름 · 최고 등급 칩), 아래 작은 글씨로 지역·물때 */}
       {spots.length === 0 ? (
         <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
-          {loading ? '불러오는 중…' : x.species && !x.species.indexName ? `${x.species.name}은 공식 지수가 없는 어종이에요` : '이날 「좋음」 이상인 곳이 없어요'}
+          {loading
+            ? '불러오는 중…'
+            : sel && !sel.indexName
+              ? `${sel.name}은 공식 지수가 없는 어종이에요`
+              : '이날 「좋음」 이상인 곳이 없어요'}
         </ThemedText>
       ) : (
         spots.map((sp, i) => {
@@ -160,14 +181,23 @@ export function SpotsCard({
               key={sp.point.station_id}
               accessibilityRole="button"
               onPress={() => router.push({ pathname: '/place/[id]', params: { id: String(sp.placeId) } })}
-              style={({ pressed }) => [styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderColor: theme.border }, pressed && styles.pressed]}>
+              style={({ pressed }) => [
+                styles.row,
+                i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderColor: theme.border },
+                pressed && styles.pressed,
+              ]}>
               <Text style={[styles.rank, { color: i === 0 ? Brand.orange : theme.textSecondary }]}>{i + 1}</Text>
               <View style={styles.flex}>
                 <ThemedText type="smallBold" numberOfLines={1}>
                   {place ? placeName(place) : sp.point.station_name}
                 </ThemedText>
                 <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                  {[place?.region_name, sp.tide, isToday && s?.wave_fc_max ? `파고 ${s.wave_fc_max.v}m` : null, sp.picks.length > 1 ? `외 ${sp.picks.length - 1}종 좋음` : null]
+                  {[
+                    place?.region_name,
+                    sp.tide,
+                    isToday && s?.wave_fc_max ? `파고 ${s.wave_fc_max.v}m` : null,
+                    sp.picks.length > 1 ? `외 ${sp.picks.length - 1}종 좋음` : null,
+                  ]
                     .filter(Boolean)
                     .join(' · ')}
                 </ThemedText>
@@ -175,7 +205,7 @@ export function SpotsCard({
               <View style={[styles.pick, { backgroundColor: very ? Brand.teal : theme.tintSoft }]}>
                 {speciesByIndexName(p0.species) ? <SpeciesImage code={speciesByIndexName(p0.species)!.code} size={18} /> : null}
                 <Text style={[styles.pickText, { color: very ? '#FFFFFF' : Brand.teal }]}>
-                  {x.species ? p0.grade : `${p0.species} ${p0.grade}`}
+                  {sel ? p0.grade : `${p0.species} ${p0.grade}`}
                 </Text>
               </View>
             </Pressable>
@@ -208,11 +238,19 @@ const styles = StyleSheet.create({
   pick: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
   pickText: { fontSize: 12, fontWeight: '700' },
   more: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 32 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  fishCard: { width: '48.5%', borderWidth: 1.5, borderRadius: 14, padding: 10, gap: 6 },
-  fishCardOn: { borderWidth: 2.5 },
-  fishTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  word: { fontSize: 18, lineHeight: 24, fontWeight: '800' },
+  carHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  arrow: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  arrowText: { fontSize: 22, lineHeight: 24, fontWeight: '700' },
+  off: { opacity: 0.35 },
+  bleed: { marginHorizontal: -16 },
+  carRow: { paddingHorizontal: 16, gap: 10 },
+  fishCard: { borderWidth: 1, borderRadius: 16, padding: 12, gap: 8 },
+  fishArt: { alignItems: 'center', justifyContent: 'center', height: 64 },
+  fishName: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
+  fishFoot: { flexDirection: 'row', alignItems: 'center' },
+  allCard: { alignItems: 'center', justifyContent: 'center' },
+  center: { textAlign: 'center' },
+  word: { fontSize: 17, lineHeight: 22, fontWeight: '800' },
   dist: { flexDirection: 'row', height: 6, borderRadius: 3, overflow: 'hidden' },
   listCard: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 4 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
@@ -221,78 +259,161 @@ const styles = StyleSheet.create({
 });
 /**
  * 메인의 핵심: 오늘 어종별 공식 바다낚시지수 (2026-11-23 사용자 방향 — 「시원한 바다 + 여러 물고기의 지수」).
- * 어종마다 그림 · 그날 대표 등급(좋음 이상 비율로) · 좋음 이상 n/전체 곳 · 등급 분포 막대.
- * 좋음 이상이 많은 순. 누르면 그 어종을 고르고 아래 「어디로 갈까」가 그 어종 기준으로 바뀐다
+ * 옆으로 넘기는 카드 (한 화면에 2장, < > 화살표·스와이프). 어종마다 그림 · 대표 등급 · 등급 분포 · 좋음 이상 n/전체 곳.
+ * 좋음 이상이 많은 순. 누르면 onOpen → 그 어종 오늘 시트(좋은 곳·금어기·지도·계획)
  */
-export function IndexGrid({
+export function IndexCarousel({
   x,
-  selected,
-  onSelect,
+  onOpen,
+  onAll,
 }: {
   x: ReturnType<typeof useExplore>;
-  selected: string | null;
-  onSelect: (code: string | null) => void;
+  onOpen: (sp: SpeciesItem) => void;
+  onAll: () => void;
 }) {
   const theme = useTheme();
+  const { width } = useWindowDimensions();
+  const ref = useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const [page, setPage] = useState(0);
   const inScopeId = useMemo(() => (id: number) => !!x.byId.get(id) && x.inScope(x.byId.get(id)!), [x]);
-  const ranks = speciesRanking(x.day, inScopeId);
-  if (x.fi.isPending) {
-    return (
-      <ThemedText type="small" themeColor="textSecondary">
-        오늘 공식 낚시지수를 불러오는 중이에요…
+  const ranks = speciesRanking(x.day, inScopeId).filter((r) => speciesByIndexName(r.species));
+  const GAP = 10;
+  const cardW = Math.floor((width - 32 - GAP) / 2);
+  const step = cardW + GAP;
+  const count = ranks.length + 1; // 마지막 「전체 어종」 카드
+  const pages = Math.max(1, Math.ceil(count / 2));
+  const go = (p: number) => {
+    const n = Math.max(0, Math.min(pages - 1, p));
+    ref.current?.scrollTo({ x: n * step * 2, animated: true });
+    setPage(n);
+  };
+
+  const header = (
+    <View style={styles.carHead}>
+      <ThemedText type="sectionTitle" style={styles.flex} numberOfLines={1}>
+        오늘 어종별 낚시지수
       </ThemedText>
-    );
-  }
-  if (!ranks.length) {
+      {ranks.length ? (
+        <>
+          <ThemedText type="small" themeColor="textSecondary">
+            {page + 1}/{pages}
+          </ThemedText>
+          {(
+            [
+              ['‹', -1, '이전 어종'],
+              ['›', 1, '다음 어종'],
+            ] as const
+          ).map(([t, d, label]) => {
+            const off = d < 0 ? page === 0 : page >= pages - 1;
+            return (
+              <Pressable
+                key={t}
+                accessibilityRole="button"
+                accessibilityLabel={label}
+                accessibilityState={{ disabled: off }}
+                disabled={off}
+                hitSlop={6}
+                onPress={() => go(page + d)}
+                style={({ pressed }) => [
+                  styles.arrow,
+                  { borderColor: theme.border, backgroundColor: theme.backgroundElement },
+                  off && styles.off,
+                  pressed && styles.pressed,
+                ]}>
+                <Text style={[styles.arrowText, { color: theme.text }]}>{t}</Text>
+              </Pressable>
+            );
+          })}
+        </>
+      ) : null}
+    </View>
+  );
+
+  if (x.fi.isPending || !ranks.length) {
     return (
-      <ThemedText type="small" themeColor="textSecondary">
-        {x.scopeName}에는 오늘 공식 낚시지수 지점이 없어요. 지역을 넓혀 보세요.
-      </ThemedText>
+      <>
+        {header}
+        <ThemedText type="small" themeColor="textSecondary">
+          {x.fi.isPending
+            ? '오늘 공식 낚시지수를 불러오는 중이에요…'
+            : `${x.scopeName}에는 오늘 공식 낚시지수 지점이 없어요. 지역을 넓혀 보세요.`}
+        </ThemedText>
+      </>
     );
   }
   return (
-    <View style={styles.grid}>
-      {ranks.map((r) => {
-        const sp = speciesByIndexName(r.species);
-        const ratio = r.total ? r.good / r.total : 0;
-        const word = r.veryGood > 0 && ratio >= 0.5 ? '매우좋음' : ratio >= 0.4 ? '좋음' : r.total && r.bad / r.total >= 0.5 ? '나쁨' : '보통';
-        const tone = word === '매우좋음' ? Brand.teal : word === '좋음' ? '#2E8B7A' : word === '나쁨' ? '#D9534F' : '#7A8794';
-        const on = !!sp && sp.code === selected;
-        const mid = r.total - r.good - r.bad;
-        return (
-          <Pressable
-            key={r.species}
-            accessibilityRole="button"
-            accessibilityState={{ selected: on }}
-            accessibilityLabel={`${r.species}, 오늘 ${word}, 좋음 이상 ${r.good}곳 / ${r.total}곳`}
-            onPress={() => sp && onSelect(on ? null : sp.code)}
-            style={({ pressed }) => [
-              styles.fishCard,
-              { backgroundColor: theme.backgroundElement, borderColor: on ? Brand.orange : theme.border },
-              on && styles.fishCardOn,
-              pressed && styles.pressed,
-            ]}>
-            <View style={styles.fishTop}>
-              {sp ? <SpeciesImage code={sp.code} size={52} /> : null}
-              <View style={styles.flex}>
-                <ThemedText type="smallBold" numberOfLines={1}>
+    <>
+      {header}
+      <ScrollView
+        ref={ref}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        snapToInterval={step * 2}
+        decelerationRate="fast"
+        style={styles.bleed}
+        contentContainerStyle={styles.carRow}
+        onMomentumScrollEnd={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / (step * 2)))}>
+        {ranks.map((r) => {
+          const sp = speciesByIndexName(r.species)!;
+          const ratio = r.total ? r.good / r.total : 0;
+          const word =
+            r.veryGood > 0 && ratio >= 0.5 ? '매우좋음' : ratio >= 0.4 ? '좋음' : r.total && r.bad / r.total >= 0.5 ? '나쁨' : '보통';
+          const tone = word === '매우좋음' ? Brand.teal : word === '좋음' ? '#2E8B7A' : word === '나쁨' ? '#D9534F' : '#7A8794';
+          const mid = r.total - r.good - r.bad;
+          return (
+            <Pressable
+              key={r.species}
+              accessibilityRole="button"
+              accessibilityLabel={`${r.species}, 오늘 ${word}, 좋음 이상 ${r.good}곳 / ${r.total}곳. 좋은 낚시터 보기`}
+              onPress={() => onOpen(sp)}
+              style={({ pressed }) => [
+                styles.fishCard,
+                { width: cardW, backgroundColor: theme.backgroundElement, borderColor: theme.border },
+                pressed && styles.pressed,
+              ]}>
+              <View style={styles.fishArt}>
+                <SpeciesImage code={sp.code} size={84} />
+              </View>
+              <View style={styles.fishName}>
+                <ThemedText type="smallBold" numberOfLines={1} style={styles.flex}>
                   {r.species}
                 </ThemedText>
                 <Text style={[styles.word, { color: tone }]}>{word}</Text>
               </View>
-            </View>
-            {/* 등급 분포: 좋음 이상 · 보통 · 나쁨 이하 */}
-            <View style={[styles.dist, { backgroundColor: theme.border }]}>
-              <View style={{ flex: r.good, backgroundColor: Brand.teal }} />
-              <View style={{ flex: mid, backgroundColor: '#B7C3CF' }} />
-              <View style={{ flex: r.bad, backgroundColor: '#E57373' }} />
-            </View>
-            <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-              좋음 이상 {r.good}/{r.total}곳
-            </ThemedText>
-          </Pressable>
-        );
-      })}
-    </View>
+              {/* 등급 분포: 좋음 이상 · 보통 · 나쁨 이하 */}
+              <View style={[styles.dist, { backgroundColor: theme.border }]}>
+                <View style={{ flex: r.good, backgroundColor: Brand.teal }} />
+                <View style={{ flex: mid, backgroundColor: '#B7C3CF' }} />
+                <View style={{ flex: r.bad, backgroundColor: '#E57373' }} />
+              </View>
+              <View style={styles.fishFoot}>
+                <ThemedText type="small" themeColor="textSecondary" numberOfLines={1} style={styles.flex}>
+                  좋음 이상 {r.good}/{r.total}곳
+                </ThemedText>
+                <ThemedText type="smallBold" themeColor="tint">
+                  ›
+                </ThemedText>
+              </View>
+            </Pressable>
+          );
+        })}
+        <Pressable
+          accessibilityRole="button"
+          onPress={onAll}
+          style={({ pressed }) => [
+            styles.fishCard,
+            styles.allCard,
+            { width: cardW, backgroundColor: theme.tintSoft, borderColor: theme.border },
+            pressed && styles.pressed,
+          ]}>
+          <ThemedText type="smallBold" themeColor="tint">
+            전체 어종 보기 ›
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
+            공식 지수 없는 어종도{'\n'}제철·금어기를 볼 수 있어요
+          </ThemedText>
+        </Pressable>
+      </ScrollView>
+    </>
   );
 }

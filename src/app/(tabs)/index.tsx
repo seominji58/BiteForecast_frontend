@@ -7,7 +7,8 @@ import { useDateRange } from '@/api/queries';
 import type { Place } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { OptionSheet } from '@/components/option-sheet';
-import { IndexGrid, SpotsCard } from '@/components/home-briefing';
+import { IndexCarousel, SpotsCard } from '@/components/home-briefing';
+import { Button } from '@/components/form';
 import { RulesLine } from '@/components/rules-line';
 import { BottomSheet } from '@/components/bottom-sheet';
 import { SpeciesYear } from '@/components/species-year';
@@ -15,6 +16,7 @@ import { Card, SectionHeader, TabScreen } from '@/components/screen';
 import { CatchStrip } from '@/components/catch-strip';
 import { SearchBar } from '@/components/search-bar';
 import { SpeciesImage } from '@/components/species';
+import type { SpeciesItem } from '@/lib/species';
 import { ThemedText } from '@/components/themed-text';
 import type { AppIconName } from '@/constants/icons';
 import { Brand, IconSize } from '@/constants/theme';
@@ -52,6 +54,8 @@ export default function HomeScreen() {
   const [sheet, setSheet] = useState<'date' | 'region' | null>(null);
 
   const [yearOpen, setYearOpen] = useState(false);
+  // 어종 카드를 누르면 그 어종 오늘 시트
+  const [fish, setFish] = useState<SpeciesItem | null>(null);
   const results = query.trim() ? (x.places.data ?? []).filter((p) => matches(p, query)).slice(0, 5) : [];
   const speciesHits = query.trim()
     ? x.allSpecies.filter((s) => s.name.includes(query.trim()) || (s.alias ?? '').includes(query.trim())).slice(0, 3)
@@ -67,12 +71,13 @@ export default function HomeScreen() {
   };
   // 지도는 홈에서 고른 지역 그대로 연다: 내 주변 → 현재 위치, 해역 → 그 해역 전체, 전국 → 전국
   // 고른 어종이 있으면 지도도 그 어종 관련 낚시터만 보여준다 (?fish=), 날짜는 「출조계획에 추가」로 이어진다
-  const openMap = () =>
+  const openMap = (o: { fish?: SpeciesItem | null; near?: boolean; ports?: boolean } = {}) =>
     router.push({
       pathname: '/explore',
       params: {
-        ...(x.region === '내 주변' ? { near: '1' } : { region: x.region === '전국' ? 'all' : `sea:${x.region}` }),
-        ...(x.species ? { fish: x.species.name } : {}),
+        ...(o.near || x.region === '내 주변' ? { near: '1' } : { region: x.region === '전국' ? 'all' : `sea:${x.region}` }),
+        ...(o.fish ? { fish: o.fish.name } : {}),
+        ...(o.ports ? { ports: '1' } : {}),
         ...(date ? { date } : {}),
       },
     });
@@ -93,17 +98,25 @@ export default function HomeScreen() {
           />
         ) : null}
         <View pointerEvents="none" style={styles.heroShade} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`지역 ${x.region}, 바꾸기`}
+          hitSlop={6}
+          onPress={() => setSheet('region')}
+          style={({ pressed }) => [styles.regionPill, pressed && styles.pressed]}>
+          <AppIcon name="find-gps" size={16} />
+          <Text style={styles.regionText}>{x.near ? (x.nearArea ? `내 주변 · ${x.nearArea.area}` : '내 주변') : x.region} ▾</Text>
+        </Pressable>
         <View style={styles.heroCopy}>
           <Text style={styles.heroTitle}>오늘은 어떤 낚시를 떠나세요?</Text>
           <Text style={styles.heroSubtitle}>오늘 바다낚시지수로 어종과 낚시터를 골라 드려요.</Text>
         </View>
         <SearchBar value={query} onChangeText={setQuery} onClear={() => setQuery('')} placeholder="어종·지역·낚시터 검색" />
+        {/* 이름을 몰라도 바로 찾게: 지도 · 내 주변 · 배낚시 항구 (낚시앱 공통 — 지도에서 고르기) */}
         <View style={styles.heroActions}>
-          <HeroButton
-            icon="find-gps"
-            label={`${x.near ? (x.nearArea ? `내 주변 · ${x.nearArea.area}` : '내 주변') : x.region} ▾`}
-            onPress={() => setSheet('region')}
-          />
+          <HeroButton icon="find-map" label="지도로 찾기" onPress={() => openMap()} />
+          <HeroButton icon="find-gps" label="내 주변" onPress={() => openMap({ near: true })} />
+          <HeroButton icon="place-wharf" label="배낚시 항구" onPress={() => openMap({ ports: true })} />
         </View>
       </View>
 
@@ -153,20 +166,50 @@ export default function HomeScreen() {
         </Card>
       ) : null}
 
-      {/* 메인의 핵심: 오늘 어종별 공식 바다낚시지수 (좋음 이상 많은 순). 날짜별 비교는 출조계획 탭에서 */}
-      <SectionHeader title="오늘 어종별 낚시지수" actionLabel="전체 어종" onAction={() => router.push('/species')} />
-      <IndexGrid x={x} selected={x.speciesCode} onSelect={x.setSpeciesCode} />
-      {/* 지금 금어기인 어종을 골랐을 때만 경고 (평소 금지체장은 어종 시트에서) */}
-      <RulesLine species={x.species} today={range.data?.today} onOpenSpecies={x.species ? () => setYearOpen(true) : undefined} alertOnly />
-      {x.species ? (
-        <BottomSheet open={yearOpen} title={`${x.species.name} · 1년 달력`} onClose={() => setYearOpen(false)}>
-          <SpeciesYear species={x.species} today={range.data?.today} onLeave={() => setYearOpen(false)} />
+      {/* 메인의 핵심: 오늘 어종별 공식 바다낚시지수 (좋음 이상 많은 순, 옆으로 넘김). 날짜별 비교는 출조계획 탭에서 */}
+      <IndexCarousel x={x} onOpen={setFish} onAll={() => router.push('/species')} />
+
+      {/* 어디로 갈까: 오늘 가장 좋은 곳 (전체 어종 기준) · 지도로 펼쳐 보기 */}
+      <SectionHeader title="오늘 어디로 갈까" actionLabel="지도" onAction={() => openMap()} />
+      <SpotsCard x={x} dates={dates} date={today} today={today} species={null} />
+
+      {/* 어종 카드 → 그 어종 오늘: 좋은 곳 5 · 금어기·체장 · [지도에서 보기] [이 어종으로 계획] */}
+      <BottomSheet open={!!fish} title={fish ? `오늘 ${fish.name} 좋은 곳` : ''} onClose={() => setFish(null)}>
+        {fish ? (
+          <View style={styles.sheet}>
+            <SpotsCard x={x} dates={dates} date={today} today={today} species={fish} limit={5} />
+            <RulesLine species={fish} today={today} onOpenSpecies={() => setYearOpen(true)} />
+            <View style={styles.sheetActions}>
+              <View style={styles.flex}>
+                <Button
+                  label="지도에서 보기"
+                  variant="navy"
+                  onPress={() => {
+                    const f = fish;
+                    setFish(null);
+                    openMap({ fish: f });
+                  }}
+                />
+              </View>
+              <View style={styles.flex}>
+                <Button
+                  label="이 어종으로 계획"
+                  onPress={() => {
+                    const f = fish;
+                    setFish(null);
+                    router.push({ pathname: '/trip/new', params: { species: f.code } });
+                  }}
+                />
+              </View>
+            </View>
+          </View>
+        ) : null}
+      </BottomSheet>
+      {fish ? (
+        <BottomSheet open={yearOpen} title={`${fish.name} · 1년 달력`} onClose={() => setYearOpen(false)}>
+          <SpeciesYear species={fish} today={today} onLeave={() => setYearOpen(false)} />
         </BottomSheet>
       ) : null}
-
-      {/* 어디로 갈까: 오늘 가장 좋은 곳 (고른 어종 기준, 없으면 전체) · 지도로 펼쳐 보기 */}
-      <SectionHeader title={`어디로 갈까${x.species ? ` · ${x.species.name}` : ''}`} actionLabel="지도" onAction={openMap} />
-      <SpotsCard x={x} dates={dates} date={today} today={today} />
 
       {x.summary.isSuccess && x.summary.data.data_status.stale ? (
         <ThemedText type="small" themeColor="warning">
@@ -222,7 +265,7 @@ const styles = StyleSheet.create({
     backgroundColor: Brand.navy,
     marginTop: -16,
     marginHorizontal: -16,
-    paddingTop: 104,
+    paddingTop: 96,
     paddingHorizontal: 16,
     paddingBottom: 16,
     gap: 10,
@@ -231,23 +274,37 @@ const styles = StyleSheet.create({
   heroImage: { position: 'absolute', top: 0, right: 0 },
   heroShade: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(5, 30, 58, 0.42)' },
   heroActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  regionPill: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+  },
+  regionText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  sheet: { gap: 10 },
+  sheetActions: { flexDirection: 'row', gap: 8 },
   heroCopy: { paddingHorizontal: 4, paddingTop: 8, gap: 4 },
   heroTitle: { color: '#FFFFFF', fontSize: 25, lineHeight: 32, fontWeight: '800' },
   heroSubtitle: { color: 'rgba(255,255,255,0.88)', fontSize: 14, lineHeight: 20, fontWeight: '600' },
   heroBtn: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: 'column',
+    paddingVertical: 8,
     paddingHorizontal: 10,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
     minHeight: 44,
     borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.14)',
   },
   heroBtnOn: { backgroundColor: 'rgba(255,255,255,0.22)' },
-  heroIcon: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#F3F6F9', alignItems: 'center', justifyContent: 'center' },
-  heroBtnText: { color: Brand.onNavy, fontSize: 15, fontWeight: '700' },
+  heroIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F3F6F9', alignItems: 'center', justifyContent: 'center' },
+  heroBtnText: { color: Brand.onNavy, fontSize: 13, fontWeight: '700' },
   dateRow: { gap: 6 },
   datePill: {
     minHeight: 36,
