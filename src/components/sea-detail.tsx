@@ -12,195 +12,16 @@ import { Card } from '@/components/screen';
 import { SpeciesImage } from '@/components/species';
 import { TermLinks } from '@/components/term-sheet';
 import { ThemedText } from '@/components/themed-text';
-import type { AppIconName } from '@/constants/icons';
 import { Brand, Layout } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import {
-  currentIndexPeriod,
-  findSeries,
-  KIND_TEXT,
-  latestPoint,
-  nextExtreme,
-  rangeText,
-  REASON_TEXT,
-  timeLabel,
-} from '@/lib/compare';
-import { distanceGrade, seaState, windName } from '@/lib/describe';
-import { ptyLabel, SKY_TEXT } from '@/lib/format';
+import { KIND_TEXT, REASON_TEXT, timeLabel } from '@/lib/compare';
+import { distanceGrade } from '@/lib/describe';
 import { useHomeSpecies } from '@/lib/prefs';
 import { speciesByCode, speciesByIndexName } from '@/lib/species';
 import { distLabel, isApprox, PLACE_IMAGE, PLACE_TYPE_LABEL } from '@/lib/place';
 
-type MetricKey = 'wave_height' | 'wind_speed' | 'water_temp';
-const METRIC_ROWS: { metric: MetricKey; label: string; icon: AppIconName; grade?: (v: number) => string }[] = [
-  { metric: 'wave_height', label: '파고', icon: 'wave', grade: seaState },
-  { metric: 'wind_speed', label: '풍속', icon: 'wind', grade: (v) => windName(v).name },
-  { metric: 'water_temp', label: '수온', icon: 'water-temp' },
-];
-
-const f1 = (n: number) => String(Math.round(n * 10) / 10);
-
 export function distText(km: number | null) {
   return km == null ? '거리 확인 불가' : `${km < 1 ? '1km 미만' : `${Math.round(km)}km`}·${distanceGrade(km)}`;
-}
-
-/**
- * 지금 바다 표: 항목마다 「최근 실측」과 「오늘 예보 범위」를 다른 칸에 둔다 (실측·예보를 섞지 않음).
- * 각 줄 아래에 기준 지점과 거리를 짧게 표시하고, 자세한 출처는 DataBasis 에서 본다.
- */
-export function MetricTable({ pc }: { pc: PlaceCompare }) {
-  const theme = useTheme();
-  const line = { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: theme.border };
-  return (
-    <Card style={styles.table}>
-      <View style={[styles.tr, styles.thead, line]}>
-        <ThemedText type="small" themeColor="textSecondary" style={styles.colLabel}>
-          항목
-        </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary" style={styles.col}>
-          최근 실측
-        </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary" style={styles.col}>
-          오늘 예보 범위
-        </ThemedText>
-      </View>
-      {METRIC_ROWS.map((r, i) => {
-        const obsS = findSeries(pc, r.metric, 'observed');
-        const fcS = findSeries(pc, r.metric, 'forecast');
-        const obs = latestPoint(obsS);
-        const fc = rangeText(fcS);
-        return (
-          <View key={r.metric} style={[styles.tbody, i < METRIC_ROWS.length - 1 && line]}>
-            <View style={styles.tr}>
-              <View style={[styles.colLabel, styles.inline]}>
-                <AppIcon name={r.icon} size={16} />
-                <ThemedText type="smallBold">{r.label}</ThemedText>
-              </View>
-              <View style={styles.col}>
-                {obs?.v != null ? (
-                  <>
-                    <ThemedText style={styles.num}>
-                      {f1(obs.v)}
-                      {obsS!.unit}
-                    </ThemedText>
-                    <ThemedText type="small" themeColor="textSecondary">
-                      {timeLabel(obs.t)}
-                      {r.grade ? ` · ${r.grade(obs.v)}` : ''}
-                    </ThemedText>
-                  </>
-                ) : (
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {obsS?.reason && obsS.reason !== 'NO_DATA' ? REASON_TEXT[obsS.reason] : '실측 없음'}
-                  </ThemedText>
-                )}
-              </View>
-              <View style={styles.col}>
-                {fc ? (
-                  <ThemedText style={styles.num}>{fc}</ThemedText>
-                ) : (
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {r.metric === 'water_temp' ? '예보 제공 안 됨' : '예보 없음'}
-                  </ThemedText>
-                )}
-              </View>
-            </View>
-          </View>
-        );
-      })}
-      {/* 기준 지점은 항목마다 반복하지 않고 한 줄로 (자세한 출처는 「자료 출처」 시트, 2026-11-23) */}
-      <ThemedText type="small" themeColor="textSecondary" style={styles.srcFoot}>
-        기준:{' '}
-        {[
-          ...new Set(
-            METRIC_ROWS.flatMap((r) => {
-              const o = findSeries(pc, r.metric, 'observed')?.source;
-              const fcs = findSeries(pc, r.metric, 'forecast')?.source;
-              return [o ? `실측 ${o.station_name} ${distText(o.distance_km)}` : null, fcs ? `예보 ${fcs.agency}` : null];
-            }).filter(Boolean),
-          ),
-        ].join(' · ') || '기준 지점 없음'}
-      </ThemedText>
-      <TermLinks items={[['wave', '파고란?'], ['wind', '풍속이란?'], ['water_temp', '수온이란?']]} />
-    </Card>
-  );
-}
-
-/** 육상 단기예보의 기온·강수. 바다 상태나 입질로 해석하지 않고 원 발표값만 요약한다. */
-export function WeatherForecastCard({ pc }: { pc: PlaceCompare }) {
-  const temp = findSeries(pc, 'air_temp', 'forecast');
-  const pop = findSeries(pc, 'precipitation_probability', 'forecast');
-  const sky = findSeries(pc, 'sky_state', 'forecast');
-  const pty = findSeries(pc, 'precipitation_type', 'forecast');
-  const values = (s: typeof temp) => (s?.points ?? []).flatMap((p) => (p.v == null ? [] : [p.v]));
-  const temps = values(temp);
-  const pops = values(pop);
-  const skyText = [...new Set(values(sky).map((v) => SKY_TEXT[v]).filter(Boolean))].join(' → ');
-  const ptyText = [...new Set(values(pty).filter((v) => v > 0).map(ptyLabel))].join('·');
-  if (!temps.length && !pops.length && !skyText && !ptyText) {
-    return <Card><ThemedText themeColor="textSecondary">단기 날씨 예보 자료 없음</ThemedText></Card>;
-  }
-  return (
-    <Card>
-      <View style={styles.weatherRow}>
-        <ThemedText type="smallBold">기온</ThemedText>
-        <ThemedText>{temps.length ? `${f1(Math.min(...temps))}~${f1(Math.max(...temps))}°C` : '자료 없음'}</ThemedText>
-      </View>
-      <View style={styles.weatherRow}>
-        <ThemedText type="smallBold">강수확률</ThemedText>
-        <ThemedText>{pops.length ? `최대 ${f1(Math.max(...pops))}%` : '자료 없음'}</ThemedText>
-      </View>
-      <View style={styles.weatherRow}>
-        <ThemedText type="smallBold">하늘·강수</ThemedText>
-        <ThemedText>{[skyText, ptyText].filter(Boolean).join(' · ') || '자료 없음'}</ThemedText>
-      </View>
-      <ThemedText type="small" themeColor="textSecondary">기상청 단기예보 · 해상 조건이나 입질을 뜻하지 않아요</ThemedText>
-    </Card>
-  );
-}
-
-/** 물때: 오늘 만조·간조 시각과 높이, 다음 이벤트 강조, 물때(사리·조금) */
-export function TideCard({ pc }: { pc: PlaceCompare }) {
-  const theme = useTheme();
-  const now = new Date();
-  const s = findSeries(pc, 'tide_extreme', 'forecast');
-  const next = nextExtreme(s, now);
-  const phase = currentIndexPeriod(pc.fishing_index, now)?.tide_phase;
-  const ex = s?.status === 'ok' ? (s.extremes ?? []) : [];
-  return (
-    <Card>
-      {ex.length === 0 ? (
-        <ThemedText themeColor="textSecondary">{s?.reason ? REASON_TEXT[s.reason] : '자료 없음'}</ThemedText>
-      ) : (
-        <View style={styles.tideRow}>
-          {ex.map((e) => {
-            const isNext = next?.t === e.t;
-            return (
-              <View
-                key={e.t}
-                style={[
-                  styles.tideCell,
-                  { borderColor: isNext ? theme.tint : theme.border },
-                  new Date(e.t) < now && styles.past,
-                ]}>
-                <ThemedText type="small" themeColor={e.type === 'high' ? 'tint' : 'accent'} style={styles.bold}>
-                  {e.type === 'high' ? '만조' : '간조'}
-                  {isNext ? ' 다음' : ''}
-                </ThemedText>
-                <ThemedText type="smallBold">{timeLabel(e.t)}</ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
-                  {e.v != null ? `${e.v}cm` : '높이 없음'}
-                </ThemedText>
-              </View>
-            );
-          })}
-        </View>
-      )}
-      <ThemedText type="small" themeColor="textSecondary">
-        예보 · {s?.source ? `${s.source.agency} ${s.source.station_name} ${distText(s.source.distance_km)}` : '기준 지점 없음'}
-        {phase ? ` · 물때 ${phase}` : ''}
-      </ThemedText>
-    </Card>
-  );
 }
 
 /** 자료 기준: 어떤 지점의 어떤 종류 자료를 언제 기준으로 쓰는지 (P0-5) */
@@ -299,9 +120,13 @@ export function FishingIndexCard({ pc }: { pc: PlaceCompare }) {
               <View key={i.species} style={styles.indexItem}>
                 {speciesByIndexName(i.species) ? <SpeciesImage code={speciesByIndexName(i.species)!.code} size={28} /> : null}
                 <View style={styles.flex}>
-                  <ThemedText type="small" numberOfLines={1}>{i.species}</ThemedText>
+                  <ThemedText type="small" numberOfLines={1}>
+                    {i.species}
+                  </ThemedText>
                   {p.items.some((item) => indexConditionText(item) !== indexConditionText(p.items[0])) ? (
-                    <ThemedText type="small" themeColor="textSecondary">{indexConditionText(i) ?? '환경 범위 자료 없음'}</ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {indexConditionText(i) ?? '환경 범위 자료 없음'}
+                    </ThemedText>
                   ) : null}
                 </View>
                 <ThemedText type="smallBold" themeColor={i.index ? LEVEL_COLOR[i.index] : 'textSecondary'}>
@@ -319,8 +144,78 @@ export function FishingIndexCard({ pc }: { pc: PlaceCompare }) {
           : '이 지점 발표'}{' '}
         · 지수와 환경 범위 모두 기관 발표값이며 앱이 판정한 값이 아닙니다
       </ThemedText>
-      <TermLinks items={[['index', '공식 낚시지수란?'], ['tide', '물때란?']]} />
+      <TermLinks
+        items={[
+          ['index', '공식 낚시지수란?'],
+          ['tide', '물때란?'],
+        ]}
+      />
     </Card>
+  );
+}
+
+/**
+ * 공식 바다낚시지수 한 줄 (2026-11-23): 어종마다 오늘 오전·오후 중 더 좋은 등급을 칩으로, 좋은 순.
+ * 누르면 시간대·환경 범위가 있는 전체 카드(시트)
+ */
+const RANK: Record<string, number> = { 매우좋음: 5, 좋음: 4, 보통: 3, 나쁨: 2, 매우나쁨: 1 };
+export function IndexChips({ pc, onMore }: { pc: PlaceCompare; onMore: () => void }) {
+  const theme = useTheme();
+  const f = pc.fishing_index;
+  const periods = f.status === 'ok' ? (f.periods ?? []) : [];
+  const best = new Map<string, string>();
+  for (const p of periods)
+    for (const i of p.items) if (i.index && (RANK[i.index] ?? 0) > (RANK[best.get(i.species) ?? ''] ?? 0)) best.set(i.species, i.index);
+  const items = [...best.entries()]
+    .filter(([sp]) => !['기타어종', '어종 공통', '-'].includes(sp))
+    .sort((a, b) => (RANK[b[1]] ?? 0) - (RANK[a[1]] ?? 0));
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onMore}
+      style={({ pressed }) => [
+        styles.chipCard,
+        { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+        pressed && { opacity: 0.85 },
+      ]}>
+      <View style={styles.chipHead}>
+        <ThemedText type="smallBold">공식 낚시지수 · 오늘</ThemedText>
+        <ThemedText type="smallBold" themeColor="tint">
+          자세히 ›
+        </ThemedText>
+      </View>
+      {items.length ? (
+        <View style={styles.chips}>
+          {items.map(([sp, g]) => {
+            const good = (RANK[g] ?? 0) >= 4;
+            return (
+              <View
+                key={sp}
+                style={[
+                  styles.chip,
+                  { backgroundColor: g === '매우좋음' ? Brand.teal : good ? theme.tintSoft : theme.background, borderColor: theme.border },
+                ]}>
+                {speciesByIndexName(sp) ? <SpeciesImage code={speciesByIndexName(sp)!.code} size={18} /> : null}
+                <ThemedText type="small" style={g === '매우좋음' ? styles.onTeal : undefined}>
+                  {sp}{' '}
+                  <ThemedText
+                    type="smallBold"
+                    themeColor={g === '매우좋음' ? undefined : LEVEL_COLOR[g as keyof typeof LEVEL_COLOR]}
+                    style={g === '매우좋음' ? styles.onTeal : undefined}>
+                    {g}
+                  </ThemedText>
+                </ThemedText>
+              </View>
+            );
+          })}
+        </View>
+      ) : (
+        <ThemedText type="small" themeColor="textSecondary">
+          {f.reason ? REASON_TEXT[f.reason] : '오늘 발표 없음'}
+          {f.source ? ` · 가장 가까운 지점 ${f.source.station_name} ${f.source.distance_km ?? '?'}km` : ''}
+        </ThemedText>
+      )}
+    </Pressable>
   );
 }
 
@@ -346,10 +241,7 @@ export function NearbyPlaces({
             accessibilityRole="button"
             accessibilityLabel={`${p.name}${current ? ', 현재 보는 낚시터' : ''}`}
             onPress={() => onPress(p)}
-            style={[
-              styles.placeCard,
-              { borderColor: current ? Brand.orange : theme.border, backgroundColor: theme.backgroundElement },
-            ]}>
+            style={[styles.placeCard, { borderColor: current ? Brand.orange : theme.border, backgroundColor: theme.backgroundElement }]}>
             <View style={styles.placeArt}>
               <AppIcon name={PLACE_IMAGE[p.type]} size={40} />
             </View>
@@ -387,6 +279,19 @@ const styles = StyleSheet.create({
   indexBlock: { gap: 4 },
   indexGrid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 2 },
   indexItem: { flexDirection: 'row', width: '46%', gap: 6 },
+  chipCard: { borderWidth: 1, borderRadius: 16, padding: 12, gap: 8 },
+  chipHead: { flexDirection: 'row', justifyContent: 'space-between' },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  onTeal: { color: '#FFFFFF' },
   placeRow: { gap: 8, paddingRight: Layout.screenPadding },
   placeCard: { width: 112, borderRadius: Layout.cardRadius, borderWidth: 1.5, overflow: 'hidden' },
   placeArt: { height: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F6F9' },

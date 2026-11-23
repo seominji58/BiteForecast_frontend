@@ -22,36 +22,29 @@ import { Button } from '@/components/form';
 import { MarineWarningBanner } from '@/components/marine-warning-banner';
 import { NearbyShops } from '@/components/nearby-shops';
 import { nearestPort } from '@/components/boat-ports';
-import { MetricTiles, NearbyCompact } from '@/components/place-compact';
+import { NearbyCompact } from '@/components/place-compact';
 import { PlaceNavigate } from '@/components/place-navigate';
 import { PlaceGallery } from '@/components/place-photo';
 import { Card, ErrorView, Loading } from '@/components/screen';
-import { DataBasis, FishingIndexCard, MetricTable, NearbyPlaces, TideCard, WeatherForecastCard } from '@/components/sea-detail';
-import { SegmentTabs } from '@/components/segment-tabs';
+import { DataBasis, FishingIndexCard, IndexChips, NearbyPlaces } from '@/components/sea-detail';
+import { SeaChart } from '@/components/sea-chart';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { ZoneNotice } from '@/components/zone-notice';
 import { Brand, Layout } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
-import { dayLabel, timeLabel } from '@/lib/compare';
 import { nearLabel } from '@/lib/navigate';
 import { nearby, PLACE_TYPE_LABEL, placeKindNote, placeName } from '@/lib/place';
 import { pushRecentPlace, useHomePlace } from '@/lib/prefs';
 
-type Tab = 'sea' | 'tide' | 'around';
-const TABS: { value: Tab; label: string }[] = [
-  { value: 'sea', label: '해황' },
-  { value: 'tide', label: '물때' },
-  { value: 'around', label: '주변 시설' },
-];
 type Sheet = 'index' | 'source' | 'around' | 'photo' | null;
 
 /**
- * 위치 상세 (2026-11-23 화면 재설계): 길게 나열하던 구조를
- *   ① 장소·작은 지도/사진 ② 특보·위험구역(안전은 기본 화면에) ③ 파고·풍속·수온 3칸
- *   ④ [해황][물때][주변 시설] 탭 — 고른 탭 내용만 ⑤ 아래 고정 버튼 [조건 비교][출조계획에 추가]
- * 로 바꿨다. 낚시지수·전체 주변 시설·자료 출처·사진 크게 보기는 바텀시트로.
+ * 위치 상세 (2026-11-23 v2): ① 장소·작은 지도/사진 ② 위험구역·특보 ③ 공식 낚시지수 칩
+ *   ④ 「오늘 바다」 그래프(물때·파고·바람·날씨 하루 선 그래프) ⑤ 근처 낚시터·주변 시설 ⑥ 조황
+ *   아래 고정 [조건 비교][출조계획에 추가]. 탭을 없애 한 화면에서 위→아래로 읽는다.
+ * 낚시지수 전체·주변 시설 전체·자료 출처·사진 크게 보기는 바텀시트로.
  * 데이터는 이전과 같은 API (GET /places/{id}/conditions · 전체 요약 · 카카오).
  */
 export default function PlaceDetailScreen() {
@@ -71,7 +64,6 @@ export default function PlaceDetailScreen() {
   const summary = usePlacesSummary(today);
   const cal = summary.data?.places.find((x) => x.place_id === placeId);
   const kakao = usePlaceKakao(placeId);
-  const [tab, setTab] = useState<Tab>('sea');
   const [sheet, setSheet] = useState<Sheet>(null);
   const [trip, setTrip] = useState(false);
 
@@ -167,87 +159,30 @@ export default function PlaceDetailScreen() {
             <ZoneNotice regulation={pc.regulation} compact />
             <MarineWarningBanner w={pc.warning} />
 
-            <View style={styles.between}>
-              <ThemedText type="smallBold">현재 해황</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                {today ? dayLabel(today) : ''}
-                {cond.data ? ` · ${timeLabel(cond.data.generated_at)} 갱신` : ''}
-              </ThemedText>
-            </View>
-            <MetricTiles pc={pc} />
+            {/* 공식 낚시지수: 어종 칩 (누르면 시간대·환경 범위 시트) */}
+            <IndexChips pc={pc} onMore={() => setSheet('index')} />
+            {/* 오늘 바다: 물때·파고·바람·날씨 하루 그래프 (지금 값 크게) */}
+            {today ? <SeaChart pc={pc} date={today} cal={cal} updated={cond.data?.generated_at} /> : null}
 
-            <SegmentTabs tabs={TABS} value={tab} onChange={setTab} />
-            {tab === 'sea' ? (
+            {/* 주변: 가까운 낚시터 · 주변 시설 (탭 없이 한 번에) */}
+            {place && places.data && !place.location_suspect && !place.coord?.recommend_hold ? (
               <>
-                <MetricTable pc={pc} />
-                <WeatherForecastCard pc={pc} />
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => setSheet('index')}
-                  style={[
-                    styles.rowLink,
-                    {
-                      borderColor: theme.border,
-                      backgroundColor: theme.backgroundElement,
-                    },
-                  ]}>
-                  <ThemedText type="smallBold">공식 바다낚시지수</ThemedText>
-                  <ThemedText type="smallBold" themeColor="tint">
-                    보기 ›
-                  </ThemedText>
-                </Pressable>
-                <CatchStrip
-                  title="이 낚시터 이용자 조황"
-                  filter={{ placeId }}
-                  note="이용자가 올린 조황이에요. 예보가 아니고, 낚시가 허용된 곳이라는 뜻도 아니에요."
+                <ThemedText type="smallBold">근처 낚시터</ThemedText>
+                <NearbyPlaces
+                  items={nearby(place, places.data, 8)}
+                  currentId={place.id}
+                  onPress={(p) => router.replace({ pathname: '/place/[id]', params: { id: String(p.id) } })}
                 />
               </>
-            ) : tab === 'tide' ? (
-              <>
-                {cal?.mulddae || cal?.sunrise ? (
-                  <Card>
-                    <ThemedText type="smallBold">
-                      {[
-                        cal.mulddae ? `물때 ${cal.mulddae}` : null,
-                        cal.sunrise ? `일출 ${cal.sunrise}` : null,
-                        cal.sunset ? `일몰 ${cal.sunset}` : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </ThemedText>
-                    {cal.wind_dir_fc && cal.wind_fc_max ? (
-                      <ThemedText type="small" themeColor="textSecondary">
-                        가장 센 바람 {cal.wind_dir_fc}풍 {cal.wind_fc_max.v}m/s (예보)
-                      </ThemedText>
-                    ) : null}
-                    {calendarSource(cal) ? (
-                      <ThemedText type="small" themeColor="textSecondary">
-                        {calendarSource(cal)}
-                      </ThemedText>
-                    ) : null}
-                  </Card>
-                ) : null}
-                <TideCard pc={pc} />
-              </>
-            ) : (
-              <>
-                {place && places.data && !place.location_suspect && !place.coord?.recommend_hold ? (
-                  <NearbyPlaces
-                    items={nearby(place, places.data, 8)}
-                    currentId={place.id}
-                    onPress={(p) =>
-                      router.replace({
-                        pathname: '/place/[id]',
-                        params: { id: String(p.id) },
-                      })
-                    }
-                  />
-                ) : null}
-                <Card>
-                  <NearbyCompact placeId={placeId} onAll={() => setSheet('around')} />
-                </Card>
-              </>
-            )}
+            ) : null}
+            <Card>
+              <NearbyCompact placeId={placeId} onAll={() => setSheet('around')} />
+            </Card>
+            <CatchStrip
+              title="이 낚시터 이용자 조황"
+              filter={{ placeId }}
+              note="이용자가 올린 조황이에요. 예보가 아니고, 낚시가 허용된 곳이라는 뜻도 아니에요."
+            />
           </>
         ) : null}
       </ScrollView>

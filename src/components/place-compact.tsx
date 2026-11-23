@@ -1,76 +1,13 @@
 /**
  * 위치 상세 재설계 조각 (2026-11-23)
- * - MetricTiles: 파고·풍속·수온 3칸. 최근 실측이 있으면 실측(시각), 없으면 오늘 예보 범위 — 종류를 늘 붙인다. 없으면 「자료 없음」
  * - NearbyCompact: 주변 시설을 종류마다 한 줄 (가까운 1~2곳 + 거리). 없으면 「반경 2km 안 등록된 주차장 없음」 한 줄
  *   전체 목록은 「전체 보기」 시트에서 (낚시점·낚시배 + 편의시설 원래 카드)
  */
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import { useAmenities, useNearbyShops } from '@/api/queries';
-import type { PlaceCompare } from '@/api/types';
-import { AppIcon } from '@/components/app-icon';
 import { ThemedText } from '@/components/themed-text';
-import type { AppIconName } from '@/constants/icons';
 import { useTheme } from '@/hooks/use-theme';
-import { findSeries, latestPoint, rangeText, timeLabel } from '@/lib/compare';
-
-const TILES: {
-  metric: 'wave_height' | 'wind_speed' | 'water_temp';
-  label: string;
-  icon: AppIconName;
-}[] = [
-  { metric: 'wave_height', label: '파고', icon: 'wave' },
-  { metric: 'wind_speed', label: '풍속', icon: 'wind' },
-  { metric: 'water_temp', label: '수온', icon: 'water-temp' },
-];
-
-export function MetricTiles({ pc }: { pc: PlaceCompare }) {
-  const theme = useTheme();
-  return (
-    <View style={styles.tiles}>
-      {TILES.map((t) => {
-        const obsS = findSeries(pc, t.metric, 'observed');
-        const obs = latestPoint(obsS);
-        const fc = rangeText(findSeries(pc, t.metric, 'forecast'));
-        const unit = obsS?.unit === '°C' ? '°C' : obsS ? ` ${obsS.unit}` : '';
-        const value = obs?.v != null ? `${Math.round(obs.v * 10) / 10}${unit}` : fc;
-        const tag = obs?.v != null ? `실측 ${timeLabel(obs.t)}` : fc ? '오늘 예보' : null;
-        return (
-          <View
-            key={t.metric}
-            style={[
-              styles.tile,
-              {
-                backgroundColor: theme.backgroundElement,
-                borderColor: theme.border,
-              },
-            ]}>
-            <AppIcon name={t.icon} size={22} />
-            <ThemedText type="small" themeColor="textSecondary">
-              {t.label}
-            </ThemedText>
-            <ThemedText type="smallBold" numberOfLines={1} adjustsFontSizeToFit>
-              {value ?? '자료 없음'}
-            </ThemedText>
-            {tag ? (
-              <View
-                style={[
-                  styles.tag,
-                  {
-                    backgroundColor: obs?.v != null ? theme.tintSoft : theme.backgroundSelected,
-                  },
-                ]}>
-                <ThemedText type="small" themeColor={obs?.v != null ? 'tint' : 'textSecondary'} style={styles.tagText}>
-                  {tag}
-                </ThemedText>
-              </View>
-            ) : null}
-          </View>
-        );
-      })}
-    </View>
-  );
-}
 
 const km = (m: number) => (m < 1000 ? `${m}m` : `${Number((m / 1000).toFixed(1))}km`);
 const naverSearch = (q: string) => `https://map.naver.com/p/search/${encodeURIComponent(q)}`;

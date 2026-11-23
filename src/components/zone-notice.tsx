@@ -30,7 +30,7 @@ export function ZoneNotice({ regulation, compact }: { regulation: Regulation; co
             accessibilityState={{ expanded: open }}
             disabled={!compact}
             onPress={() => setOpen((v) => !v)}
-            style={[styles.box, { borderColor: color, backgroundColor: theme.backgroundElement }]}>
+            style={[styles.box, { borderColor: theme.border, backgroundColor: control ? theme.dangerSoft : theme.warningSoft }]}>
             <View style={styles.head}>
               <AppIcon name="regulation" size={22} />
               <ThemedText type="smallBold" style={[{ color }, styles.flex]}>
@@ -64,7 +64,7 @@ export function ZoneNotice({ regulation, compact }: { regulation: Regulation; co
 
 const styles = StyleSheet.create({
   col: { gap: 8 },
-  box: { borderWidth: 1.5, borderRadius: 12, padding: 12, gap: 4 },
+  box: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 12, padding: 12, gap: 4 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   flex: { flex: 1 },
 });
