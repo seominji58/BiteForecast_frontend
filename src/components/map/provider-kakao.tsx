@@ -73,6 +73,8 @@ const GROUP: Record<MarkerTone, number> = {
   good: require('@/assets/map/group-good.png'),
 };
 const ME = require('@/assets/map/me.png');
+const PORT = require('@/assets/map/port.png');
+const PORT_SEL = require('@/assets/map/port-selected.png');
 /** (예전) 어종 그림 핀 — 공식 지수 8종, 초록 테두리. 새 핀은 PIN (scripts/make_map_pins.py) */
 const FISH: Record<string, number> = {
   rockfish: require('@/assets/map/fish-rockfish.png'),
@@ -188,11 +190,27 @@ export const KakaoMap = forwardRef<AppMapHandle, AppMapProps>(function KakaoMap(
         id: 'me',
         levels: [{ level: 0, image: asset(ME, 30), anchor: { x: 0.5, y: 0.5 } }],
       },
+      // 출항항: 닻 핀 + 아래 「93척」
+      ...([
+        ['port', PORT],
+        ['port-selected', PORT_SEL],
+      ] as const).map(([id, src]) => ({
+        id,
+        levels: [
+          {
+            level: 0,
+            image: asset(src, 32),
+            anchor: { x: 0.5, y: 0.5 },
+            textLayout: 'bottom' as const,
+            textLines: [{ fontSize: 12, color: '#0F766E', strokeColor: '#FFFFFF', strokeWidth: 3 }],
+          },
+        ],
+      })),
     ];
     const catchBadge = { id: 'catch', image: asset(BADGE_CATCH, 14), offset: { x: 0.9, y: 0.1 }, zOrder: 1 };
     const warnBadge = { id: 'warn', image: asset(BADGE_WARN, 16), offset: { x: 0.1, y: 0.1 }, zOrder: 2 };
     const labels: import('@react-native-kakao/map').MapLabel[] = markers.map((m) => {
-      const pin = m.fish && PIN[m.fish] ? `pin-${m.fish}-${m.ring ?? 'normal'}` : null;
+      const pin = m.kind === 'port' ? (m.selected ? 'port-selected' : 'port') : m.fish && PIN[m.fish] ? `pin-${m.fish}-${m.ring ?? 'normal'}` : null;
       const styleId = pin ?? (m.count && m.count > 1 ? `group-${m.tone}` : m.fish && FISH[m.fish] ? `fish-${m.fish}` : `dot-${m.tone}`);
       const text = pin ? (m.caption ? [{ value: m.caption }] : undefined) : m.count && m.count > 1 ? [{ value: String(m.count) }] : undefined;
       return {

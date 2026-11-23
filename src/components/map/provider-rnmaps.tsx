@@ -38,7 +38,24 @@ export const RnMapsMap = forwardRef<AppMapHandle, AppMapProps>(function RnMapsMa
       onMapReady={onReady}
       onRegionChangeComplete={(r) => onCameraIdle?.(r)}>
       {markers.map((m) =>
-        m.fish && PIN[m.fish] ? (
+        m.kind === 'port' ? (
+          // 출항항: 닻 핀 + 아래 「93척」 (카카오맵과 같은 모양)
+          <Marker
+            key={`${m.id}-${m.selected ? 1 : 0}`}
+            coordinate={{ latitude: m.lat, longitude: m.lon }}
+            tracksViewChanges={false}
+            anchor={{ x: 0.5, y: 0.4 }}
+            accessibilityLabel={m.label}
+            onPress={() => onMarkerPress?.(m.id)}>
+            <View style={styles.pinWrap}>
+              <Image
+                source={m.selected ? require('@/assets/map/port-selected.png') : require('@/assets/map/port.png')}
+                style={styles.portPin}
+              />
+              {m.caption ? <Text style={styles.caption}>{m.caption}</Text> : null}
+            </View>
+          </Marker>
+        ) : m.fish && PIN[m.fish] ? (
           // 어종 핀 (테두리 = 공식 지수 등급) + 특보 ⚠ + 조황 주황 점 + 아래 「좋음 12」 (카카오맵과 같은 규칙)
           <Marker
             key={`${m.id}-${m.ring}-${m.selected ? 1 : 0}-${m.caught ? 1 : 0}-${m.warn ? 1 : 0}-${m.caption ?? ''}`}
@@ -81,6 +98,7 @@ export const RnMapsMap = forwardRef<AppMapHandle, AppMapProps>(function RnMapsMa
 });
 
 const styles = StyleSheet.create({
+  portPin: { width: 32, height: 32 },
   pinWrap: { alignItems: 'center' },
   pin: { width: 40, height: 40 },
   pinSel: { width: 52, height: 52 },

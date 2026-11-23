@@ -29,6 +29,8 @@ export type MapMarker = {
   selected?: boolean;
   /** 핀 아래 글자 (어종 묶음의 「좋음 12」 등) */
   caption?: string;
+  /** port: 낚시어선 출항항 — 낚시터 핀과 헷갈리지 않게 닻 그림 핀 (아래 caption 에 「93척」, 2026-11-23) */
+  kind?: 'port';
 };
 
 export type MapRegion = { latitude: number; longitude: number; latitudeDelta: number; longitudeDelta: number };

@@ -34,8 +34,9 @@ export function portMarkers(ports: BoatPort[] | undefined, view: MapRegion | nul
       id: `h${p.id}`,
       lat: p.lat,
       lon: p.lon,
-      tone: p.id === selectedId ? 'selected' : 'teal',
-      count: p.boats,
+      tone: 'teal',
+      kind: 'port',
+      caption: `${p.boats}척`,
       label: `${p.name} 낚시어선 ${p.boats}척`,
       selected: p.id === selectedId,
     }));
