@@ -1,5 +1,5 @@
 {
-  "_comment": "어종 이미지 목록(15종). in_index = 국립해양조사원 바다낚시지수 제공 어종 여부, index_name = 지수의 어종 이름(fishing_index.species 그대로). species_code = 앱 어종 기준표(species) 코드, 없으면 null(출조계획에는 기타 입력으로 저장). view = 그리는 방향, features = 프롬프트·검수 체크리스트에 함께 쓰는 실제 외형 특징",
+  "_comment": "어종 이미지 목록. in_index = 국립해양조사원 바다낚시지수 제공 어종 여부, index_name = 지수의 어종 이름(fishing_index.species 그대로). species_code = 앱 어종 기준표(species) 코드, 없으면 null(출조계획에는 기타 입력으로 저장). view = 그리는 방향, features = 프롬프트·검수 체크리스트에 함께 쓰는 실제 외형 특징",
   "species": [
     {
       "code": "rockfish",
@@ -387,6 +387,125 @@
         "one distinct black eyespot at the base of the tail",
         "downward-facing mouth, blunt snout",
         "squarish tail"
+      ],
+      "in_index": false,
+      "view": "strict side view (lateral profile), head facing left"
+    },
+    {
+      "code": "spanish_mackerel",
+      "name_ko": "삼치",
+      "index_name": null,
+      "species_code": "spanish_mackerel",
+      "scientific": "Scomberomorus niphonius",
+      "english": "Japanese Spanish mackerel",
+      "features": [
+        "long slender torpedo-shaped body",
+        "bluish-gray back with rows of dark round spots along the sides",
+        "silvery white belly",
+        "two dorsal fins followed by small finlets",
+        "deeply forked tail"
+      ],
+      "in_index": false,
+      "view": "strict side view (lateral profile), head facing left"
+    },
+    {
+      "code": "yellowtail",
+      "name_ko": "방어",
+      "index_name": null,
+      "species_code": "yellowtail",
+      "scientific": "Seriola quinqueradiata",
+      "english": "Japanese amberjack (yellowtail)",
+      "features": [
+        "streamlined elongated body",
+        "blue-green back and silvery belly",
+        "distinct yellow longitudinal stripe from eye to tail",
+        "yellowish forked tail",
+        "pointed snout"
+      ],
+      "in_index": false,
+      "view": "strict side view (lateral profile), head facing left"
+    },
+    {
+      "code": "filefish",
+      "name_ko": "쥐치",
+      "index_name": null,
+      "species_code": "filefish",
+      "scientific": "Stephanolepis cirrhifer",
+      "english": "thread-sail filefish",
+      "features": [
+        "deep, strongly compressed rhombic body",
+        "single long first dorsal spine above the eye",
+        "small mouth at the tip of a pointed snout",
+        "rough sandpaper-like skin, brownish-yellow with irregular dark blotches",
+        "fan-shaped tail"
+      ],
+      "in_index": false,
+      "view": "strict side view (lateral profile), head facing left"
+    },
+    {
+      "code": "mitre_squid",
+      "name_ko": "한치",
+      "index_name": null,
+      "species_code": "mitre_squid",
+      "scientific": "Uroteuthis edulis",
+      "english": "swordtip squid",
+      "features": [
+        "long slender torpedo-shaped mantle",
+        "rhombic fins at the rear of the mantle",
+        "translucent reddish-brown skin with fine dark spots",
+        "eight short arms and two longer tentacles",
+        "large eyes"
+      ],
+      "in_index": false,
+      "view": "strict side view (lateral profile), head facing left"
+    },
+    {
+      "code": "gizzard_shad",
+      "name_ko": "전어",
+      "index_name": null,
+      "species_code": "gizzard_shad",
+      "scientific": "Konosirus punctatus",
+      "english": "dotted gizzard shad",
+      "features": [
+        "deep, compressed oval body",
+        "bluish back and bright silvery sides",
+        "one large dark spot behind the gill cover",
+        "rows of small dark dots along the upper sides",
+        "last dorsal fin ray elongated into a long filament"
+      ],
+      "in_index": false,
+      "view": "strict side view (lateral profile), head facing left"
+    },
+    {
+      "code": "flounder",
+      "name_ko": "가자미",
+      "index_name": null,
+      "species_code": "flounder",
+      "scientific": "Pleuronectes herzensteini",
+      "english": "yellow striped flounder",
+      "features": [
+        "flat oval body seen from the eyed (upper) side",
+        "both eyes on the right side of the head, head pointing to the right of the frame",
+        "brownish body with small pale and dark speckles",
+        "yellow band along the base of the dorsal and anal fins",
+        "small mouth"
+      ],
+      "in_index": false,
+      "view": "top-down view of the eyed (upper) side, head facing RIGHT (right-eyed flatfish: both eyes on the right side of the head, unlike the left-eyed olive flounder)"
+    },
+    {
+      "code": "croaker",
+      "name_ko": "민어",
+      "index_name": null,
+      "species_code": "croaker",
+      "scientific": "Miichthys miiuy",
+      "english": "brown croaker",
+      "features": [
+        "elongated robust body",
+        "grayish-brown back with bronze sheen and pale belly",
+        "large mouth with slightly projecting lower jaw",
+        "long continuous dorsal fin with a notch",
+        "rounded (wedge-shaped) tail"
       ],
       "in_index": false,
       "view": "strict side view (lateral profile), head facing left"

@@ -871,5 +871,271 @@
     "asset_px": 384,
     "asset_kb": 95,
     "applied_at": "2026-11-16T09:52:49.912006+00:00"
+  },
+  "spanish_mackerel": {
+    "code": "spanish_mackerel",
+    "name_ko": "삼치",
+    "scientific": "Scomberomorus niphonius",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "c0ca599d4e721da1",
+    "usage": {
+      "input_tokens": 260,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 260
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1709
+    },
+    "created_at": "2026-11-23T06:09:35.813Z",
+    "review": {
+      "checklist": [
+        "long slender torpedo-shaped body",
+        "bluish-gray back with rows of dark round spots along the sides",
+        "silvery white belly",
+        "two dorsal fins followed by small finlets",
+        "deeply forked tail"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/spanish_mackerel.png",
+    "asset_px": 384,
+    "asset_kb": 54,
+    "applied_at": "2026-11-23T06:10:59.381057+00:00"
+  },
+  "yellowtail": {
+    "code": "yellowtail",
+    "name_ko": "방어",
+    "scientific": "Seriola quinqueradiata",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "54346ad2d99a8e55",
+    "usage": {
+      "input_tokens": 250,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 250
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1699
+    },
+    "created_at": "2026-11-23T06:09:43.141Z",
+    "review": {
+      "checklist": [
+        "streamlined elongated body",
+        "blue-green back and silvery belly",
+        "distinct yellow longitudinal stripe from eye to tail",
+        "yellowish forked tail",
+        "pointed snout"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/yellowtail.png",
+    "asset_px": 384,
+    "asset_kb": 67,
+    "applied_at": "2026-11-23T06:10:59.399613+00:00"
+  },
+  "filefish": {
+    "code": "filefish",
+    "name_ko": "쥐치",
+    "scientific": "Stephanolepis cirrhifer",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "cacfec5fb3944a9b",
+    "usage": {
+      "input_tokens": 268,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 268
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1717
+    },
+    "created_at": "2026-11-23T06:09:53.210Z",
+    "review": {
+      "checklist": [
+        "deep, strongly compressed rhombic body",
+        "single long first dorsal spine above the eye",
+        "small mouth at the tip of a pointed snout",
+        "rough sandpaper-like skin, brownish-yellow with irregular dark blotches",
+        "fan-shaped tail"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/filefish.png",
+    "asset_px": 384,
+    "asset_kb": 136,
+    "applied_at": "2026-11-23T06:10:59.297744+00:00"
+  },
+  "mitre_squid": {
+    "code": "mitre_squid",
+    "name_ko": "한치",
+    "scientific": "Uroteuthis edulis",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "0ce672fa20fd02dc",
+    "usage": {
+      "input_tokens": 255,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 255
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1704
+    },
+    "created_at": "2026-11-23T06:10:03.567Z",
+    "review": {
+      "checklist": [
+        "long slender torpedo-shaped mantle",
+        "rhombic fins at the rear of the mantle",
+        "translucent reddish-brown skin with fine dark spots",
+        "eight short arms and two longer tentacles",
+        "large eyes"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/mitre_squid.png",
+    "asset_px": 384,
+    "asset_kb": 73,
+    "applied_at": "2026-11-23T06:10:59.364259+00:00"
+  },
+  "gizzard_shad": {
+    "code": "gizzard_shad",
+    "name_ko": "전어",
+    "scientific": "Konosirus punctatus",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "6940da1f9fb77a0c",
+    "usage": {
+      "input_tokens": 261,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 261
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1710
+    },
+    "created_at": "2026-11-23T06:10:13.279Z",
+    "review": {
+      "checklist": [
+        "deep, compressed oval body",
+        "bluish back and bright silvery sides",
+        "one large dark spot behind the gill cover",
+        "rows of small dark dots along the upper sides",
+        "last dorsal fin ray elongated into a long filament"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/gizzard_shad.png",
+    "asset_px": 384,
+    "asset_kb": 100,
+    "applied_at": "2026-11-23T06:10:59.343527+00:00"
+  },
+  "flounder": {
+    "code": "flounder",
+    "name_ko": "가자미",
+    "scientific": "Pleuronectes herzensteini",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "43ecc767f4b174cf",
+    "usage": {
+      "input_tokens": 305,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 305
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1754
+    },
+    "created_at": "2026-11-23T06:10:55.067Z",
+    "review": {
+      "checklist": [
+        "flat oval body seen from the eyed (upper) side",
+        "both eyes on the right side of the head, head pointing to the right of the frame",
+        "brownish body with small pale and dark speckles",
+        "yellow band along the base of the dorsal and anal fins",
+        "small mouth"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/flounder.png",
+    "asset_px": 384,
+    "asset_kb": 133,
+    "applied_at": "2026-11-23T06:10:59.321148+00:00"
+  },
+  "croaker": {
+    "code": "croaker",
+    "name_ko": "민어",
+    "scientific": "Miichthys miiuy",
+    "model": "gpt-image-2.6-flare",
+    "size": "1024x1024",
+    "quality": "medium",
+    "background": "transparent",
+    "prompt_sha": "e6951e2dd558cce9",
+    "usage": {
+      "input_tokens": 256,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 256
+      },
+      "output_tokens": 1449,
+      "output_tokens_details": {
+        "image_tokens": 1449,
+        "text_tokens": 0
+      },
+      "total_tokens": 1705
+    },
+    "created_at": "2026-11-23T06:10:29.815Z",
+    "review": {
+      "checklist": [
+        "elongated robust body",
+        "grayish-brown back with bronze sheen and pale belly",
+        "large mouth with slightly projecting lower jaw",
+        "long continuous dorsal fin with a notch",
+        "rounded (wedge-shaped) tail"
+      ],
+      "status": "applied_pending_user_review"
+    },
+    "asset": "assets/species/croaker.png",
+    "asset_px": 384,
+    "asset_kb": 88,
+    "applied_at": "2026-11-23T06:10:59.271490+00:00"
   }
 }
