@@ -3,12 +3,13 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Image, Keyboard, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { useCatchSummary, useDateRange, useFishingRules, useSpeciesSeasons } from '@/api/queries';
+import { useCatchSummary, useDateRange, useFishingRules } from '@/api/queries';
 import type { Place } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { HomeActions, SeaLine } from '@/components/home-explore';
 import { OptionSheet } from '@/components/option-sheet';
 import { RulesLine } from '@/components/rules-line';
+import { BottomSheet } from '@/components/bottom-sheet';
 import { SpeciesYear } from '@/components/species-year';
 import { railBadge } from '@/lib/seasons';
 import { Card, SectionHeader, TabScreen } from '@/components/screen';
@@ -75,13 +76,13 @@ export default function HomeScreen() {
     [x.allSpecies, speciesCounts],
   );
   // 어종 카드 배지: 지금 금어기 > 이번 달 산란기 (법령·수산과학원·논문 근거)
-  const seasonsQ = useSpeciesSeasons();
   const rulesQ = useFishingRules();
+  const [yearOpen, setYearOpen] = useState(false);
   const railBadges = useMemo(() => {
     const t = range.data?.today;
     if (!t) return undefined;
-    return Object.fromEntries(railSpecies.map((s) => [s.code, railBadge(s.code, t, seasonsQ.data, rulesQ.data)]));
-  }, [railSpecies, range.data?.today, seasonsQ.data, rulesQ.data]);
+    return Object.fromEntries(railSpecies.map((s) => [s.code, railBadge(s.code, t, rulesQ.data)]));
+  }, [railSpecies, range.data?.today, rulesQ.data]);
   const results = query.trim() ? (x.places.data ?? []).filter((p) => matches(p, query)).slice(0, 5) : [];
   const speciesHits = query.trim()
     ? x.allSpecies.filter((s) => s.name.includes(query.trim()) || (s.alias ?? '').includes(query.trim())).slice(0, 3)
@@ -232,8 +233,13 @@ export default function HomeScreen() {
       {/* 어종 */}
       <SectionHeader title="어떤 어종을 잡으러 가세요?" actionLabel="전체 어종 보기" onAction={() => router.push('/species')} />
       <SpeciesRail items={railSpecies} selected={x.speciesCode} onSelect={x.setSpeciesCode} badges={railBadges} />
-      {/* 고른 어종: 1년 달력(산란기·금어기·금지체장) / 안 골랐으면 오늘 금어기 한 줄 */}
-      {x.species ? <SpeciesYear species={x.species} today={range.data?.today} /> : <RulesLine species={null} today={range.data?.today} />}
+      {/* 금어기·금지체장 한 줄. 어종을 골랐으면 누를 때 그 어종 시트(1년 달력·근거), 아니면 금어기 화면 */}
+      <RulesLine species={x.species} today={range.data?.today} onOpenSpecies={x.species ? () => setYearOpen(true) : undefined} />
+      {x.species ? (
+        <BottomSheet open={yearOpen} title={`${x.species.name} · 1년 달력`} onClose={() => setYearOpen(false)}>
+          <SpeciesYear species={x.species} today={range.data?.today} onLeave={() => setYearOpen(false)} />
+        </BottomSheet>
+      ) : null}
 
       {/* 출조 날짜 | 지역 */}
       <ConditionBox

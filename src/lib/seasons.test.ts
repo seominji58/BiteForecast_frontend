@@ -33,8 +33,8 @@ test('1년 달력: 산란기·성기·금어기(달에 하루라도 걸치면)',
   assert.deepEqual(c.filter((x) => x.ban).map((x) => x.month), [11, 12]);
 });
 
-test('홈 배지: 금어기가 산란기보다 먼저', () => {
-  assert.deepEqual(railBadge('greenling', '2026-11-23', seasons, rules), { label: '금어기', tone: 'danger' });
-  assert.deepEqual(railBadge('greenling', '2026-10-05', seasons, rules), { label: '산란기', tone: 'success' });
-  assert.equal(railBadge('greenling', '2026-06-01', seasons, rules), null);
+test('홈 배지: 금어기일 때만 (산란기는 배지로 달지 않음)', () => {
+  assert.deepEqual(railBadge('greenling', '2026-11-23', rules), { label: '금어기', tone: 'danger' });
+  assert.equal(railBadge('greenling', '2026-10-05', rules), null); // 산란기지만 배지 없음
+  assert.equal(railBadge('greenling', '2026-06-01', rules), null);
 });

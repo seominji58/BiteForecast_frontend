@@ -1,5 +1,5 @@
 /**
- * 홈에서 어종을 고르면 그 어종의 1년 달력 (2026-11-23).
+ * 어종 1년 달력 (2026-11-23). 홈 어종 한 줄을 누르면 시트 안에서 보여준다 (홈에 크게 펼치지 않음).
  * - 칸: 산란기(초록, 성기는 진하게) · 금어기(빨간 테두리·X) · 이번 달(주황 밑줄)
  * - 아래: 금지체장 · 해역별 산란기 근거(누르면 논문·수산과학원 원문) · 「산란기는 잘 잡히는 시기가 아니에요」
  * - 근거가 없으면 칸을 칠하지 않고 「국내 연구 자료 없음」이라고만 쓴다 (지어내지 않음)
@@ -16,7 +16,16 @@ import { inPeriod, periodText, rulesForSpecies } from '@/lib/rules';
 import { yearCells } from '@/lib/seasons';
 import type { SpeciesItem } from '@/lib/species';
 
-export function SpeciesYear({ species, today }: { species: SpeciesItem; today: string | undefined }) {
+export function SpeciesYear({
+  species,
+  today,
+  onLeave,
+}: {
+  species: SpeciesItem;
+  today: string | undefined;
+  /** 다른 화면으로 가기 전에 (시트 안에서 쓸 때 시트를 닫는다) */
+  onLeave?: () => void;
+}) {
   const theme = useTheme();
   const seasons = useSpeciesSeasons().data;
   const rules = useFishingRules().data;
@@ -102,7 +111,10 @@ export function SpeciesYear({ species, today }: { species: SpeciesItem; today: s
             </Pressable>
           ))}
           {bans.length ? (
-            <Pressable accessibilityRole="link" onPress={() => router.push({ pathname: '/rules', params: { name: bans[0].name } })}>
+            <Pressable accessibilityRole="link" onPress={() => {
+                onLeave?.();
+                router.push({ pathname: '/rules', params: { name: bans[0].name } });
+              }}>
               <ThemedText type="small" themeColor="tint">
                 금어기·금지체장: 수산자원관리법 시행령·고시 ›
               </ThemedText>

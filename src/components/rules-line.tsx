@@ -12,7 +12,16 @@ import { ThemedText } from '@/components/themed-text';
 import { activeBans, inPeriod, periodText, rulesForSpecies, upcomingBans } from '@/lib/rules';
 import type { SpeciesItem } from '@/lib/species';
 
-export function RulesLine({ species, today }: { species: SpeciesItem | null; today: string | undefined }) {
+export function RulesLine({
+  species,
+  today,
+  onOpenSpecies,
+}: {
+  species: SpeciesItem | null;
+  today: string | undefined;
+  /** 어종을 골랐을 때 누르면: 그 어종 시트(1년 달력·근거)를 연다. 없으면 금어기 화면으로 */
+  onOpenSpecies?: () => void;
+}) {
   const q = useFishingRules();
   if (!q.data || !today) return null;
   const r = q.data;
@@ -20,7 +29,17 @@ export function RulesLine({ species, today }: { species: SpeciesItem | null; tod
 
   if (species) {
     const { bans, sizes } = rulesForSpecies(r, species.code);
-    if (!bans.length && !sizes.length) return null; // 시행령 대상이 아닌 어종은 조용히
+    const tap = onOpenSpecies ?? (() => open(bans[0]?.name ?? sizes[0]?.name));
+    if (!bans.length && !sizes.length) {
+      // 시행령 금어기·금지체장 대상이 아닌 어종: 규정 없음을 짧게 (산란기 등은 시트에서)
+      return (
+        <Pressable accessibilityRole="button" onPress={tap} style={styles.line}>
+          <ThemedText type="small" themeColor="textSecondary">
+            <ThemedText type="smallBold">{species.name}</ThemedText> · 법정 금어기·금지체장 없음 ›
+          </ThemedText>
+        </Pressable>
+      );
+    }
     const year = Number(today.slice(0, 4));
     // 고시 어종은 그해 고시된 기간만 (inPeriod 가 year 를 본다)
     const nowBan = bans.find((b) => b.periods.some((p) => inPeriod(p, today)));
@@ -35,7 +54,7 @@ export function RulesLine({ species, today }: { species: SpeciesItem | null; tod
             .join(' / ')}` : null,
     ].filter(Boolean);
     return (
-      <Pressable accessibilityRole="button" onPress={() => open(bans[0]?.name ?? sizes[0]?.name)} style={styles.line}>
+      <Pressable accessibilityRole="button" onPress={tap} style={styles.line}>
         {nowBan ? (
           <ThemedText type="smallBold" themeColor="danger">
             ⚠ 지금 {species.name} 금어기예요 · {nowPeriods.map(periodText).join(' · ')} ›

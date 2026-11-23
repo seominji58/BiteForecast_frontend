@@ -34,14 +34,12 @@ export function yearCells(code: string, year: number, seasons?: SpeciesSeasons, 
 
 export type RailBadge = { label: string; tone: 'danger' | 'success' };
 
-/** 홈 어종 카드 배지 (하나만): 지금 금어기 > 이번 달 산란기 */
-export function railBadge(code: string, today: string, seasons?: SpeciesSeasons, rules?: FishingRules): RailBadge | null {
-  if (rules) {
-    const { bans } = rulesForSpecies(rules, code);
-    if (bans.some((b) => b.periods.some((p) => inPeriod(p, today)))) return { label: '금어기', tone: 'danger' };
-  }
-  const s = seasons?.species[code];
-  const m = Number(today.slice(5, 7));
-  if (s?.periods.some((p) => p.months.includes(m))) return { label: s.kind === 'birth' ? '출산기' : '산란기', tone: 'success' };
-  return null;
+/**
+ * 홈 어종 카드 배지: 지금 금어기일 때만 (2026-11-23 변경).
+ * 산란기는 「잘 잡히는 시기」로 오해되기 쉬워 카드에 달지 않는다 (어종 시트의 1년 달력에서만)
+ */
+export function railBadge(code: string, today: string, rules?: FishingRules): RailBadge | null {
+  if (!rules) return null;
+  const { bans } = rulesForSpecies(rules, code);
+  return bans.some((b) => b.periods.some((p) => inPeriod(p, today))) ? { label: '금어기', tone: 'danger' } : null;
 }
