@@ -13,9 +13,8 @@ import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { formatDateTime } from '@/lib/format';
-import { VERIFY_LABEL } from '@/lib/verification';
 
-// SCR-05 낚시 기록 — 일지 목록(인증 상태 배지) + 당시 인근 관측소 기록 요약 (FR-08, FR-10)
+// SCR-05 낚시 기록 — 일지 목록(받은 포인트) + 당시 인근 관측소 기록 요약 (FR-08, FR-10)
 export default function RecordsScreen() {
   const journals = useJournals();
   const { status } = useAuth();
@@ -29,7 +28,7 @@ export default function RecordsScreen() {
           <LoginRequired
             icon="cat-catch"
             title="내 낚시 기록을 남겨 보세요"
-            message="기록·사진 인증·포인트는 로그인 후 쓸 수 있어요. 이 기기에서 전에 쓴 기록이 있으면 가입한 계정으로 이어져요."
+            message="기록·포인트는 로그인 후 쓸 수 있어요. 이 기기에서 전에 쓴 기록이 있으면 가입한 계정으로 이어져요."
           />
         )}
       </TabScreen>
@@ -46,7 +45,7 @@ export default function RecordsScreen() {
       {journals.isError && <ErrorView message={journals.error.message} onRetry={() => journals.refetch()} />}
       {journals.isSuccess &&
         (journals.data.length === 0 ? (
-          <EmptyView message="아직 기록이 없어요. 사진과 함께 기록을 남기고 인증을 받으면 포인트가 쌓여요." />
+          <EmptyView message="아직 기록이 없어요. 기록을 남기면 포인트가 쌓여 등급이 올라가요." />
         ) : (
           journals.data.map((j) => <JournalRow key={j.id} journal={j} />)
         ))}
@@ -59,18 +58,12 @@ function SummaryCard() {
   const theme = useTheme();
   const s = useRecordSummary();
   if (!s.isSuccess || s.data.journal_count === 0) return null;
-  const best = [...s.data.species]
-    .filter((x) => x.best_length_cm != null)
-    .sort((a, b) => b.best_length_cm! - a.best_length_cm!)[0];
+  const best = [...s.data.species].filter((x) => x.best_length_cm != null).sort((a, b) => b.best_length_cm! - a.best_length_cm!)[0];
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={() => router.push('/my-records')}
-      style={({ pressed }) => pressed && styles.pressed}>
+    <Pressable accessibilityRole="button" onPress={() => router.push('/my-records')} style={({ pressed }) => pressed && styles.pressed}>
       <Card style={{ borderColor: theme.tint }}>
         <ThemedText type="smallBold">
-          출조 {s.data.trip_days}일 · 잡은 어종 {s.data.species.length}종
-          {s.data.skunk_days ? ` · 못 잡은 날 ${s.data.skunk_days}일` : ''}
+          출조 {s.data.trip_days}일 · 잡은 어종 {s.data.species.length}종{s.data.skunk_days ? ` · 못 잡은 날 ${s.data.skunk_days}일` : ''}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
           {best ? `내 최대어 ${best.species_name} ${best.best_length_cm}cm · ` : ''}어종 도감·첫 포획 보기 ›
@@ -89,35 +82,29 @@ function JournalRow({ journal: j }: { journal: Journal }) {
   const theme = useTheme();
   const source = usePhotoSource();
   const thumb = j.photos[0] ? source(j.photos[0]) : null;
-  const v = VERIFY_LABEL[j.verification.status];
   // 마릿수 0 = 「못 잡은 날」 기록 (꽝도 출조 기록으로 보여준다)
   const catchText =
     j.count === 0
       ? '못 잡은 날'
-      : [j.count != null ? `${j.count}마리` : null, j.max_length_cm != null ? `${j.max_length_cm}cm` : null]
-          .filter(Boolean)
-          .join(' · ');
+      : [j.count != null ? `${j.count}마리` : null, j.max_length_cm != null ? `${j.max_length_cm}cm` : null].filter(Boolean).join(' · ');
 
   return (
     <Link href={{ pathname: '/journal/[id]', params: { id: String(j.id) } }} asChild>
       <Pressable accessibilityRole="button" style={({ pressed }) => pressed && styles.pressed}>
         <Card style={styles.row}>
           <View style={[styles.art, { backgroundColor: theme.background }]}>
-            {thumb ? (
-              <Image source={thumb} style={styles.img} contentFit="cover" />
-            ) : (
-              <AppIcon name="cat-catch" size={36} />
-            )}
+            {thumb ? <Image source={thumb} style={styles.img} contentFit="cover" /> : <AppIcon name="cat-catch" size={36} />}
           </View>
           <View style={styles.main}>
             <View style={styles.between}>
               <ThemedText type="small" themeColor="textSecondary" numberOfLines={1} style={styles.flex}>
                 {formatDateTime(j.fished_at)}
               </ThemedText>
-              <ThemedText type="smallBold" themeColor={v.color}>
-                {v.label}
-                {j.verification.points > 0 ? ` +${j.verification.points}P` : ''}
-              </ThemedText>
+              {j.verification.points > 0 ? (
+                <ThemedText type="smallBold" themeColor="success">
+                  +{j.verification.points}P
+                </ThemedText>
+              ) : null}
             </View>
             <ThemedText type="smallBold" numberOfLines={1}>
               {j.place_name}

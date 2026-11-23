@@ -171,7 +171,8 @@ export type RecordSummary = {
   species: SpeciesRecord[];
 };
 
-export type PointReason = 'JOURNAL_CREATED' | 'DETAIL_FILLED' | 'PHOTO_ATTACHED' | 'FIRST_PLACE' | 'PERSONAL_BEST';
+export type PointReason =
+  'JOURNAL_CREATED' | 'DETAIL_FILLED' | 'PHOTO_ATTACHED' | 'FIRST_PLACE' | 'PERSONAL_BEST' | 'POST_CREATED' | 'COMMENT_CREATED';
 
 export type PointHistoryItem = {
   id: number;

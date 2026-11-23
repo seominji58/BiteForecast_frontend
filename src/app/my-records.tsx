@@ -1,6 +1,6 @@
 /**
  * 내 낚시 요약 (서비스 개선 설계 R1): 출조 일수 · 잡은 어종(도감) · 어종별 첫 포획·최대어.
- * - 기존 기록을 서버가 집계만 한다 (새 표 없음). 인증 여부와 관계없는 개인 기록이고, 인증 완료 최대어에만 표시를 붙인다
+ * - 기존 기록을 서버가 집계만 한다 (새 표 없음). 개인 기록
  * - 순위·남과의 비교는 하지 않는다. 안 잡은 어종은 흐리게만 보여주고 「도전 과제」로 압박하지 않는다
  */
 import { router, Stack } from 'expo-router';
@@ -126,8 +126,7 @@ function Body() {
               {r.best_journal_id != null && r.best_length_cm != null ? (
                 <Pressable accessibilityRole="button" onPress={() => open(r.best_journal_id!)} hitSlop={6}>
                   <ThemedText type="small" themeColor="tint">
-                    내 최대어 {r.best_length_cm}cm · {shortDate(r.best_at!)}
-                    {r.best_verified ? ' · ✓ 인증' : ''} ›
+                    내 최대어 {r.best_length_cm}cm · {shortDate(r.best_at!)}›
                   </ThemedText>
                 </Pressable>
               ) : (

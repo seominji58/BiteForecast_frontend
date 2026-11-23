@@ -10,7 +10,7 @@ export const CATEGORY: Record<PostCategory, { label: string; icon: AppIconName }
 
 export const REPORT_REASONS = ['광고·홍보', '욕설·비방', '개인정보 노출', '허위·위험한 정보', '기타'] as const;
 
-/** 인증 조황의 조과 한 줄: 「우럭 3마리 · 최대 32.5cm」 (괄호 속 표준명은 줄인다) */
+/** 조황 글의 조과 한 줄: 「우럭 3마리 · 최대 32.5cm」 (괄호 속 표준명은 줄인다) */
 export function catchLine(c: { species_name: string | null; count: number | null; max_length_cm: number | null }): string {
   const name = c.species_name?.replace(/\(.*\)/, '') ?? null;
   return [

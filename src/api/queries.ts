@@ -121,15 +121,6 @@ export function useDeleteJournal(id: number) {
   return useMutation({ mutationFn: () => api.deleteJournal(id), onSuccess: invalidate });
 }
 
-/** 인증 신청(true) / 신청 취소(false) */
-export function useVerification(id: number) {
-  const invalidate = useInvalidateJournalData();
-  return useMutation({
-    mutationFn: (request: boolean) => (request ? api.requestVerification(id) : api.cancelVerification(id)),
-    onSuccess: invalidate,
-  });
-}
-
 // --- 커뮤니티 ---
 
 const postKey = (category: PostCategory | null, sort: string, filter: PostFilter) =>

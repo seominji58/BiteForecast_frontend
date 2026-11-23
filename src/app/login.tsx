@@ -16,7 +16,7 @@ import { kakaoAvailable, kakaoIdToken, pendingKakao } from '@/lib/kakao';
 
 /**
  * 로그인 (2026-11-16): 버튼 3개 — 카카오 · 구글 · 이메일. 이메일은 다음 화면(/login-email)에서 입력한다.
- * 해황 보기는 로그인 없이 되고, 기록·사진 인증·포인트·글쓰기·댓글·좋아요·신고는 로그인 후 쓸 수 있다.
+ * 해황 보기는 로그인 없이 되고, 기록·포인트·글쓰기·댓글·좋아요·신고는 로그인 후 쓸 수 있다.
  * 카카오·구글은 서버 설정과 이 앱 빌드의 네이티브 모듈이 모두 있을 때만 보인다 (Expo Go 에서는 이메일만).
  */
 export default function LoginScreen() {
@@ -79,7 +79,7 @@ export default function LoginScreen() {
           입질예보
         </ThemedText>
         <ThemedText themeColor="textSecondary" style={styles.center}>
-          기록·사진 인증·커뮤니티는{'\n'}로그인하고 쓸 수 있어요
+          기록·포인트·커뮤니티는{'\n'}로그인하고 쓸 수 있어요
         </ThemedText>
       </View>
 

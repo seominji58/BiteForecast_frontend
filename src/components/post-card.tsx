@@ -49,18 +49,6 @@ export function Tag({ icon, text }: { icon: 'map-marker' | 'fish'; text: string 
   );
 }
 
-/** 「인증 조황」 배지: 관리자 승인을 받은 낚시 기록을 공유한 글 */
-export function VerifiedBadge() {
-  const theme = useTheme();
-  return (
-    <View style={[styles.pill, { borderColor: theme.success }]}>
-      <ThemedText type="small" themeColor="success" style={styles.badgeText}>
-        ✓ 인증 조황
-      </ThemedText>
-    </View>
-  );
-}
-
 /**
  * 커뮤니티 글 카드 (2026-11-17 레퍼런스): 작성자·시간 → 제목 → 본문 두 줄 → 사진(있을 때만, 장수 표시) → 지역·어종 꼬리표 + 좋아요·댓글.
  * 사진이 없는 글에 그림을 대신 넣지 않는다.
@@ -86,7 +74,6 @@ export function PostCard({ p }: { p: PostSummary }) {
             {timeAgo(p.created_at)} · {cat.label}
           </ThemedText>
         </View>
-        {p.verified ? <VerifiedBadge /> : null}
         {p.popular ? (
           <View style={[styles.pill, styles.hot]}>
             <ThemedText type="small" style={styles.hotText}>

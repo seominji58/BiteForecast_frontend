@@ -17,7 +17,7 @@ import { useAuth } from '@/lib/auth';
  * - 로그인 전: 「로그인 / 회원가입」 하나 + 최근 본 낚시터(가로 한 줄) + 설정
  * - 로그인 후: 프로필(닉네임·칭호·로그인 수단) → 요약 3칸 → 메뉴(내 낚시터·요약·칭호·설정) → 로그아웃 (탈퇴는 설정)
  *   찜·최근 본 곳·직접 찍은 포인트는 「내 낚시터」 화면에 모은다 (2026-11-23)
- * 칭호·포인트·인증 현황은 「칭호·포인트」 화면, 도감·최대어는 「내 낚시 요약」 화면에서 본다
+ * 칭호·포인트는 「칭호·포인트」 화면, 도감·최대어는 「내 낚시 요약」 화면에서 본다
  */
 const PROVIDER_NAME: Record<string, string> = { email: '이메일', google: '구글', kakao: '카카오' };
 
@@ -115,7 +115,7 @@ function SignedIn() {
       <Card style={styles.menu}>
         <MenuRow icon="place-rock" label="내 낚시터" sub="직접 찍은 포인트·찜한 곳·최근 본 곳" href="/my-places" />
         <MenuRow icon="total-fish" label="내 낚시 요약·도감" sub="첫 포획, 어종별 최대어" href="/my-records" />
-        <MenuRow icon="medal" label="칭호·포인트" sub="사진 인증 현황, 포인트 내역" href="/my-points" />
+        <MenuRow icon="medal" label="칭호·포인트" sub="등급, 포인트 쌓는 법·내역" href="/my-points" />
         <MenuRow icon="regulation" label="설정·정보" sub="차단한 사용자, 약관, 회원 탈퇴" href="/settings" last />
       </Card>
 

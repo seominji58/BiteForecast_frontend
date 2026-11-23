@@ -31,7 +31,7 @@ type Props = {
 /**
  * 낚시일지 작성/수정 폼 (재설계 v2 §8).
  * ① 장소·일시 ② 조과(어종 검색·마릿수·길이) ③ 사진 ④ 미끼·채비·메모(접힘)
- * 사진이 있으면 [저장] / [저장하고 인증 신청]. 포인트는 관리자 승인 후에만 생긴다.
+ * 저장하면 바로 포인트가 쌓인다 (2026-11-23 사진 인증 없앰 — 카페 등급처럼 활동으로).
  * 「오늘은 못 잡았어요」를 고르면 마릿수 0 으로 저장하고 어종·길이 칸을 숨긴다 (꽝도 출조 기록, 서비스 개선 설계 R2)
  */
 export function JournalForm({
@@ -63,20 +63,16 @@ export function JournalForm({
   const [error, setError] = useState<string | null>(null);
   const photos = usePhotoUploads('journal', initial?.photos ?? []);
 
-  const status = initial?.verification.status ?? 'none';
-  const canRequestAfterSave = status === 'none' || status === 'rejected';
-  const hasPhoto = photos.photoIds.length > 0;
   const hasSpecies = !skunk && !!(species.code || species.etc);
   const speciesRequired = !initial || !!(initial.species_code || initial.species_etc);
   const countRequired = !initial || (initial.count != null && initial.count > 0);
 
-  const submit = (requestVerification: boolean) => {
+  const submit = () => {
     if (photos.uploading) return setError('사진을 올리는 중이에요. 잠시 후 다시 눌러 주세요.');
     if (photos.failed) return setError('올리지 못한 사진이 있어요. 눌러서 다시 시도하거나 ✕로 빼 주세요.');
     // 조과 검증: 잡았는데 0마리·어종 없음 저장 금지 (예전 기록의 빈 칸은 그대로 둔다)
     const bad = checkCatch({ skunk, speciesRequired, countRequired, hasSpecies, count });
     if (bad) return setError(bad.text);
-    if (requestVerification && !hasSpecies) return setError('인증 신청에는 어종이 필요해요.');
     const result = buildInput(
       skunk
         ? { placeId, fishedAt, species: { code: null, etc: null }, count: '0', length: '', bait, rig, memo }
@@ -84,7 +80,7 @@ export function JournalForm({
     );
     if (typeof result === 'string') return setError(result);
     setError(null);
-    onSubmit({ ...result, photo_ids: photos.photoIds, request_verification: requestVerification }, { share });
+    onSubmit({ ...result, photo_ids: photos.photoIds, request_verification: false }, { share });
   };
 
   return (
@@ -120,13 +116,7 @@ export function JournalForm({
               </View>
               <View style={styles.flex}>
                 <Field label="최대 길이 (cm)">
-                  <TextField
-                    value={length}
-                    onChangeText={setLength}
-                    keyboardType="decimal-pad"
-                    placeholder="예: 32.5"
-                    maxLength={5}
-                  />
+                  <TextField value={length} onChangeText={setLength} keyboardType="decimal-pad" placeholder="예: 32.5" maxLength={5} />
                 </Field>
               </View>
             </View>
@@ -134,10 +124,10 @@ export function JournalForm({
         )}
       </Section>
 
-      <Section title="사진 (인증용, 최대 4장)" icon={<UiIcon name="photo" size={IconSize.row} />}>
+      <Section title="사진 (최대 4장)" icon={<UiIcon name="photo" size={IconSize.row} />}>
         <PhotoPicker state={photos} />
         <ThemedText type="small" themeColor="textSecondary">
-          자가 보이면 검토가 빨라요 · 위치정보 지움 · 나만 봐요
+          위치정보는 지우고 올려요 · 나만 봐요 (공유하면 함께 보여요)
         </ThemedText>
       </Section>
 
@@ -200,40 +190,17 @@ export function JournalForm({
 
       {(error || serverError) && <ThemedText themeColor="danger">{error ?? serverError}</ThemedText>}
 
-      {/* 인증 안내: 사진 첨부만으로는 포인트가 없다 */}
-      {canRequestAfterSave ? (
+      {!initial ? (
         <ThemedText type="small" themeColor="textSecondary">
-          {hasPhoto
-            ? `인증 조건: 사진 ✓ · 어종 ${hasSpecies ? '✓' : '필요'} · 승인되면 포인트 지급`
-            : '사진을 넣으면 인증 신청 가능 · 포인트는 인증된 기록에만'}
+          기록을 남기면 포인트가 쌓여 등급이 올라가요 (어종·크기까지 적으면 더)
         </ThemedText>
-      ) : (
-        <ThemedText type="small" themeColor="textSecondary">
-          {status === 'approved' ? '인증 완료 기록 · ' : '인증 검토 중 · '}
-          장소·일시·조과·사진을 바꾸면 다시 검토해요.
-        </ThemedText>
-      )}
+      ) : null}
 
-      {canRequestAfterSave && hasPhoto ? (
-        <View style={styles.row}>
-          <View style={styles.flex}>
-            <Button label={submitting ? '저장 중…' : submitLabel} variant="secondary" onPress={() => submit(false)} disabled={submitting} />
-          </View>
-          <View style={styles.flex}>
-            <Button
-              label={submitting ? '저장 중…' : '저장하고 인증 신청'}
-              onPress={() => submit(true)}
-              disabled={submitting || photos.uploading}
-            />
-          </View>
-        </View>
-      ) : (
-        <Button
-          label={submitting ? '저장 중…' : photos.uploading ? '사진 올리는 중…' : submitLabel}
-          onPress={() => submit(false)}
-          disabled={submitting || photos.uploading}
-        />
-      )}
+      <Button
+        label={submitting ? '저장 중…' : photos.uploading ? '사진 올리는 중…' : submitLabel}
+        onPress={submit}
+        disabled={submitting || photos.uploading}
+      />
     </View>
   );
 }
@@ -287,7 +254,7 @@ export function buildInput(r: Raw): JournalInput | string {
     place_id: r.placeId,
     fished_at: r.fishedAt.toISOString(),
     species_code: r.species.code,
-    species_etc: r.species.code ? null : (r.species.etc?.trim() || null),
+    species_etc: r.species.code ? null : r.species.etc?.trim() || null,
     count,
     max_length_cm: length,
     bait: opt(r.bait),

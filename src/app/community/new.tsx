@@ -25,7 +25,7 @@ const CATEGORY_OPTIONS = (Object.keys(CATEGORY) as PostCategory[]).map((k) => ({
 }));
 
 // 커뮤니티 글쓰기 (재설계 v2 §7): 카테고리 드롭다운 · 제목 · 본문 · 사진 · 장소·어종 검색
-// ?journal=ID 로 열면 내 기록 공유 (장소·어종·사진은 기록 것을 그대로 사용, 인증 완료면 「인증 조황」 배지)
+// ?journal=ID 로 열면 내 기록 공유 (장소·어종·사진은 기록 것을 그대로 사용)
 // 위치 공개 범위는 기본 「지역만」 (서비스 개선 설계 C2)
 function NewPostScreenInner() {
   const journalId = Number(useLocalSearchParams<{ journal?: string }>().journal);
@@ -113,7 +113,12 @@ function NewPostScreenInner() {
         )}
 
         <Field label="제목" required>
-          <TextField value={title} onChangeText={setTitle} maxLength={60} placeholder={free ? '예: 다들 주말 잘 보내셨어요?' : '예: 동명항 우럭 입질 시작'} />
+          <TextField
+            value={title}
+            onChangeText={setTitle}
+            maxLength={60}
+            placeholder={free ? '예: 다들 주말 잘 보내셨어요?' : '예: 동명항 우럭 입질 시작'}
+          />
         </Field>
 
         <Field label="내용" required>
@@ -206,10 +211,8 @@ function SharedJournal({ j }: { j: NonNullable<ReturnType<typeof useJournal>['da
   const source = usePhotoSource();
   return (
     <Card>
-      <ThemedText type="smallBold" themeColor={j.verification.status === 'approved' ? 'success' : 'textSecondary'}>
-        {j.verification.status === 'approved'
-          ? '✓ 인증 완료 기록 · 「인증 조황」 배지와 함께 올라가요'
-          : '내 기록 · 조황공유로 올라가요 (인증을 받으면 배지가 붙어요)'}
+      <ThemedText type="smallBold" themeColor="textSecondary">
+        내 기록 · 조황공유로 올라가요
       </ThemedText>
       <ThemedText type="smallBold">
         {j.place_name} · {j.species_name ?? '어종 미기록'}

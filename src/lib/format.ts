@@ -31,13 +31,15 @@ export function formatForecastWave(value: number | null | undefined): string {
   return value === 0 ? '0.5m 미만' : `${value}m`;
 }
 
-// 서버 지급 사유 (services/points.py). 모두 관리자 인증이 완료된 기록에서만 생긴다
+// 서버 지급 사유 (services/points.py). 2026-11-23 부터 활동만으로 쌓인다 (사진 인증 없음)
 export const POINT_REASON_LABEL: Record<PointReason, string> = {
-  JOURNAL_CREATED: '인증 완료 기록',
-  DETAIL_FILLED: '어종·크기 기록 (인증)',
+  JOURNAL_CREATED: '낚시 기록',
+  DETAIL_FILLED: '어종·크기 기록',
   PHOTO_ATTACHED: '사진 첨부 (폐지된 규칙)',
-  FIRST_PLACE: '처음 간 낚시터 (인증)',
-  PERSONAL_BEST: '같은 어종 최대 길이 갱신 (인증)',
+  FIRST_PLACE: '처음 간 낚시터',
+  PERSONAL_BEST: '같은 어종 최대어 갱신',
+  POST_CREATED: '커뮤니티 글',
+  COMMENT_CREATED: '댓글',
 };
 
 /** 값이 없으면 0 이 아니라 「자료 없음」 (TC-02) */
@@ -53,7 +55,7 @@ export function formatEnvKind(s: EnvSnapshot): string | null {
 }
 
 /** 저장/삭제 결과 안내 문구 (포인트 증감 + 칭호 변경) */
-/** 저장 직후 한 줄: 첫 포획·최대어 갱신 (내 기록과 비교, 인증 여부와 관계없음) */
+/** 저장 직후 한 줄: 첫 포획·최대어 갱신 (내 기록과 비교) */
 export function milestoneLine(res: JournalMutation): string | null {
   const m = res.milestone;
   if (!m) return null;
@@ -66,11 +68,8 @@ export function pointResultMessage(res: JournalMutation): string {
   const lines: string[] = [];
   const m = milestoneLine(res);
   if (m) lines.push(m, '');
-  const v = res.journal?.verification.status;
-  if (v === 'pending') lines.push('인증 검토를 신청했어요. 관리자가 사진을 확인해 승인하면 포인트가 지급돼요.');
-  else if (v === 'none') lines.push('개인 기록으로 저장했어요. 사진 인증을 받으면 포인트가 지급돼요.');
   if (res.point_delta > 0) lines.push(`+${res.point_delta}P 획득`);
-  else if (res.point_delta < 0) lines.push(`${res.point_delta}P (인증 내용 변경·삭제로 회수)`);
+  else if (res.point_delta < 0) lines.push(`${res.point_delta}P (수정·삭제로 회수)`);
 
   if (res.title_changed) lines.push(`칭호가 「${res.title.current.name}」(으)로 바뀌었습니다.`);
   if (res.title.next) lines.push(`「${res.title.next.name}」까지 ${res.title.points_to_next}P`);

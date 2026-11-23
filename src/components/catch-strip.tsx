@@ -32,7 +32,11 @@ export function CatchStrip({ title, filter, note, onMore }: Props) {
   if (!posts.isSuccess || posts.data.length === 0) return null;
   return (
     <>
-      <SectionHeader title={title} actionLabel="더 보기" onAction={onMore ?? (() => router.push({ pathname: '/community', params: { category: 'catch' } }))} />
+      <SectionHeader
+        title={title}
+        actionLabel="더 보기"
+        onAction={onMore ?? (() => router.push({ pathname: '/community', params: { category: 'catch' } }))}
+      />
       {note ? (
         <ThemedText type="small" themeColor="textSecondary">
           {note}
@@ -59,7 +63,11 @@ function CatchTile({ p }: { p: PostSummary }) {
       accessibilityRole="button"
       accessibilityLabel={`${species ?? '조황'} ${size ?? ''} ${where ?? ''} 글 보기`}
       onPress={() => router.push({ pathname: '/community/[id]', params: { id: String(p.id) } })}
-      style={({ pressed }) => [styles.tile, { backgroundColor: theme.backgroundElement, borderColor: theme.border }, pressed && styles.pressed]}>
+      style={({ pressed }) => [
+        styles.tile,
+        { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+        pressed && styles.pressed,
+      ]}>
       {src ? (
         <Image source={src} style={styles.photo} contentFit="cover" />
       ) : (
@@ -74,11 +82,6 @@ function CatchTile({ p }: { p: PostSummary }) {
         <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
           {[timeAgo(p.created_at), where].filter(Boolean).join(' · ')}
         </ThemedText>
-        {p.verified ? (
-          <ThemedText type="small" themeColor="success">
-            ✓ 인증 조황
-          </ThemedText>
-        ) : null}
       </View>
     </Pressable>
   );
