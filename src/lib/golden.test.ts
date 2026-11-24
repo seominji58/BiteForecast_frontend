@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import type { PlaceSummary } from '../api/types.ts';
 import type { Spot } from './briefing.ts';
-import { betterPeriod, goldenSpots } from './golden.ts';
+import { betterPeriod, goldenSpots, tempDiff } from './golden.ts';
 
 const spot = (placeId: number, top: number, grades: Record<string, string> = { 오전: '좋음', 오후: '좋음' }): Spot => ({
   point: { station_id: placeId, station_name: `지점${placeId}`, tide_phase: {}, species: [{ species: '감성돔', grades }], places: [] },
@@ -47,4 +47,12 @@ test('betterPeriod: 오전·오후가 다를 때만', () => {
   assert.equal(betterPeriod({ 오전: '보통', 오후: '매우좋음' }), '오후가 더 좋아요 (매우좋음)');
   assert.equal(betterPeriod({ 오전: '좋음', 오후: '좋음' }), null);
   assert.equal(betterPeriod({ 일: '좋음' }), null);
+});
+
+test('tempDiff: 예년 대비 차이 (0.5°C 미만은 예년 수준)', () => {
+  const n = { v: 17, station: '', km: 3, period: '2019~2025', source: '' };
+  assert.equal(tempDiff({ temp_obs: { v: 18.24 } as never, temp_normal: n }), ' · 예년 +1.2°C');
+  assert.equal(tempDiff({ temp_obs: { v: 15.6 } as never, temp_normal: n }), ' · 예년 -1.4°C');
+  assert.equal(tempDiff({ temp_obs: { v: 17.3 } as never, temp_normal: n }), ' · 예년 수준');
+  assert.equal(tempDiff({ temp_obs: null, temp_normal: n }), null);
 });

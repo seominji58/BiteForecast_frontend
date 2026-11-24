@@ -27,6 +27,14 @@ const clock = (iso: string) => {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
+/** 「 · 예년 +1.2°C」 (실측과 근처 관측소 예년 같은 달 평균 차이, 0.5°C 미만이면 「예년 수준」) */
+export function tempDiff(s: Pick<PlaceSummary, 'temp_obs' | 'temp_normal'>): string | null {
+  if (!s.temp_obs || !s.temp_normal) return null;
+  const d = Math.round((s.temp_obs.v - s.temp_normal.v) * 10) / 10;
+  if (Math.abs(d) < 0.5) return ' · 예년 수준';
+  return ` · 예년 ${d > 0 ? '+' : ''}${d}°C`;
+}
+
 /** 오전·오후 등급이 다르면 더 좋은 시간대 한 줄 */
 export function betterPeriod(grades: Record<string, string>): string | null {
   const am = GRADE_RANK[grades['오전'] ?? ''];
@@ -66,7 +74,7 @@ export function goldenSpots(
       ].find(([, m]) => Math.abs(at - (m as number)) <= 120);
       if (near) reasons.push({ key: 'tide', text: `${t.type === 'high' ? '만조' : '간조'} ${clock(t.t)} ${near[0]}`, check: true });
     }
-    if (s?.temp_obs) reasons.push({ key: 'temp', text: `수온 ${s.temp_obs.v}°C`, check: false });
+    if (s?.temp_obs) reasons.push({ key: 'temp', text: `수온 ${s.temp_obs.v}°C${tempDiff(s) ?? ''}`, check: false });
     const g = sp.point.species.find((x) => x.species === sp.picks[0]?.species)?.grades;
     const when = g ? betterPeriod(g) : null;
     if (when) reasons.push({ key: 'when', text: when, check: false });

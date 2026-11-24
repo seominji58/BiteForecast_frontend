@@ -32,6 +32,8 @@ const LEFT = 30; // y 눈금 자리
 const f1 = (n: number) => String(Math.round(n * 10) / 10);
 
 type Cal = {
+  temp_obs?: { v: number; t: string } | null;
+  temp_normal?: { v: number; station: string; km: number; period: string } | null;
   mulddae?: string | null;
   sunrise?: string | null;
   sunset?: string | null;
@@ -108,6 +110,10 @@ export function SeaChart({ pc, date, cal, updated }: { pc: PlaceCompare; date: s
       grade,
       rangeText(fs) ? `오늘 예보 ${rangeText(fs)}` : null,
       tab === 'wind' && cal?.wind_dir_fc && cal.wind_fc_max ? `가장 센 바람 ${cal.wind_dir_fc}풍 ${cal.wind_fc_max.v}m/s` : null,
+      // 파고 탭: 실측 수온과 근처 관측소 예년 같은 달 평균 (참고)
+      tab === 'wave' && cal?.temp_obs
+        ? `수온 ${cal.temp_obs.v}°C${cal.temp_normal ? ` (예년 ${cal.temp_normal.v}°C, ${cal.temp_normal.station} ${cal.temp_normal.period})` : ''}`
+        : null,
     ]
       .filter(Boolean)
       .join(' · ');

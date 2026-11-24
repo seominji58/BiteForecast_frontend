@@ -351,6 +351,8 @@ export type PlaceSummary = {
   pop_fc_max: ValueAt | null;
   precipitation_types: number[];
   temp_obs: ValueAt | null;
+  /** 근처 관측소 예년 같은 달 평균 수온 (국립수산과학원, 참고값 — 2026-11-24) */
+  temp_normal?: { v: number; station: string; km: number; period: string; source: string } | null;
   index: {
     period: string;
     tide_phase: string | null;
