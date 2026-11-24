@@ -9,7 +9,7 @@ import { useDateRange } from '@/api/queries';
 import type { Place } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { OptionSheet } from '@/components/option-sheet';
-import { IndexCarousel, SpotsCard } from '@/components/home-briefing';
+import { GoldenCard, IndexCarousel, SpotsCard } from '@/components/home-briefing';
 import { Button } from '@/components/form';
 import { RulesLine } from '@/components/rules-line';
 import { BottomSheet } from '@/components/bottom-sheet';
@@ -187,7 +187,7 @@ export default function HomeScreen() {
 
       {/* 어디로 갈까: 오늘 가장 좋은 곳 (전체 어종 기준) · 지도로 펼쳐 보기 */}
       <SectionHeader title="오늘 어디로 갈까" actionLabel="지도" onAction={() => openMap()} />
-      <SpotsCard x={x} dates={dates} date={today} today={today} species={null} />
+      <GoldenCard x={x} dates={dates} today={today} />
 
       {/* 어종 카드 → 그 어종 오늘: 좋은 곳 5 · 금어기·체장 · [지도에서 보기] [이 어종으로 계획] */}
       <BottomSheet

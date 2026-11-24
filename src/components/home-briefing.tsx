@@ -21,7 +21,10 @@ import { useTheme } from '@/hooks/use-theme';
 import { dayStat, speciesRanking, topSpots, weekHeadline } from '@/lib/briefing';
 import { dayLabel, tideIsRef, timeLabel } from '@/lib/compare';
 import type { useExplore } from '@/lib/explore';
+import { goldenSpots, type Golden, type Reason } from '@/lib/golden';
 import { placeName } from '@/lib/place';
+import { useCriteria } from '@/lib/prefs';
+import type { AppIconName } from '@/constants/icons';
 
 import { type SpeciesItem, speciesByIndexName } from '@/lib/species';
 import { AppIcon } from '@/components/app-icon';
@@ -330,6 +333,20 @@ const styles = StyleSheet.create({
   listCard: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 4 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
   empty: { paddingVertical: 10 },
+  goldHead: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingTop: 10, paddingBottom: 4 },
+  goldRow: { paddingVertical: 10, gap: 6 },
+  goldTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  reasons: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, paddingLeft: 28 },
+  reason: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 999,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  reasonText: { fontSize: 12, fontWeight: '600' },
   noGood: { paddingTop: 10, paddingBottom: 4, gap: 2 },
   alts: { gap: 8, paddingVertical: 8 },
   foot: { paddingVertical: 6, fontSize: 11 },
@@ -494,5 +511,123 @@ export function IndexCarousel({
         </Pressable>
       </ScrollView>
     </>
+  );
+}
+
+/**
+ * 오늘의 황금 포인트 (홈 「어디로 갈까」, 2026-11-23): 공식 등급 + 특보 없음 + 내 파고·풍속 기준 안에서,
+ * 확인 가능한 ✓(파도 잔잔·물 돌이가 해 뜰·질 무렵)가 많은 순. 이유를 칩으로 보여준다 (lib/golden).
+ * 좋음 이상이 아예 없으면 SpotsCard 의 안내(보통인 곳·좋은 날·전국)로 넘긴다
+ */
+const REASON_ICON: Record<Reason['key'], AppIconName> = {
+  calm: 'wave',
+  wave: 'wave',
+  tide: 'tide',
+  temp: 'water-temp',
+  when: 'star-on',
+  over: 'wind',
+};
+
+export function GoldenCard({ x, dates, today }: { x: ReturnType<typeof useExplore>; dates: string[]; today: string | undefined }) {
+  const theme = useTheme();
+  const [criteria] = useCriteria();
+  const { day, loading, inScopeId } = useWeekBriefing(x, dates, today, today);
+  const good = topSpots(day, inScopeId, { dist: x.distOf, limit: 60 });
+  if (!loading && good.length === 0) return <SpotsCard x={x} dates={dates} date={today} today={today} species={null} />;
+  const gold = goldenSpots(good, (id) => x.summaryById.get(id), criteria, { today: true, limit: 3 });
+  return (
+    <View style={[styles.listCard, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+      <View style={styles.goldHead}>
+        <AppIcon name="best" size={22} />
+        <ThemedText type="smallBold" style={styles.flex}>
+          오늘의 황금 포인트
+        </ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">
+          내 기준 파고 {criteria.maxWave}m · 바람 {criteria.maxWind}m/s
+        </ThemedText>
+      </View>
+      {loading ? (
+        <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
+          불러오는 중…
+        </ThemedText>
+      ) : gold.length === 0 ? (
+        <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
+          「좋음」 이상인 곳이 모두 지금 해상 특보 중이에요. 출조를 미루는 걸 권해요.
+        </ThemedText>
+      ) : (
+        <>
+          {gold.every((g) => g.over) ? (
+            <ThemedText type="small" themeColor="warning">
+              오늘은 내 기준을 넘는 곳뿐이에요. 등급이 좋은 곳을 참고로 보여드려요 — 현장 바다 상태를 꼭 확인하세요.
+            </ThemedText>
+          ) : null}
+          {gold.map((g, i) => (
+            <GoldenRow key={g.point.station_id} g={g} i={i} x={x} />
+          ))}
+        </>
+      )}
+      <ThemedText type="small" themeColor="textSecondary" style={styles.foot}>
+        공식 바다낚시지수 등급 순 · 같은 등급이면 ✓ 많은 곳 · 수온은 참고(판단에 쓰지 않음)
+      </ThemedText>
+    </View>
+  );
+}
+
+function GoldenRow({ g, i, x }: { g: Golden; i: number; x: ReturnType<typeof useExplore> }) {
+  const theme = useTheme();
+  const place = x.byId.get(g.placeId);
+  const p0 = g.picks[0];
+  const very = p0.grade === '매우좋음';
+  const sp = speciesByIndexName(p0.species);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => router.push({ pathname: '/place/[id]', params: { id: String(g.placeId) } })}
+      style={({ pressed }) => [
+        styles.goldRow,
+        i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderColor: theme.border },
+        pressed && styles.pressed,
+      ]}>
+      <View style={styles.goldTop}>
+        <Text style={[styles.rank, { color: i === 0 ? Brand.orange : theme.textSecondary }]}>{i + 1}</Text>
+        <View style={styles.flex}>
+          <ThemedText type="smallBold" numberOfLines={1}>
+            {place ? placeName(place) : g.point.station_name}
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+            {[place?.region_name, g.picks.length > 1 ? `외 ${g.picks.length - 1}종 좋음` : null].filter(Boolean).join(' · ')}
+          </ThemedText>
+        </View>
+        <View style={[styles.pick, { backgroundColor: very ? Brand.teal : theme.tintSoft }]}>
+          {sp ? <SpeciesImage code={sp.code} size={18} /> : null}
+          <Text numberOfLines={1} style={[styles.pickText, { flexShrink: 1, color: very ? '#FFFFFF' : Brand.teal }]}>
+            {p0.species} {p0.grade}
+          </Text>
+        </View>
+      </View>
+      {g.reasons.length ? (
+        <View style={styles.reasons}>
+          {g.reasons.map((r) => {
+            const over = r.key === 'over';
+            return (
+              <View
+                key={r.key}
+                style={[
+                  styles.reason,
+                  { backgroundColor: r.check ? theme.tintSoft : over ? theme.warningSoft : theme.background, borderColor: theme.border },
+                ]}>
+                <AppIcon name={REASON_ICON[r.key]} size={14} />
+                <Text
+                  numberOfLines={1}
+                  style={[styles.reasonText, { color: r.check ? Brand.teal : over ? theme.warning : theme.textSecondary }]}>
+                  {r.check ? '✓ ' : over ? '⚠ ' : ''}
+                  {r.text}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
+    </Pressable>
   );
 }
