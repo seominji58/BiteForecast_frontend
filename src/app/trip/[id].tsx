@@ -166,7 +166,7 @@ function TripBody({
         automaticallyAdjustKeyboardInsets>
         {/* 머리: 바다 사진(분위기) 위에 D-day · 제목 · 날짜·지역·어종 */}
         <View style={[styles.hero, { paddingTop: headerHeight + 12 }]}>
-          <Image source={require('../../../assets/home-backgrounds/dusk.png')} resizeMode="cover" style={StyleSheet.absoluteFill} />
+          <Image source={require('../../../assets/home-backgrounds/dusk.jpg')} resizeMode="cover" style={StyleSheet.absoluteFill} />
           <View pointerEvents="none" style={styles.heroShade} />
           <View style={styles.dday}>
             <Text style={styles.ddayText}>{dday(trip.start_date, trip.end_date, today)}</Text>

@@ -35,11 +35,11 @@ const HERO_RATIO = 1672 / 941; // 배경 사진 가로/세로
 
 // 시간대별 분위기만 바꾼다 (데이터·검색 로직과 무관)
 function homeBackgroundSource(hour = new Date().getHours()) {
-  if (hour >= 5 && hour < 9) return require('../../../assets/home-backgrounds/dawn.png');
-  if (hour >= 9 && hour < 16) return require('../../../assets/home-backgrounds/day.png');
-  if (hour >= 16 && hour < 18) return require('../../../assets/home-backgrounds/sunset.png');
-  if (hour >= 18 && hour < 21) return require('../../../assets/home-backgrounds/dusk.png');
-  return require('../../../assets/home-backgrounds/night.png');
+  if (hour >= 5 && hour < 9) return require('../../../assets/home-backgrounds/dawn.jpg');
+  if (hour >= 9 && hour < 16) return require('../../../assets/home-backgrounds/day.jpg');
+  if (hour >= 16 && hour < 18) return require('../../../assets/home-backgrounds/sunset.jpg');
+  if (hour >= 18 && hour < 21) return require('../../../assets/home-backgrounds/dusk.jpg');
+  return require('../../../assets/home-backgrounds/night.jpg');
 }
 
 /**

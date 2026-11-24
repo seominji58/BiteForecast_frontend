@@ -30,6 +30,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           'https://devrepo.kakao.com/nexus/content/groups/public/',
           'https://devrepo.kakao.com/nexus/repository/kakaomap-releases/',
         ],
+        // 출시 APK(원스토어): 휴대폰 CPU 만 (에뮬레이터용 x86 빼서 용량 절반 이하로), 안 쓰는 리소스 제거
+        buildArchs: ['armeabi-v7a', 'arm64-v8a'],
+        enableMinifyInReleaseBuilds: true,
+        enableShrinkResourcesInReleaseBuilds: true,
+        // 코드 줄이기(R8)가 WorkManager 의 Room DB 구현(리플렉션으로 생성)을 지워 출시 빌드가 켜자마자 꺼졌다 (2026-11-24)
+        extraProguardRules: [
+          '-keep class androidx.work.impl.WorkDatabase_Impl { *; }',
+          '-keep class * extends androidx.room.RoomDatabase { <init>(); }',
+        ].join('\n'),
       },
     },
   ]);
