@@ -41,7 +41,7 @@ export function BottomSheet({
           </Pressable>
         </View>
         {header}
-        <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
+        <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
           {children}
         </ScrollView>
       </View>

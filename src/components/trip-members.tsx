@@ -7,7 +7,7 @@ import { Alert, Pressable, Share, StyleSheet, View } from 'react-native';
 import { api } from '@/api';
 import type { MemberStatus, Trip, TripInvite, TripMember } from '@/api/types';
 import { Button, Chip } from '@/components/form';
-import { Card, SectionHeader } from '@/components/screen';
+import { Card } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
 import { periodLabel } from '@/lib/trip';
@@ -34,7 +34,6 @@ export function TripMembers({ trip, run }: { trip: Trip; run: (fn: () => Promise
   const [invite, setInvite] = useState<TripInvite | null>(null);
   const owner = trip.my_role === 'owner';
   const me = trip.members.find((m) => m.mine);
-  const going = participants(trip).length;
   const fail = (e: Error) => Alert.alert('처리하지 못했어요', e.message);
   const refresh = () => qc.invalidateQueries({ queryKey: ['trips'] });
 
@@ -71,7 +70,6 @@ export function TripMembers({ trip, run }: { trip: Trip; run: (fn: () => Promise
 
   return (
     <>
-      <SectionHeader title={`함께 가는 사람 ${going}명`} />
       <Card style={styles.card}>
         {trip.members.map((m) => (
           <View key={m.user_id} style={styles.row}>

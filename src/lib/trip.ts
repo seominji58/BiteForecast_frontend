@@ -1,8 +1,8 @@
 /** 출조계획 표시 도우미 (설계안 docs/05_UX/2026-11-09_출조계획_설계안.md) */
 import type { StopOutlook, TripStop } from '@/api/types';
-import { dayLabel, formatDay, parseDay, timeLabel } from '@/lib/compare';
-import { type Criteria, WARNING_SHORT } from '@/lib/criteria';
-import { ptyLabel } from '@/lib/format';
+import { dayLabel, formatDay, parseDay, timeLabel } from './compare.ts';
+import { type Criteria, WARNING_SHORT } from './criteria.ts';
+import { ptyLabel } from './format.ts';
 
 /** D-5 · D-day · 진행 중 · 지난 계획 */
 export function dday(start: string, end: string, today: string): string {
@@ -143,3 +143,26 @@ function outlookLineBase(o: StopOutlook | undefined, c: Criteria, lastDay: strin
 }
 
 export const DEFAULT_CHECKLIST_HINT = '기본 준비물 4가지가 들어가요. 계획에서 고치거나 더할 수 있어요.';
+
+/**
+ * 날짜·낚시터 한 줄 요약 (2026-11-24 출조계획 상세): 상태 칩 하나 + 「파고 1m · 바람 9m/s」.
+ * 특보 발효가 가장 먼저, 그다음 내 기준 판단, 예보가 없으면 그 사유를 짧게.
+ */
+export type Brief = { text: string; tone: 'danger' | 'warning' | 'success' | 'textSecondary'; mini: string | null };
+export function stopBrief(o: StopOutlook | undefined, c: Criteria, lastDay: string | null): Brief {
+  if (!o) return { text: '확인 중', tone: 'textSecondary', mini: null };
+  const status: Record<string, string> = {
+    past: '지난 날',
+    pending: '예보 전',
+    location_check: '위치 확인',
+    location_review: '판단 보류',
+  };
+  if (o.forecast_status !== 'available') return { text: status[o.forecast_status] ?? '자료 없음', tone: 'textSecondary', mini: null };
+  const mini =
+    [o.wave_fc_max ? `파고 ${o.wave_fc_max.v}m` : null, o.wind_fc_max ? `바람 ${o.wind_fc_max.v}m/s` : null].filter(Boolean).join(' · ') ||
+    null;
+  if (o.warning_is_current && o.warning_level === 'warning') return { text: '특보', tone: 'danger', mini };
+  const fit = outlookLine(o, c, lastDay).fit;
+  if (fit) return { text: fit.label, tone: fit.color === 'success' ? 'success' : 'warning', mini };
+  return { text: '예보', tone: 'textSecondary', mini };
+}
