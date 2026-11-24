@@ -824,7 +824,9 @@ function Checklist({ trip, run }: { trip: Trip; run: (fn: () => Promise<Trip>) =
                 returnKeyType="done"
               />
             </View>
-            <Button label="추가" variant="secondary" onPress={add} />
+            <View style={styles.addBtn}>
+              <Button label="추가" variant="secondary" onPress={add} />
+            </View>
           </View>
         ) : null}
       </Card>
@@ -890,6 +892,7 @@ export default function TripScreen() {
 }
 
 const styles = StyleSheet.create({
+  addBtn: { width: 72 },
   sectionHead: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
   flip: { transform: [{ rotate: '180deg' }] },
   menuBtn: { padding: 4 },
