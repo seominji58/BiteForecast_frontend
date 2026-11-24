@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Switch, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { Journal, JournalInput } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
@@ -19,9 +19,7 @@ type Props = {
   submitLabel: string;
   submitting: boolean;
   serverError?: string;
-  onSubmit: (input: JournalInput, opts: { share: boolean }) => void;
-  /** 새 기록일 때 「커뮤니티에도 올리기」 선택을 보여준다 (저장 뒤 공유 화면으로) */
-  shareOption?: boolean;
+  onSubmit: (input: JournalInput) => void;
   /** 새 일지일 때 미리 채울 장소 (홈 기준 낚시터) */
   defaultPlaceId?: number | null;
   /** 출조계획에서 「기록 남기기」로 들어오면 그날 아침으로 채운다 */
@@ -34,18 +32,8 @@ type Props = {
  * 저장하면 바로 포인트가 쌓인다 (2026-11-23 사진 인증 없앰 — 카페 등급처럼 활동으로).
  * 「오늘은 못 잡았어요」를 고르면 마릿수 0 으로 저장하고 어종·길이 칸을 숨긴다 (꽝도 출조 기록, 서비스 개선 설계 R2)
  */
-export function JournalForm({
-  initial,
-  submitLabel,
-  submitting,
-  serverError,
-  onSubmit,
-  defaultPlaceId,
-  defaultFishedAt,
-  shareOption,
-}: Props) {
+export function JournalForm({ initial, submitLabel, submitting, serverError, onSubmit, defaultPlaceId, defaultFishedAt }: Props) {
   // 공유 기본 켜짐 (서비스 개선 v2 R-A): 저장 뒤 글쓰기 화면에서 확인하고 올린다(위치는 「지역만」 기본). 끄면 나만 보기
-  const [share, setShare] = useState(true);
   const [placeId, setPlaceId] = useState<number | null>(initial?.place_id ?? defaultPlaceId ?? null);
   const [fishedAt, setFishedAt] = useState(() => (initial ? new Date(initial.fished_at) : (defaultFishedAt ?? new Date())));
   const [species, setSpecies] = useState<SpeciesValue>({
@@ -80,7 +68,7 @@ export function JournalForm({
     );
     if (typeof result === 'string') return setError(result);
     setError(null);
-    onSubmit({ ...result, photo_ids: photos.photoIds, request_verification: false }, { share });
+    onSubmit({ ...result, photo_ids: photos.photoIds, request_verification: false });
   };
 
   return (
@@ -173,20 +161,6 @@ export function JournalForm({
           </>
         ) : null}
       </Card>
-
-      {shareOption ? (
-        <Card>
-          <View style={styles.between}>
-            <View style={styles.flex}>
-              <ThemedText type="smallBold">커뮤니티에도 올리기</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                저장 후 확인하고 올려요 · 위치는 지역만 기본
-              </ThemedText>
-            </View>
-            <Switch value={share} onValueChange={setShare} accessibilityLabel="커뮤니티에도 올리기" />
-          </View>
-        </Card>
-      ) : null}
 
       {(error || serverError) && <ThemedText themeColor="danger">{error ?? serverError}</ThemedText>}
 

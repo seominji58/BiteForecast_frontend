@@ -1,11 +1,10 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Alert } from 'react-native';
 
 import { usePlaces, useSaveJournal } from '@/api/queries';
 import { JournalForm } from '@/components/journal-form';
 import { AuthGate } from '@/components/login-required';
 import { Loading, StackScreen } from '@/components/screen';
-import { pointResultMessage } from '@/lib/format';
+import { setLastSave } from '@/lib/last-save';
 import { useHomePlace } from '@/lib/prefs';
 
 /** 계획 날짜 아침 6시 (출조 시각은 폼에서 고친다) */
@@ -46,22 +45,17 @@ function NewJournalScreenInner() {
         submitLabel="저장"
         submitting={save.isPending}
         serverError={save.error?.message}
-        shareOption
-        onSubmit={(input, { share }) =>
+        onSubmit={(input) =>
           save.mutate(
             // 계획의 낚시터 그대로 저장할 때만 계획에 연결 (장소를 바꾸면 연결하지 않는다)
-            params.trip_stop && String(input.place_id) === params.place
-              ? { ...input, trip_stop_id: Number(params.trip_stop) }
-              : input,
+            params.trip_stop && String(input.place_id) === params.place ? { ...input, trip_stop_id: Number(params.trip_stop) } : input,
             {
-            onSuccess: (res) => {
-              Alert.alert('저장했습니다', pointResultMessage(res));
-              // 「커뮤니티에도 올리기」를 켰으면 기록 공유 글쓰기로, 아니면 저장한 기록 상세로
-              if (res.journal && share)
-                router.replace({ pathname: '/community/new', params: { journal: String(res.journal.id) } });
-              else if (res.journal) router.replace({ pathname: '/journal/[id]', params: { id: String(res.journal.id) } });
-              else router.back();
-            },
+              onSuccess: (res) => {
+                // 축하 화면(첫 포획·포인트·칭호 → 조황 공유 권하기)으로 (2026-11-24, 알림 창 대신)
+                setLastSave(res);
+                if (res.journal) router.replace('/journal/done');
+                else router.back();
+              },
             },
           )
         }
