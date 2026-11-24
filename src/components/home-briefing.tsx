@@ -423,6 +423,22 @@ export function IndexCarousel({
     </View>
   );
 
+  if (x.fi.isError) {
+    // 받지 못한 것과 「지점이 없음」을 구분한다 (출시 빌드 첫 실행에서 시간 초과가 「지점 없음」으로 보였다)
+    return (
+      <>
+        {header}
+        <Pressable accessibilityRole="button" onPress={() => x.fi.refetch()} hitSlop={6}>
+          <ThemedText type="small" themeColor="textSecondary">
+            오늘 공식 낚시지수를 불러오지 못했어요.{' '}
+            <ThemedText type="smallBold" themeColor="tint">
+              다시 시도 ›
+            </ThemedText>
+          </ThemedText>
+        </Pressable>
+      </>
+    );
+  }
   if (x.fi.isPending || !ranks.length) {
     return (
       <>
