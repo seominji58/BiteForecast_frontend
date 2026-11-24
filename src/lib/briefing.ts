@@ -119,3 +119,29 @@ export function topSpots(
   );
   return out.slice(0, opts.limit ?? 3).map(({ d: _d, ...s }) => s);
 }
+
+/** 범위 안 지수 지점들의 발표 환경 평균 (바람·파고·수온). 자료 없으면 null */
+export function scopeSea(day: FishingIndexDay | undefined, inScope: (placeId: number) => boolean) {
+  const pts = scopedPoints(day, inScope).filter((p) => p.env);
+  const avg = (k: 'wave_max' | 'wind_max' | 'temp_max') => {
+    const vs = pts.map((p) => p.env![k]).filter((v): v is number => v != null);
+    return vs.length ? Math.round((vs.reduce((a, b) => a + b, 0) / vs.length) * 10) / 10 : null;
+  };
+  if (!pts.length) return null;
+  return { wind: avg('wind_max'), wave: avg('wave_max'), temp: avg('temp_max'), n: pts.length };
+}
+
+/** after 다음 날부터 처음으로 「좋음 이상」이 있는 날 (species 를 주면 그 어종만) */
+export function nextGoodDay(
+  days: FishingIndexDay[],
+  inScope: (placeId: number) => boolean,
+  after: string,
+  species?: string | null,
+): { date: string; good: number } | null {
+  for (const d of [...days].sort((a, b) => a.date.localeCompare(b.date))) {
+    if (d.date <= after) continue;
+    const s = dayStat(d, inScope, species);
+    if (s.good > 0) return { date: d.date, good: s.good };
+  }
+  return null;
+}

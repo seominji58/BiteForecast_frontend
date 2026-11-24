@@ -18,7 +18,7 @@ import { SpeciesImage } from '@/components/species';
 import { ThemedText } from '@/components/themed-text';
 import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { dayStat, speciesRanking, topSpots, weekHeadline } from '@/lib/briefing';
+import { dayStat, nextGoodDay, scopeSea, speciesRanking, topSpots, weekHeadline } from '@/lib/briefing';
 import { dayLabel, tideIsRef, timeLabel } from '@/lib/compare';
 import type { useExplore } from '@/lib/explore';
 import { goldenSpots, type Golden, type Reason } from '@/lib/golden';
@@ -74,7 +74,8 @@ function useWeekBriefing(
   const dayIdx = week.indexOf(date ?? '');
   const day = (dayIdx >= 0 ? qs[dayIdx]?.data : x.day) as FishingIndexDay | undefined;
   const loading = qs.some((q) => q.isPending);
-  return { week, stats, short, headline, bestDate, maxRatio, day, loading, inScopeId };
+  const days = qs.map((q) => q.data).filter((d): d is FishingIndexDay => !!d);
+  return { week, stats, short, headline, bestDate, maxRatio, day, loading, inScopeId, days };
 }
 
 /** ① 언제 갈까: 이번 주 날짜 막대 (날짜 고르기도 여기서) */
@@ -333,6 +334,8 @@ const styles = StyleSheet.create({
   listCard: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 4 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
   empty: { paddingVertical: 10 },
+  seaToday: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 14, padding: 12, gap: 4 },
+  seaHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   goldHead: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingTop: 10, paddingBottom: 4 },
   goldRow: { paddingVertical: 10, gap: 6 },
   goldTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -358,13 +361,19 @@ const styles = StyleSheet.create({
  */
 export function IndexCarousel({
   x,
+  dates,
+  today,
   onOpen,
   onAll,
 }: {
   x: ReturnType<typeof useExplore>;
+  dates: string[];
+  today: string | undefined;
   onOpen: (sp: SpeciesItem) => void;
   onAll: () => void;
 }) {
+  // 오늘 좋음 이상이 없는 어종은 「다음 좋은 날」을 보여준다 (빨간 「나쁨」만 늘어놓지 않게)
+  const wk = useWeekBriefing(x, dates, today, today);
   const theme = useTheme();
   const { width } = useWindowDimensions();
   const ref = useRef<React.ComponentRef<typeof ScrollView>>(null);
@@ -499,9 +508,20 @@ export function IndexCarousel({
                 <View style={{ flex: r.bad, backgroundColor: '#E57373' }} />
               </View>
               <View style={styles.fishFoot}>
-                <ThemedText type="small" themeColor="textSecondary" numberOfLines={1} style={styles.flex}>
-                  좋음 이상 {r.good}/{r.total}곳
-                </ThemedText>
+                {r.good === 0 && today ? (
+                  (() => {
+                    const ng = nextGoodDay(wk.days, wk.inScopeId, today, r.species);
+                    return (
+                      <ThemedText type="small" themeColor={ng ? 'tint' : 'textSecondary'} numberOfLines={1} style={styles.flex}>
+                        {ng ? `${wk.short(ng.date)} 좋음 ${ng.good}곳` : '이번 주 좋음 없음'}
+                      </ThemedText>
+                    );
+                  })()
+                ) : (
+                  <ThemedText type="small" themeColor="textSecondary" numberOfLines={1} style={styles.flex}>
+                    좋음 이상 {r.good}/{r.total}곳
+                  </ThemedText>
+                )}
                 <ThemedText type="smallBold" themeColor="tint">
                   ›
                 </ThemedText>
@@ -652,5 +672,62 @@ function GoldenRow({ g, i, x }: { g: Golden; i: number; x: ReturnType<typeof use
         </View>
       ) : null}
     </Pressable>
+  );
+}
+
+/**
+ * 오늘 바다가 거친 날 한 줄 안내 (2026-11-24): 범위 안 지수 대부분이 나쁘거나 특보가 있으면 카드 위에
+ * 「왜」(발효 특보 · 지수 지점 평균 바람·파고)와 「언제 좋아지나」(다음 좋음 이상인 날)를 먼저 보여준다.
+ */
+export function SeaToday({ x, dates, today }: { x: ReturnType<typeof useExplore>; dates: string[]; today: string | undefined }) {
+  const theme = useTheme();
+  const { stats, short, days, inScopeId, loading } = useWeekBriefing(x, dates, today, today);
+  const s0 = stats[0];
+  if (loading || !today || !s0 || !s0.total) return null;
+  const badShare = s0.bad / s0.total;
+  const warnTypes = [
+    ...new Set(
+      (x.places.data ?? [])
+        .filter((p) => x.inScope(p) && x.summaryById.get(p.id)?.warning_level === 'warning')
+        .flatMap((p) => x.summaryById.get(p.id)?.warning_types ?? []),
+    ),
+  ];
+  if (badShare < 0.6 && !warnTypes.length) return null;
+  const sea = scopeSea(
+    days.find((d) => d.date === today),
+    inScopeId,
+  );
+  const next = nextGoodDay(days, inScopeId, today);
+  const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
+  return (
+    <View style={[styles.seaToday, { backgroundColor: theme.warningSoft, borderColor: theme.border }]}>
+      <View style={styles.seaHead}>
+        <AppIcon name="wind" size={22} />
+        <ThemedText type="smallBold" style={styles.flex}>
+          오늘 {x.scopeName} 바다는 거칠어요
+        </ThemedText>
+      </View>
+      <ThemedText type="small">
+        {[
+          warnTypes.length ? `${warnTypes.slice(0, 3).join('·')} 발효` : null,
+          sea?.wind != null ? `바람 ${sea.wind}m/s` : null,
+          sea?.wave != null ? `파고 ${sea.wave}m` : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')}
+        {sea ? ' (지수 지점 평균)' : ''} — 공식 지수 {Math.round(badShare * 100)}%가 나쁨 이하예요.
+      </ThemedText>
+      {next ? (
+        <Pressable accessibilityRole="button" hitSlop={6} onPress={() => router.push('/trips')}>
+          <ThemedText type="smallBold" themeColor="tint">
+            {short(next.date)}({md(next.date)})부터 좋아져요 · 좋음 이상 {next.good}곳 ›
+          </ThemedText>
+        </Pressable>
+      ) : (
+        <ThemedText type="small" themeColor="textSecondary">
+          이번 주 안에는 좋아지는 날이 아직 없어요. 무리한 출조는 쉬어 가세요.
+        </ThemedText>
+      )}
+    </View>
   );
 }

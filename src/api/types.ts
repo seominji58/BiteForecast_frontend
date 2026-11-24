@@ -689,6 +689,8 @@ export type IndexPoint = {
   station_id: number;
   station_name: string;
   tide_phase: Record<string, string | null>;
+  /** 지수와 함께 발표된 그날 지점 환경 최댓값 (왜 나쁜지 설명용, 2026-11-24) */
+  env?: { wave_max: number | null; wind_max: number | null; temp_max: number | null } | null;
   species: { species: string; grades: Record<string, string> }[];
   places: IndexPlaceLink[];
 };

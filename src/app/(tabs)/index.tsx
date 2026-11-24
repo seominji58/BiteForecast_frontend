@@ -9,7 +9,7 @@ import { useDateRange } from '@/api/queries';
 import type { Place } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import { OptionSheet } from '@/components/option-sheet';
-import { GoldenCard, IndexCarousel, SpotsCard } from '@/components/home-briefing';
+import { GoldenCard, IndexCarousel, SeaToday, SpotsCard } from '@/components/home-briefing';
 import { Button } from '@/components/form';
 import { RulesLine } from '@/components/rules-line';
 import { BottomSheet } from '@/components/bottom-sheet';
@@ -183,7 +183,9 @@ export default function HomeScreen() {
       {/* 메인의 핵심: 오늘 어종별 공식 바다낚시지수 (좋음 이상 많은 순, 옆으로 넘김). 날짜별 비교는 출조계획 탭에서 */}
       {/* 이번 달 제철(통계청 어획 많은 달)·금어기 소식 — 매달·매주 내용이 바뀌는 한 줄 */}
       <SeaNews today={today} region={x.near ? '내 주변' : x.region} onOpen={setFish} />
-      <IndexCarousel x={x} onOpen={setFish} onAll={() => router.push('/species')} />
+      {/* 바다가 거친 날: 왜(특보·바람·파고)와 언제 좋아지는지 먼저 */}
+      <SeaToday x={x} dates={dates} today={today} />
+      <IndexCarousel x={x} dates={dates} today={today} onOpen={setFish} onAll={() => router.push('/species')} />
 
       {/* 어디로 갈까: 오늘 가장 좋은 곳 (전체 어종 기준) · 지도로 펼쳐 보기 */}
       <SectionHeader title="오늘 어디로 갈까" actionLabel="지도" onAction={() => openMap()} />
