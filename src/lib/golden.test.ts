@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import type { PlaceSummary } from '../api/types.ts';
 import type { Spot } from './briefing.ts';
-import { betterPeriod, goldenSpots, tempDiff } from './golden.ts';
+import { betterPeriod, goldenSpots, tempAlert, tempDiff } from './golden.ts';
 
 const spot = (placeId: number, top: number, grades: Record<string, string> = { 오전: '좋음', 오후: '좋음' }): Spot => ({
   point: { station_id: placeId, station_name: `지점${placeId}`, tide_phase: {}, species: [{ species: '감성돔', grades }], places: [] },
@@ -55,4 +55,16 @@ test('tempDiff: 예년 대비 차이 (0.5°C 미만은 예년 수준)', () => {
   assert.equal(tempDiff({ temp_obs: { v: 15.6 } as never, temp_normal: n }), ' · 예년 -1.4°C');
   assert.equal(tempDiff({ temp_obs: { v: 17.3 } as never, temp_normal: n }), ' · 예년 수준');
   assert.equal(tempDiff({ temp_obs: null, temp_normal: n }), null);
+});
+
+test('tempAlert: 특보 기준값 참고 (공식 특보 아님), 실시간 수온 우선', () => {
+  assert.equal(tempAlert(26), '참고 · 고수온 예비 기준(25℃) 이상');
+  assert.equal(tempAlert(28.4), '참고 · 고수온 주의보 기준(28℃) 이상');
+  assert.equal(tempAlert(6.5), '참고 · 저수온 예비 기준(7℃) 이하');
+  assert.equal(tempAlert(15), null);
+  const n = { v: 17, station: '', km: 3, period: '', source: '' };
+  assert.equal(
+    tempDiff({ temp_obs: { v: 15 } as never, temp_rt: { v: 18.2, t: '', station: '', km: 5 }, temp_normal: n }),
+    ' · 예년 +1.2°C',
+  );
 });

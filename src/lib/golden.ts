@@ -13,7 +13,7 @@ import type { PlaceSummary } from '@/api/types';
 import { GRADE_RANK, type Spot } from './briefing.ts';
 import type { Criteria } from './criteria.ts';
 
-export type Reason = { key: 'calm' | 'tide' | 'temp' | 'wave' | 'when' | 'over'; text: string; check: boolean };
+export type Reason = { key: 'calm' | 'tide' | 'temp' | 'wave' | 'when' | 'over' | 'heat'; text: string; check: boolean };
 export type Golden = Spot & { reasons: Reason[]; checks: number; over: boolean };
 
 const hhmm = (s: string) => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));
@@ -28,11 +28,27 @@ const clock = (iso: string) => {
 };
 
 /** 「 · 예년 +1.2°C」 (실측과 근처 관측소 예년 같은 달 평균 차이, 0.5°C 미만이면 「예년 수준」) */
-export function tempDiff(s: Pick<PlaceSummary, 'temp_obs' | 'temp_normal'>): string | null {
-  if (!s.temp_obs || !s.temp_normal) return null;
-  const d = Math.round((s.temp_obs.v - s.temp_normal.v) * 10) / 10;
+export function tempDiff(s: Pick<PlaceSummary, 'temp_obs' | 'temp_normal' | 'temp_rt'>): string | null {
+  const now = nowTemp(s);
+  if (now == null || !s.temp_normal) return null;
+  const d = Math.round((now - s.temp_normal.v) * 10) / 10;
   if (Math.abs(d) < 0.5) return ' · 예년 수준';
   return ` · 예년 ${d > 0 ? '+' : ''}${d}°C`;
+}
+
+/** 지금 수온: 국립수산과학원 실시간(가까운 관측소)이 있으면 그것, 없으면 국립해양조사원 실측 */
+export function nowTemp(s: Pick<PlaceSummary, 'temp_obs' | 'temp_rt'>): number | null {
+  return s.temp_rt?.v ?? s.temp_obs?.v ?? null;
+}
+
+/** 수온 참고 배지: 국립수산과학원 특보 기준값(고수온 예비 25℃·주의보 28℃, 저수온 예비 7℃·주의보 4℃)에 닿았는지 — 공식 특보 아님 */
+export function tempAlert(v: number | null): string | null {
+  if (v == null) return null;
+  if (v >= 28) return '참고 · 고수온 주의보 기준(28℃) 이상';
+  if (v >= 25) return '참고 · 고수온 예비 기준(25℃) 이상';
+  if (v <= 4) return '참고 · 저수온 주의보 기준(4℃) 이하';
+  if (v <= 7) return '참고 · 저수온 예비 기준(7℃) 이하';
+  return null;
 }
 
 /** 오전·오후 등급이 다르면 더 좋은 시간대 한 줄 */
@@ -74,7 +90,10 @@ export function goldenSpots(
       ].find(([, m]) => Math.abs(at - (m as number)) <= 120);
       if (near) reasons.push({ key: 'tide', text: `${t.type === 'high' ? '만조' : '간조'} ${clock(t.t)} ${near[0]}`, check: true });
     }
-    if (s?.temp_obs) reasons.push({ key: 'temp', text: `수온 ${s.temp_obs.v}°C${tempDiff(s) ?? ''}`, check: false });
+    const temp = s ? nowTemp(s) : null;
+    if (temp != null) reasons.push({ key: 'temp', text: `수온 ${temp}°C${tempDiff(s!) ?? ''}`, check: false });
+    const alert = tempAlert(temp);
+    if (alert) reasons.push({ key: 'heat', text: alert, check: false });
     const g = sp.point.species.find((x) => x.species === sp.picks[0]?.species)?.grades;
     const when = g ? betterPeriod(g) : null;
     if (when) reasons.push({ key: 'when', text: when, check: false });

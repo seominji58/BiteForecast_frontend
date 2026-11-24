@@ -353,6 +353,8 @@ export type PlaceSummary = {
   temp_obs: ValueAt | null;
   /** 근처 관측소 예년 같은 달 평균 수온 (국립수산과학원, 참고값 — 2026-11-24) */
   temp_normal?: { v: number; station: string; km: number; period: string; source: string } | null;
+  /** 국립수산과학원 실시간 연안 수온 (같은 바다 20km 안, 품질처리 전 참고값 — 2026-11-24) */
+  temp_rt?: { v: number; t: string; station: string; km: number } | null;
   index: {
     period: string;
     tide_phase: string | null;
@@ -850,4 +852,11 @@ export type UserSpot = {
   memo: string | null;
   created_at: string;
   near: { id: number; name: string; km: number } | null;
+};
+
+/** 국립수산과학원 적조 속보·해파리 보고 (원문 요약, 2026-11-24) */
+export type MarineIssues = {
+  redtide: { date: string; seas: string | null; breaking: string | null; progress: string | null; biology: string | null }[];
+  jelly: { title: string; date: string; breaking: boolean }[];
+  source: string;
 };

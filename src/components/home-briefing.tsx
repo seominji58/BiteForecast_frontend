@@ -526,6 +526,7 @@ const REASON_ICON: Record<Reason['key'], AppIconName> = {
   temp: 'water-temp',
   when: 'star-on',
   over: 'wind',
+  heat: 'water-temp',
 };
 
 export function GoldenCard({ x, dates, today }: { x: ReturnType<typeof useExplore>; dates: string[]; today: string | undefined }) {
@@ -614,12 +615,18 @@ function GoldenRow({ g, i, x }: { g: Golden; i: number; x: ReturnType<typeof use
                 key={r.key}
                 style={[
                   styles.reason,
-                  { backgroundColor: r.check ? theme.tintSoft : over ? theme.warningSoft : theme.background, borderColor: theme.border },
+                  {
+                    backgroundColor: r.check ? theme.tintSoft : over || r.key === 'heat' ? theme.warningSoft : theme.background,
+                    borderColor: theme.border,
+                  },
                 ]}>
                 <AppIcon name={REASON_ICON[r.key]} size={14} />
                 <Text
                   numberOfLines={1}
-                  style={[styles.reasonText, { color: r.check ? Brand.teal : over ? theme.warning : theme.textSecondary }]}>
+                  style={[
+                    styles.reasonText,
+                    { color: r.check ? Brand.teal : over || r.key === 'heat' ? theme.warning : theme.textSecondary },
+                  ]}>
                   {r.check ? '✓ ' : over ? '⚠ ' : ''}
                   {r.text}
                 </Text>

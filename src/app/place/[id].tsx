@@ -21,6 +21,7 @@ import { BottomSheet } from '@/components/bottom-sheet';
 import { CatchStrip } from '@/components/catch-strip';
 import { CoordNote } from '@/components/coord-note';
 import { Button } from '@/components/form';
+import { MarineIssuesCard } from '@/components/marine-issues';
 import { MarineWarningBanner, warningSummary } from '@/components/marine-warning-banner';
 import { useNavPicker } from '@/components/nav-picker';
 import { UiIcon, type UiIconName } from '@/components/ui-icon';
@@ -180,6 +181,7 @@ export default function PlaceDetailScreen() {
           <BottomSheet open={sheet === 'safety'} title="안전 정보" onClose={() => setSheet(null)}>
             <ZoneNotice regulation={pc.regulation} />
             <MarineWarningBanner w={pc.warning} />
+            <MarineIssuesCard />
           </BottomSheet>
           <BottomSheet open={sheet === 'index'} title="공식 바다낚시지수" onClose={() => setSheet(null)}>
             <FishingIndexCard pc={pc} />

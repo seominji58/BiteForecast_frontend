@@ -240,6 +240,9 @@ export const useNearbyShops = (placeId: number | null, rockId: number | null = n
   });
 
 /** 어획 많은 달 (통계, 잘 바뀌지 않음) */
+/** 적조 속보·해파리 보고 (국립수산과학원, 10분 캐시) */
+export const useMarineIssues = () => useQuery({ queryKey: ['marine-issues'], queryFn: api.marineIssues, staleTime: 10 * 60_000 });
+
 export const useCatchSeasons = () =>
   useQuery({ queryKey: ['catch-seasons'], queryFn: api.catchSeasons, staleTime: 24 * 3600_000, gcTime: 24 * 3600_000 });
 

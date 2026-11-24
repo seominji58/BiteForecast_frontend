@@ -54,6 +54,7 @@ import type {
   PlaceKakao,
   RockPoints,
   UserSpot,
+  MarineIssues,
 } from '@/api/types';
 
 export const api = {
@@ -144,6 +145,7 @@ export const api = {
   rockPoints: () => request<RockPoints>('/rock-points'),
   nearbyShops: (placeId: number) => request<NearbyShops>(`/places/${placeId}/nearby`),
   catchSeasons: () => request<CatchSeasons>('/meta/catch-seasons'),
+  marineIssues: () => request<MarineIssues>('/meta/marine-issues'),
   fishingIndexWeek: (start: string, days: number) => request<FishingIndexDay[]>(`/fishing-index/week?start=${start}&days=${days}`),
   boatPorts: () => request<BoatPorts>('/boat-ports'),
   portNearby: (portId: number) => request<NearbyShops>(`/boat-ports/${portId}/nearby`),
