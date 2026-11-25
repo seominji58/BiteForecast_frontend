@@ -156,6 +156,19 @@ export const useMySpots = () => {
   return useQuery({ queryKey: ['me', 'spots'], queryFn: api.mySpots, enabled: signedIn });
 };
 
+export const usePushPrefs = () => {
+  const { signedIn } = useAuth();
+  return useQuery({ queryKey: ['me', 'push-prefs'], queryFn: api.pushPrefs, enabled: signedIn });
+};
+
+export function useSetPushPrefs() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.setPushPrefs,
+    onSuccess: (p) => qc.setQueryData(['me', 'push-prefs'], p),
+  });
+}
+
 export function useSaveSpot() {
   const qc = useQueryClient();
   return useMutation({

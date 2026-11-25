@@ -6,6 +6,7 @@ import { api, ApiError } from '@/api';
 import type { Account, AuthResult } from '@/api/types';
 import { googleSignOut } from '@/lib/google';
 import { kakaoSignOut } from '@/lib/kakao';
+import { registerPush, unregisterPush } from '@/lib/push';
 import { loadToken, onTokenChange, setToken } from '@/lib/session';
 
 type Status = 'loading' | 'guest' | 'signed-in';
@@ -59,6 +60,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // 로그인돼 있으면 이 폰을 알림 받을 곳으로 등록 (처음 한 번은 알림 권한을 묻는다)
+  useEffect(() => {
+    if (status === 'signed-in') registerPush(true);
+  }, [status]);
+
   const refreshUserData = () =>
     Promise.all([
       qc.invalidateQueries({ queryKey: ['journals'] }),
@@ -91,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    await unregisterPush();
     await api.logout().catch(() => undefined);
     await googleSignOut();
     await kakaoSignOut();
@@ -98,11 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await refreshUserData();
   };
 
-  return (
-    <Ctx.Provider value={{ status, signedIn: status === 'signed-in', account, signIn, signOut, setAccount }}>
-      {children}
-    </Ctx.Provider>
-  );
+  return <Ctx.Provider value={{ status, signedIn: status === 'signed-in', account, signIn, signOut, setAccount }}>{children}</Ctx.Provider>;
 }
 
 export function useAuth(): AuthContext {

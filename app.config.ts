@@ -5,6 +5,8 @@
  * - EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: iOS 구글 로그인이 돌아올 주소(거꾸로 쓴 클라이언트 ID)
  * 키가 없으면 그 플러그인을 넣지 않는다 (Expo Go·키 없는 개발 환경에서도 설정이 깨지지 않게)
  */
+import { existsSync } from 'node:fs';
+
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
 const KAKAO_KEY = process.env.EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY?.trim();
@@ -43,6 +45,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
   ]);
 
+  // 푸시 알림 (2026-11-25): 안드로이드는 FCM. google-services.json 은 깃에 올리지 않으니 있을 때만 연결
+  plugins.push([
+    'expo-notifications',
+    { icon: './assets/images/android-icon-monochrome.png', color: '#0F2C4A', defaultChannel: 'default' },
+  ]);
+
   if (KAKAO_KEY) {
     plugins.push([
       '@react-native-kakao/core',
@@ -66,6 +74,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ...config.ios,
       // 로그인 확인 창(「'앱'이 kauth.kakao.com 을 사용하여 로그인…」)에 내부 이름 대신 「입질예보」가 보이게
       infoPlist: { ...config.ios?.infoPlist, CFBundleName: '입질예보' },
+    },
+    android: {
+      ...config.android,
+      ...(existsSync('./google-services.json') ? { googleServicesFile: './google-services.json' } : {}),
     },
     plugins,
   };

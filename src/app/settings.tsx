@@ -1,17 +1,19 @@
 import { useQueryClient } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import { type ReactNode, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { type ReactNode, useEffect, useState } from 'react';
+import { Alert, AppState, Linking, Pressable, StyleSheet, Switch, View } from 'react-native';
 
 import { api, API_URL } from '@/api';
-import { useBlocks, useSources, useUnblock } from '@/api/queries';
+import { useBlocks, usePushPrefs, useSetPushPrefs, useSources, useUnblock } from '@/api/queries';
+import type { PushPrefs } from '@/api/types';
 import { Card, ErrorView, Loading, StackScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
 import { KIND_TEXT } from '@/lib/compare';
 import { kakaoUnlink } from '@/lib/kakao';
+import { PUSH_SUPPORTED, pushPermission, registerPush, type PushPermission } from '@/lib/push';
 
 // SCR-07 설정·법적 안내 (FR-15)
 // TODO: 이용약관·개인정보 처리방침 링크, 문의처, 내 데이터 삭제 (배포 전 필수)
@@ -20,6 +22,8 @@ export default function SettingsScreen() {
 
   return (
     <StackScreen>
+      <PushSettings />
+
       <Fold title="데이터 출처" hint={sources.data ? `공공데이터 ${sources.data.length}종` : undefined}>
         {sources.isPending && <Loading />}
         {sources.isError && <ErrorView message={sources.error.message} onRetry={() => sources.refetch()} />}
@@ -82,6 +86,72 @@ export default function SettingsScreen() {
 
       <DeleteAccount />
     </StackScreen>
+  );
+}
+
+const PUSH_KINDS: { key: keyof PushPrefs; label: string; hint: string }[] = [
+  { key: 'fav_good', label: '즐겨찾기 낚시터 「좋음」', hint: '내일 지수가 좋으면 전날 저녁에' },
+  { key: 'trip_warning', label: '출조 날 기상특보', hint: '오늘·내일 출조지에 특보가 나면' },
+  { key: 'weekly_best', label: '이번 주 가장 좋은 날', hint: '월요일 아침, 즐겨찾기 기준' },
+];
+
+/** 알림 (로그인 + 안드로이드). 폰 알림 권한이 꺼져 있으면 설정으로 안내 */
+function PushSettings() {
+  const { signedIn } = useAuth();
+  const prefs = usePushPrefs();
+  const setPrefs = useSetPushPrefs();
+  const [perm, setPerm] = useState<PushPermission | null>(null);
+
+  useEffect(() => {
+    if (!PUSH_SUPPORTED) return;
+    pushPermission().then(setPerm);
+    // 휴대폰 설정에서 켜고 돌아오면 다시 확인·등록
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st === 'active') registerPush(false).then(setPerm);
+    });
+    return () => sub.remove();
+  }, []);
+
+  if (!signedIn || !PUSH_SUPPORTED) return null;
+  const off = perm === 'denied' || perm === 'undetermined';
+  return (
+    <Card>
+      <ThemedText type="sectionTitle">알림</ThemedText>
+      {off ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => (perm === 'undetermined' ? registerPush(true).then(setPerm) : Linking.openSettings())}
+          style={styles.linkRow}>
+          <View style={styles.flex}>
+            <ThemedText type="smallBold">휴대폰 알림이 꺼져 있어요</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {perm === 'undetermined' ? '눌러서 알림을 허용해 주세요' : '눌러서 휴대폰 설정에서 알림을 켜 주세요'}
+            </ThemedText>
+          </View>
+          <ThemedText themeColor="tint">›</ThemedText>
+        </Pressable>
+      ) : null}
+      {prefs.isError ? <ErrorView message={prefs.error.message} onRetry={() => prefs.refetch()} /> : null}
+      {PUSH_KINDS.map((k) => (
+        <View key={k.key} style={[styles.linkRow, off && styles.dim]}>
+          <View style={styles.flex}>
+            <ThemedText>{k.label}</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {k.hint}
+            </ThemedText>
+          </View>
+          <Switch
+            accessibilityLabel={`${k.label} 알림`}
+            value={prefs.data?.[k.key] ?? true}
+            disabled={!prefs.data || setPrefs.isPending}
+            onValueChange={(v) => setPrefs.mutate({ [k.key]: v }, { onError: (e) => Alert.alert('바꾸지 못했어요', e.message) })}
+          />
+        </View>
+      ))}
+      <ThemedText type="small" themeColor="textSecondary">
+        밤(오후 9시~오전 7시)에는 보내지 않아요. 지수는 국립해양조사원 발표값이고 조과를 보장하지 않아요.
+      </ThemedText>
+    </Card>
   );
 }
 
@@ -181,6 +251,7 @@ const styles = StyleSheet.create({
   linkRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 44 },
   unblock: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 },
   flex: { flex: 1 },
+  dim: { opacity: 0.5 },
   deleteLink: { alignSelf: 'center', minHeight: 44, justifyContent: 'center', paddingHorizontal: 12 },
   row: { flexDirection: 'row', gap: Spacing.two, alignItems: 'flex-start' },
   status: { fontWeight: '700', width: 30 },

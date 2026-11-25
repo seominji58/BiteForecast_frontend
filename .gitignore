@@ -50,3 +50,7 @@ example
 # 어종 이미지 생성 후보 (검수 전, 앱에 포함하지 않음)
 assets/species/_candidates/
 __pycache__/
+
+# Firebase 구성 파일 (로컬 빌드용, 저장소에 올리지 않음)
+google-services.json
+GoogleService-Info.plist

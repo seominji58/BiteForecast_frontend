@@ -862,3 +862,10 @@ export type MarineIssues = {
   jelly: { title: string; date: string; breaking: boolean }[];
   source: string;
 };
+
+/** 알림 종류별 켜기·끄기 (서버 기본: 전부 켜짐) */
+export type PushPrefs = {
+  fav_good: boolean;
+  trip_warning: boolean;
+  weekly_best: boolean;
+};

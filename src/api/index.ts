@@ -1,5 +1,6 @@
 import { request } from '@/api/client';
 import type {
+  PushPrefs,
   Account,
   Amenities,
   BoatPorts,
@@ -107,6 +108,13 @@ export const api = {
     request<UserSpot>('/me/spots', { method: 'POST', body }),
   editSpot: (id: number, body: { name?: string; memo?: string | null }) => request<UserSpot>(`/me/spots/${id}`, { method: 'PATCH', body }),
   deleteSpot: (id: number) => request<void>(`/me/spots/${id}`, { method: 'DELETE' }),
+
+  // --- 푸시 알림 ---
+  registerPushDevice: (token: string, platform: 'android' | 'ios') =>
+    request<void>('/me/push/device', { method: 'PUT', body: { token, platform } }),
+  removePushDevice: (token: string) => request<void>('/me/push/device/remove', { method: 'POST', body: { token } }),
+  pushPrefs: () => request<PushPrefs>('/me/push/prefs'),
+  setPushPrefs: (patch: Partial<PushPrefs>) => request<PushPrefs>('/me/push/prefs', { method: 'PATCH', body: patch }),
 
   // --- 출조계획 ---
   trips: (when: 'upcoming' | 'past') => request<TripListItem[]>(`/me/trips?when=${when}`, { auth: true }),

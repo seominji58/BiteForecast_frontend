@@ -7,6 +7,7 @@ import { Text } from '@/components/app-text';
 import { ApiError } from '@/api';
 import { Brand } from '@/constants/theme';
 import { AuthProvider } from '@/lib/auth';
+import { listenPushTaps } from '@/lib/push';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -17,6 +18,8 @@ export default function RootLayout() {
     const sub = AppState.addEventListener('change', (st) => focusManager.setFocused(st === 'active'));
     return () => sub.remove();
   }, []);
+  // 알림을 누르면 그 낚시터·출조계획 화면으로
+  useEffect(() => listenPushTaps(), []);
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -46,7 +49,7 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="journal/new" options={{ title: '낚시일지 작성' }} />
             <Stack.Screen name="journal/done" options={{ headerShown: false, gestureEnabled: false }} />
-          <Stack.Screen name="journal/[id]" options={{ title: '낚시일지' }} />
+            <Stack.Screen name="journal/[id]" options={{ title: '낚시일지' }} />
             <Stack.Screen name="settings" options={{ title: '설정·정보' }} />
             <Stack.Screen name="place/[id]" options={{ title: '상세 해황' }} />
             <Stack.Screen name="explore" options={{ title: '낚시터 찾기' }} />
