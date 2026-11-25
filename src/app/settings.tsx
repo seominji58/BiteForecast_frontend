@@ -2,13 +2,14 @@ import { useQueryClient } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { type ReactNode, useEffect, useState } from 'react';
-import { Alert, AppState, Linking, Pressable, StyleSheet, Switch, View } from 'react-native';
+import { Alert, AppState, Linking, Platform, Pressable, StyleSheet, Switch, View } from 'react-native';
 
 import { api, API_URL } from '@/api';
 import { useBlocks, usePushPrefs, useSetPushPrefs, useSources, useUnblock } from '@/api/queries';
 import type { PushPrefs } from '@/api/types';
 import { Card, ErrorView, Loading, StackScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
+import { SUPPORT_EMAIL } from '@/constants/contact';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
 import { KIND_TEXT } from '@/lib/compare';
@@ -16,7 +17,6 @@ import { kakaoUnlink } from '@/lib/kakao';
 import { PUSH_SUPPORTED, pushPermission, registerPush, type PushPermission } from '@/lib/push';
 
 // SCR-07 설정·법적 안내 (FR-15)
-// TODO: 이용약관·개인정보 처리방침 링크, 문의처, 내 데이터 삭제 (배포 전 필수)
 export default function SettingsScreen() {
   const sources = useSources();
 
@@ -62,6 +62,15 @@ export default function SettingsScreen() {
         <ThemedText type="sectionTitle">안내·약관</ThemedText>
         <Pressable accessibilityRole="link" onPress={() => router.push('/info/safety')} style={styles.linkRow}>
           <ThemedText>금어기·출조 안전 정보</ThemedText>
+          <ThemedText themeColor="textSecondary">›</ThemedText>
+        </Pressable>
+        <Pressable accessibilityRole="link" onPress={contact} style={styles.linkRow}>
+          <View style={styles.flex}>
+            <ThemedText>문의하기</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {SUPPORT_EMAIL}
+            </ThemedText>
+          </View>
           <ThemedText themeColor="textSecondary">›</ThemedText>
         </Pressable>
         <Pressable accessibilityRole="link" onPress={() => router.push('/terms')} style={styles.linkRow}>
@@ -152,6 +161,17 @@ function PushSettings() {
         밤(오후 9시~오전 7시)에는 보내지 않아요. 지수는 국립해양조사원 발표값이고 조과를 보장하지 않아요.
       </ThemedText>
     </Card>
+  );
+}
+
+/** 메일 앱으로 문의 (버전·기기를 미리 적어 둔다). 메일 앱이 없으면 주소를 보여 준다 */
+function contact() {
+  const subject = encodeURIComponent('[입질예보] 문의');
+  const body = encodeURIComponent(
+    `\n\n\n---\n앱 버전 ${Constants.expoConfig?.version ?? '-'} · ${Platform.OS} ${String(Platform.Version)}`,
+  );
+  Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`).catch(() =>
+    Alert.alert('문의하기', `메일 앱을 열지 못했어요.\n${SUPPORT_EMAIL} 로 보내 주세요.`),
   );
 }
 

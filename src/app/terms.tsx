@@ -1,4 +1,5 @@
 import { LegalDoc } from '@/components/legal-doc';
+import { SUPPORT_EMAIL } from '@/constants/contact';
 
 // 이용약관 (초안). 출시 전 법률 검토 후 확정한다
 export default function TermsScreen() {
@@ -34,6 +35,10 @@ export default function TermsScreen() {
         {
           title: '제7조 (탈퇴와 데이터 삭제)',
           body: '탈퇴하면 낚시 기록·사진·글·댓글·좋아요·포인트가 삭제되며 되돌릴 수 없습니다. 같은 이메일로 다시 가입할 수 있지만 이전 기록은 복구되지 않습니다.',
+        },
+        {
+          title: '제8조 (문의)',
+          body: `서비스 이용 문의·오류 신고·게시물 관련 요청은 ${SUPPORT_EMAIL} 로 보내 주세요.`,
         },
       ]}
     />
