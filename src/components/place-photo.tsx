@@ -8,7 +8,7 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Text } from '@/components/app-text';
 
@@ -142,17 +142,22 @@ export function PlaceGallery({
           pagingEnabled
           showsHorizontalScrollIndicator={false}
           onMomentumScrollEnd={(e) => w && setPage(Math.round(e.nativeEvent.contentOffset.x / w))}>
-          {imgs.map((im) => (
-            <Image
-              key={im.url}
-              source={{ uri: im.url }}
-              style={{ width: w || 1, ...box, backgroundColor: '#0B2D4D' }}
-              contentFit="contain"
-              cachePolicy="disk"
-              transition={150}
-              accessibilityLabel={`${photos.data!.title} 사진`}
-            />
-          ))}
+          {/* 원본이 장당 0.1~0.7MB라 한꺼번에 받으면 첫 장이 늦게 뜬다 (2026-11-26):
+              지금 장과 바로 옆 장만 받고, 작은 미리보기가 있으면 먼저 보여 주고, 받는 동안 로딩 표시 */}
+          {imgs.map((im, i) =>
+            Math.abs(i - page) <= 1 ? (
+              <GalleryImage
+                key={im.url}
+                url={im.url}
+                thumb={im.thumb !== im.url ? im.thumb : undefined}
+                first={i === page}
+                style={{ width: w || 1, ...box }}
+                label={`${photos.data!.title} 사진`}
+              />
+            ) : (
+              <View key={im.url} style={{ width: w || 1, ...box, backgroundColor: '#0B2D4D' }} />
+            ),
+          )}
         </ScrollView>
         {imgs.length > 1 ? (
           <View style={styles.counter}>
@@ -169,6 +174,41 @@ export function PlaceGallery({
   }
   if (photos.isPending) return null;
   return <UserPhotosOrMap place={place} style={style} height={height} onPost={onPost} />;
+}
+
+/** 갤러리 한 장: 받는 동안 가운데 로딩 표시, 작은 미리보기(thumb)가 있으면 먼저 흐리게 */
+function GalleryImage({
+  url,
+  thumb,
+  first,
+  style,
+  label,
+}: {
+  url: string;
+  thumb?: string;
+  first: boolean;
+  style: StyleProp<ViewStyle>;
+  label: string;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <View style={[style, styles.galleryBox]}>
+      <Image
+        source={{ uri: url }}
+        placeholder={thumb ? { uri: thumb } : undefined}
+        placeholderContentFit="contain"
+        style={StyleSheet.absoluteFill}
+        contentFit="contain"
+        cachePolicy="disk"
+        priority={first ? 'high' : 'normal'}
+        transition={150}
+        onLoad={() => setLoaded(true)}
+        onError={() => setLoaded(true)}
+        accessibilityLabel={label}
+      />
+      {loaded ? null : <ActivityIndicator color="#FFFFFF" style={styles.spinner} />}
+    </View>
+  );
 }
 
 /**
@@ -266,6 +306,8 @@ const styles = StyleSheet.create({
   },
   credit: { fontSize: 11, paddingHorizontal: 12, paddingTop: 6 },
   locMap: { width: '100%', aspectRatio: 2.6 },
+  galleryBox: { backgroundColor: '#0B2D4D', alignItems: 'center', justifyContent: 'center' },
+  spinner: { position: 'absolute' },
   fallback: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   box: { overflow: 'hidden' },
   tag: {
