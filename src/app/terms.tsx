@@ -2,10 +2,11 @@ import { LegalDoc } from '@/components/legal-doc';
 import { SUPPORT_EMAIL } from '@/constants/contact';
 
 // 이용약관 (초안). 출시 전 법률 검토 후 확정한다
+// 웹 주소 https://biteforecast-api.fly.dev/terms 는 backend/app/legal.py — 고칠 때 둘 다 고친다
 export default function TermsScreen() {
   return (
     <LegalDoc
-      updated="2026-11-09"
+      updated="2026-11-25"
       intro="입질예보(이하 「서비스」)를 이용해 주셔서 감사합니다. 이 약관은 서비스 이용에 필요한 기본 사항을 정합니다."
       sections={[
         {
@@ -18,7 +19,7 @@ export default function TermsScreen() {
         },
         {
           title: '제3조 (회원가입과 계정)',
-          body: '만 14세 이상이면 이메일 또는 구글 계정으로 가입할 수 있습니다. 계정 정보는 본인이 관리하며 다른 사람에게 양도·대여할 수 없습니다. 회원은 언제든지 내정보 화면에서 탈퇴할 수 있습니다.',
+          body: '만 14세 이상이면 이메일·구글·카카오 계정으로 가입할 수 있습니다. 계정 정보는 본인이 관리하며 다른 사람에게 양도·대여할 수 없습니다. 회원은 언제든지 내정보 화면에서 탈퇴할 수 있습니다.',
         },
         {
           title: '제4조 (게시물과 사진)',
