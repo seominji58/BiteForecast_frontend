@@ -45,6 +45,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
   ]);
 
+  // 출시 APK 서명 (원스토어): 키는 저장소 밖 ~/.gradle/gradle.properties
+  plugins.push('./plugins/with-release-signing');
+
   // 푸시 알림 (2026-11-25): 안드로이드는 FCM. google-services.json 은 깃에 올리지 않으니 있을 때만 연결
   plugins.push([
     'expo-notifications',
