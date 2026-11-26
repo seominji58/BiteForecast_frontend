@@ -9,6 +9,7 @@ import { useBlocks, usePushPrefs, useSetPushPrefs, useSources, useUnblock } from
 import type { PushPrefs } from '@/api/types';
 import { Card, ErrorView, Loading, StackScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
+import { PermissionList } from '@/components/permission-notice';
 import { SUPPORT_EMAIL } from '@/constants/contact';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
@@ -49,6 +50,10 @@ export default function SettingsScreen() {
       </Fold>
 
       <BlockedUsers />
+
+      <Fold title="앱 접근 권한" hint="필수 없음 · 위치·카메라·사진·알림(선택)">
+        <PermissionList />
+      </Fold>
 
       <Fold title="이용 안내" hint="예보·지수 해석, 책임 범위">
         <ThemedText type="small" themeColor="textSecondary">

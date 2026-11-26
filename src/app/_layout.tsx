@@ -8,6 +8,7 @@ import { ApiError } from '@/api';
 import { Brand } from '@/constants/theme';
 import { AuthProvider } from '@/lib/auth';
 import { listenPushTaps } from '@/lib/push';
+import { PermissionNotice } from '@/components/permission-notice';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -76,6 +77,7 @@ export default function RootLayout() {
             <Stack.Screen name="community/[id]" options={{ title: '커뮤니티' }} />
             <Stack.Screen name="community/edit" options={{ title: '글 고치기' }} />
           </Stack>
+          <PermissionNotice />
         </ThemeProvider>
       </AuthProvider>
     </QueryClientProvider>

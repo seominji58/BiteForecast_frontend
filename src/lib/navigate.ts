@@ -14,18 +14,22 @@ export const NAV_APP_LABEL: Record<NavApp, string> = { kakao: '카카오맵', na
 
 const APP_ID = 'com.seominji58.biteforecast';
 
-/** 설치 안내: [iOS 앱스토어, 안드로이드 플레이스토어] */
-export const NAV_STORE: Record<NavApp, [string, string]> = {
-  kakao: ['https://apps.apple.com/kr/app/id304608425', 'market://details?id=net.daum.android.map'],
-  naver: ['https://apps.apple.com/kr/app/id311867728', 'market://details?id=com.nhn.android.nmap'],
-  tmap: ['https://apps.apple.com/kr/app/id431589174', 'market://details?id=com.skt.tmap.ku'],
+/** 설치 안내 (iOS 앱스토어만). 안드로이드는 원스토어 배포라 다른 마켓(구글 플레이)으로 보내지 않고 웹 지도로 연다 (2026-11-26) */
+export const NAV_STORE_IOS: Record<NavApp, string> = {
+  kakao: 'https://apps.apple.com/kr/app/id304608425',
+  naver: 'https://apps.apple.com/kr/app/id311867728',
+  tmap: 'https://apps.apple.com/kr/app/id431589174',
 };
+
+/** 앱이 없을 때 브라우저로 여는 카카오맵 웹 (위치 표시·검색) */
+export function webMapUrl(t: Exclude<NavTarget, { kind: 'none' }>): string {
+  if (t.kind === 'search') return `https://map.kakao.com/link/search/${enc(t.query)}`;
+  return `https://map.kakao.com/link/map/${enc(t.name)},${t.lat},${t.lon}`;
+}
 const enc = encodeURIComponent;
 
 export type NavTarget =
-  | { kind: 'route'; name: string; lat: number; lon: number }
-  | { kind: 'search'; query: string }
-  | { kind: 'none'; reason: string };
+  { kind: 'route'; name: string; lat: number; lon: number } | { kind: 'search'; query: string } | { kind: 'none'; reason: string };
 
 export function navTarget(p: Place, name: string): NavTarget {
   if (p.type === 'boat' || p.type === 'point') {
