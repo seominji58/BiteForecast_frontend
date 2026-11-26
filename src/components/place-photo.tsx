@@ -23,6 +23,14 @@ import { PLACE_IMAGE } from '@/lib/place';
 
 type P = Pick<Place, 'id' | 'type' | 'lat' | 'lon' | 'location_suspect'>;
 
+/**
+ * 관광공사 사진을 서버가 줄인 사본으로 (2026-11-26). 갤러리 원본은 장당 ~1.2MB 라 폰에서 한참 회색이었다.
+ * 서버 /tour-photo 가 긴 변 400·1000px 로 줄여 캐시한다. 관광공사 주소가 아니면 그대로
+ */
+export function tourPhoto(u: string, w: 400 | 1000): string {
+  return /^https?:\/\/tong\.visitkorea\.or\.kr\//.test(u) ? `${API_URL}/tour-photo?u=${encodeURIComponent(u)}&w=${w}` : u;
+}
+
 export function placePhotoUrl(p: P, size: 'hero' | 'thumb'): string | null {
   if (p.lat == null || p.lon == null || p.location_suspect) return null;
   return `${API_URL}/places/${p.id}/map.jpg?size=${size}`;
@@ -86,8 +94,9 @@ export function PlaceThumb({ place, style }: { place: Pick<Place, 'id' | 'type'>
   const theme = useTheme();
   const idx = usePlacePhotoIndex();
   const thumb = idx.data?.thumbs[String(place.id)];
-  const [failed, setFailed] = useState(false);
-  if (!thumb || failed) {
+  // 0: 줄인 사본 → 1: 원본 → 2: 그림
+  const [failed, setFailed] = useState(0);
+  if (!thumb || failed >= 2) {
     return (
       <View style={[styles.fallback, { backgroundColor: theme.tintSoft }, style]}>
         <AppIcon name={PLACE_IMAGE[place.type]} size={26} />
@@ -97,12 +106,12 @@ export function PlaceThumb({ place, style }: { place: Pick<Place, 'id' | 'type'>
   return (
     <View style={[styles.box, { backgroundColor: theme.backgroundSelected }, style]}>
       <Image
-        source={{ uri: thumb }}
+        source={{ uri: failed === 0 ? tourPhoto(thumb, 400) : thumb }}
         style={StyleSheet.absoluteFill}
         contentFit="contain"
         cachePolicy="disk"
         transition={150}
-        onError={() => setFailed(true)}
+        onError={() => setFailed((n) => n + 1)}
         accessibilityLabel="낚시터 사진 (한국관광공사)"
       />
     </View>
@@ -191,11 +200,13 @@ function GalleryImage({
   label: string;
 }) {
   const [loaded, setLoaded] = useState(false);
+  // 줄인 사본(서버)을 먼저, 실패하면 원본으로
+  const [raw, setRaw] = useState(false);
   return (
     <View style={[style, styles.galleryBox]}>
       <Image
-        source={{ uri: url }}
-        placeholder={thumb ? { uri: thumb } : undefined}
+        source={{ uri: raw ? url : tourPhoto(url, 1000) }}
+        placeholder={{ uri: tourPhoto(thumb ?? url, 400) }}
         placeholderContentFit="contain"
         style={StyleSheet.absoluteFill}
         contentFit="contain"
@@ -203,7 +214,7 @@ function GalleryImage({
         priority={first ? 'high' : 'normal'}
         transition={150}
         onLoad={() => setLoaded(true)}
-        onError={() => setLoaded(true)}
+        onError={() => (raw ? setLoaded(true) : setRaw(true))}
         accessibilityLabel={label}
       />
       {loaded ? null : <ActivityIndicator color="#FFFFFF" style={styles.spinner} />}
