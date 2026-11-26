@@ -21,9 +21,27 @@ export type ChallengeSpot = {
   status: ChallengeStatus;
   /** 확인하며 남긴 조건·남은 일 */
   note: string | null;
+  checks: ChallengeChecks;
+};
+
+/** 2026-11-26 자료 대조 결과 (docs 탐험_후보선정_현황 7-1·7-2·7-5·7-6). 낚시 허가 여부를 뜻하지 않는다 */
+export type ChallengeChecks = {
+  /** 카카오 지도에 등록된 같은 이름 장소와의 거리(km). 2km 넘거나 등록 안 됨이면 null */
+  kakaoKm: number | null;
+  /** 국립공원 안이면 공원 이름 (국립공원공단 공원경계 2026-11-13) */
+  park: string | null;
+  /** 공원 경계에서 0.3km 안 (경계 근처) */
+  parkEdge: boolean;
+  /** 국가어항 (해양수산부 국가어항구역) */
+  nationalHarbor: boolean;
+  /** 1km 안의 기관 낚시 자료 장소 (바다낚시지수 지점·관광공사·전국낚시터 정보) — 허가 근거 아님 */
+  official: { name: string; source: string; km: number } | null;
+  /** 1.5km 안 해수부 포인트 중 연안사고 위험구역 표시 수 */
+  dangerNear: number;
 };
 
 export const CHALLENGE_CHECKED_AT = '2026-11-19';
+export const CHALLENGE_CROSSCHECKED_AT = '2026-11-26';
 
 export const CHALLENGE_SPOTS: ChallengeSpot[] = [
   {
@@ -37,6 +55,14 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 128.786207,
     status: '조건부',
     note: '해수욕장 기간 제한 · 북방파제 TTP 위험구역',
+    checks: {
+      kakaoKm: 0.29,
+      park: null,
+      parkEdge: false,
+      nationalHarbor: true,
+      official: { name: '남애항', source: '바다낚시지수 지점', km: 0.6 },
+      dangerNear: 1,
+    },
   },
   {
     id: 2,
@@ -49,6 +75,14 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 128.557005,
     status: '조건부',
     note: '갯바위 위험구역 안 · 군 협의 범위',
+    checks: {
+      kakaoKm: 0.09,
+      park: null,
+      parkEdge: false,
+      nationalHarbor: true,
+      official: { name: '아야진항', source: '바다낚시지수 지점', km: 0.2 },
+      dangerNear: 2,
+    },
   },
   {
     id: 3,
@@ -61,6 +95,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 128.568649,
     status: '조건부',
     note: '북방파제 TTP 25m — 진입 금지 안내',
+    checks: { kakaoKm: 0.2, park: null, parkEdge: false, nationalHarbor: false, official: null, dangerNear: 1 },
   },
   {
     id: 4,
@@ -73,6 +108,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 129.410852,
     status: '미확인',
     note: '방파제 보강공사 여부',
+    checks: { kakaoKm: 0.75, park: null, parkEdge: false, nationalHarbor: false, official: null, dangerNear: 0 },
   },
   {
     id: 5,
@@ -85,6 +121,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 129.120646,
     status: '조건부',
     note: '북방파제 TTP 빼고. 고시 나오면 재확인',
+    checks: { kakaoKm: 0.14, park: null, parkEdge: false, nationalHarbor: false, official: null, dangerNear: 0 },
   },
   {
     id: 6,
@@ -97,6 +134,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 129.565911,
     status: '보류',
     note: '포항시 수산정책과에 고시 원문 문의',
+    checks: { kakaoKm: 0.91, park: null, parkEdge: false, nationalHarbor: false, official: null, dangerNear: 0 },
   },
   {
     id: 7,
@@ -109,6 +147,14 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 129.261126,
     status: '미확인',
     note: '방파제 사망사고 구역 131m',
+    checks: {
+      kakaoKm: 0.22,
+      park: null,
+      parkEdge: false,
+      nationalHarbor: false,
+      official: { name: '대진항', source: '바다낚시지수 지점', km: 0.2 },
+      dangerNear: 0,
+    },
   },
   {
     id: 8,
@@ -121,6 +167,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 129.291033,
     status: '조건부',
     note: '동·북방파제 TTP 진입 금지 안내',
+    checks: { kakaoKm: 0.35, park: null, parkEdge: false, nationalHarbor: false, official: null, dangerNear: 0 },
   },
   {
     id: 9,
@@ -133,6 +180,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 129.511735,
     status: '조건부',
     note: '북방파제 TTP 위험구역 · 송대말 등대 부지',
+    checks: { kakaoKm: 0.35, park: null, parkEdge: false, nationalHarbor: false, official: null, dangerNear: 1 },
   },
   {
     id: 10,
@@ -145,6 +193,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 129.414046,
     status: '조건부',
     note: '방문 지점 좌표',
+    checks: { kakaoKm: 0.33, park: null, parkEdge: false, nationalHarbor: false, official: null, dangerNear: 0 },
   },
   {
     id: 11,
@@ -157,6 +206,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 129.58,
     status: '미확인',
     note: null,
+    checks: { kakaoKm: 1.11, park: null, parkEdge: false, nationalHarbor: false, official: null, dangerNear: 0 },
   },
   {
     id: 12,
@@ -169,6 +219,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 129.462472,
     status: '미확인',
     note: null,
+    checks: { kakaoKm: 0.38, park: null, parkEdge: false, nationalHarbor: false, official: null, dangerNear: 1 },
   },
   {
     id: 13,
@@ -181,6 +232,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 126.107056,
     status: '미확인',
     note: '국립공원 여부',
+    checks: { kakaoKm: 0.09, park: null, parkEdge: false, nationalHarbor: false, official: null, dangerNear: 0 },
   },
   {
     id: 14,
@@ -193,6 +245,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 126.065583,
     status: '미확인',
     note: null,
+    checks: { kakaoKm: null, park: null, parkEdge: false, nationalHarbor: false, official: null, dangerNear: 0 },
   },
   {
     id: 15,
@@ -205,6 +258,14 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 126.481139,
     status: '미확인',
     note: null,
+    checks: {
+      kakaoKm: 0.88,
+      park: null,
+      parkEdge: false,
+      nationalHarbor: false,
+      official: { name: '용담바다낚시터', source: '관광공사 낚시 정보', km: 0.5 },
+      dangerNear: 0,
+    },
   },
   {
     id: 16,
@@ -217,6 +278,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 126.420333,
     status: '미확인',
     note: null,
+    checks: { kakaoKm: 0.68, park: '태안해안', parkEdge: true, nationalHarbor: false, official: null, dangerNear: 1 },
   },
   {
     id: 17,
@@ -229,6 +291,14 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 126.325139,
     status: '미확인',
     note: '태안해안국립공원 안일 가능성(해변길 5코스) — 공원 행위제한',
+    checks: {
+      kakaoKm: 0.68,
+      park: '태안해안',
+      parkEdge: false,
+      nationalHarbor: false,
+      official: { name: '방포항', source: '바다낚시지수 지점', km: 0.8 },
+      dangerNear: 1,
+    },
   },
   {
     id: 18,
@@ -241,6 +311,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 126.33375,
     status: '미확인',
     note: '국립공원 경계(해변길 6코스)',
+    checks: { kakaoKm: 0.64, park: '태안해안', parkEdge: false, nationalHarbor: false, official: null, dangerNear: 0 },
   },
   {
     id: 19,
@@ -253,6 +324,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 126.334306,
     status: '미확인',
     note: '강화군 고시 반드시 확인',
+    checks: { kakaoKm: 0.16, park: null, parkEdge: false, nationalHarbor: false, official: null, dangerNear: 1 },
   },
   {
     id: 20,
@@ -265,6 +337,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 126.406833,
     status: '미확인',
     note: '긍정 문구는 방파제 — 방문 지점을 포구 방파제로 · 개장 기간 제외',
+    checks: { kakaoKm: 0.61, park: null, parkEdge: false, nationalHarbor: false, official: null, dangerNear: 1 },
   },
   {
     id: 21,
@@ -277,6 +350,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 129.238389,
     status: '조건부',
     note: '통제구역 도면 기장군 문의 · TTP 진입 금지',
+    checks: { kakaoKm: 0.69, park: null, parkEdge: false, nationalHarbor: true, official: null, dangerNear: 0 },
   },
   {
     id: 22,
@@ -289,6 +363,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 129.259962,
     status: '미확인',
     note: '연구소 부지 통과 여부 · 긍정 근거',
+    checks: { kakaoKm: 0.18, park: null, parkEdge: false, nationalHarbor: false, official: null, dangerNear: 0 },
   },
   {
     id: 23,
@@ -301,6 +376,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 127.725429,
     status: '보류',
     note: '지정 고시·위치도 나온 뒤',
+    checks: { kakaoKm: 0.49, park: null, parkEdge: false, nationalHarbor: true, official: null, dangerNear: 0 },
   },
   {
     id: 24,
@@ -313,6 +389,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 127.561181,
     status: '미확인',
     note: null,
+    checks: { kakaoKm: 0.7, park: null, parkEdge: false, nationalHarbor: false, official: null, dangerNear: 0 },
   },
   {
     id: 25,
@@ -325,6 +402,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 128.624806,
     status: '미확인',
     note: '한려해상국립공원 여부',
+    checks: { kakaoKm: null, park: '한려해상', parkEdge: false, nationalHarbor: false, official: null, dangerNear: 0 },
   },
   {
     id: 26,
@@ -337,6 +415,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 128.513417,
     status: '미확인',
     note: null,
+    checks: { kakaoKm: 0.64, park: null, parkEdge: false, nationalHarbor: false, official: null, dangerNear: 0 },
   },
   {
     id: 27,
@@ -349,6 +428,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 128.4415,
     status: '미확인',
     note: '통영시 조례 제정 전으로 보임',
+    checks: { kakaoKm: null, park: '한려해상', parkEdge: false, nationalHarbor: false, official: null, dangerNear: 0 },
   },
   {
     id: 28,
@@ -361,6 +441,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 127.1155,
     status: '조건부',
     note: 'ⓐ만 남음',
+    checks: { kakaoKm: 0.77, park: null, parkEdge: false, nationalHarbor: false, official: null, dangerNear: 0 },
   },
   {
     id: 29,
@@ -373,6 +454,14 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 127.108389,
     status: '조건부',
     note: 'ⓐ만 남음',
+    checks: {
+      kakaoKm: null,
+      park: null,
+      parkEdge: false,
+      nationalHarbor: false,
+      official: { name: '거금해양낚시공원', source: '전국낚시터 정보', km: 0.8 },
+      dangerNear: 0,
+    },
   },
   {
     id: 30,
@@ -385,6 +474,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 126.865806,
     status: '조건부',
     note: '연륙 공식 근거 보강',
+    checks: { kakaoKm: null, park: '다도해해상', parkEdge: false, nationalHarbor: false, official: null, dangerNear: 0 },
   },
   {
     id: 31,
@@ -397,6 +487,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 126.824417,
     status: '조건부',
     note: '연륙 공식 근거 보강',
+    checks: { kakaoKm: null, park: '다도해해상', parkEdge: false, nationalHarbor: false, official: null, dangerNear: 0 },
   },
   {
     id: 32,
@@ -409,6 +500,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 126.283639,
     status: '조건부',
     note: '선창이 섬 쪽인지 본섬 쪽인지',
+    checks: { kakaoKm: 1.83, park: null, parkEdge: false, nationalHarbor: false, official: null, dangerNear: 0 },
   },
   {
     id: 33,
@@ -421,6 +513,7 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 126.916694,
     status: '조건부',
     note: '해수욕장 기간 수상레저 금지 · 행정예고(제2026-15호) 내용',
+    checks: { kakaoKm: 0.1, park: null, parkEdge: false, nationalHarbor: false, official: null, dangerNear: 0 },
   },
   {
     id: 34,
@@ -433,5 +526,6 @@ export const CHALLENGE_SPOTS: ChallengeSpot[] = [
     lon: 126.626583,
     status: '미확인',
     note: '명승 지정구역 대조',
+    checks: { kakaoKm: 0.35, park: null, parkEdge: false, nationalHarbor: false, official: null, dangerNear: 0 },
   },
 ];

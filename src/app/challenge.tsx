@@ -18,7 +18,14 @@ import { ThemedText } from '@/components/themed-text';
 import type { AppIconName } from '@/constants/icons';
 import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { CHALLENGE_CHECKED_AT, CHALLENGE_SPOTS, type ChallengeSea, type ChallengeSpot, type ChallengeStatus } from '@/lib/challenge-data';
+import {
+  CHALLENGE_CHECKED_AT,
+  CHALLENGE_CROSSCHECKED_AT,
+  CHALLENGE_SPOTS,
+  type ChallengeSea,
+  type ChallengeSpot,
+  type ChallengeStatus,
+} from '@/lib/challenge-data';
 
 const SEAS: ChallengeSea[] = ['동해', '서해', '남해', '제주'];
 
@@ -189,6 +196,8 @@ function SpotSheet({ spot, onClose }: { spot: ChallengeSpot | null; onClose: () 
             </View>
           ) : null}
 
+          <CheckList spot={spot} />
+
           {spot.fish.length ? (
             <View style={styles.fishWrap}>
               <ThemedText type="smallBold">근처 해수부 포인트 대상어</ThemedText>
@@ -216,8 +225,110 @@ function SpotSheet({ spot, onClose }: { spot: ChallengeSpot | null; onClose: () 
   );
 }
 
+type Mark = 'ok' | 'warn' | 'unknown' | 'info';
+type CheckRow = { mark: Mark; title: string; detail: string };
+
+/** 자료 대조로 확인한 것 / 남은 것 (낚시 허가 여부를 판정하지 않는다) */
+function checkRows(s: ChallengeSpot): CheckRow[] {
+  const c = s.checks;
+  const isPort = !/해변|해수욕장/.test(s.name);
+  const rows: CheckRow[] = [
+    c.kakaoKm != null
+      ? {
+          mark: 'ok',
+          title: '위치',
+          detail: `카카오 지도에 등록된 위치와 ${c.kakaoKm < 1 ? `${Math.round(c.kakaoKm * 1000)}m` : `${c.kakaoKm}km`} 차이`,
+        }
+      : { mark: 'unknown', title: '위치', detail: '지도에 등록되지 않은 작은 선창이에요. 정확한 자리 확인이 필요해요' },
+    {
+      mark: 'unknown',
+      title: '방문 지점',
+      detail: isPort ? '방파제 입구·주차장 같은 도착 지점은 아직 확인 전이에요' : '해변 입구·주차장 같은 도착 지점은 아직 확인 전이에요',
+    },
+    { mark: 'ok', title: '해경 출입통제', detail: '관할 해경서 공고와 대조 — 해당 없음 (11/19)' },
+    s.status === '보류'
+      ? { mark: 'warn', title: '시군 낚시통제구역', detail: '제한이 생길 수 있어 확인될 때까지 보류했어요' }
+      : s.status === '미확인'
+        ? { mark: 'unknown', title: '시군 낚시통제구역', detail: '시군 고시를 아직 확인하지 못했어요 (데이터 공개 요청 예정)' }
+        : { mark: 'ok', title: '시군 낚시통제구역', detail: '찾은 공고에서 제한을 발견하지 못했어요 · 조건은 위 메모 참고' },
+    c.park
+      ? {
+          mark: 'warn',
+          title: '국립공원',
+          detail: `${c.park}국립공원 ${c.parkEdge ? '경계 근처' : '안'} — 국립공원공단 출입통제 공고 확인 필요`,
+        }
+      : { mark: 'ok', title: '국립공원', detail: '국립공원 밖이에요' },
+  ];
+  if (isPort) {
+    rows.push(
+      c.nationalHarbor
+        ? { mark: 'info', title: '항구 관리', detail: '국가어항 (해양수산부 지정)' }
+        : { mark: 'info', title: '항구 관리', detail: '지방·소규모 항 — 시군이 관리해요' },
+    );
+  }
+  if (c.official) {
+    rows.push({
+      mark: 'ok',
+      title: '근처 낚시 자료',
+      detail: `${c.official.name} (${c.official.source}) ${c.official.km}km — 허가 근거는 아니에요`,
+    });
+  }
+  rows.push(
+    c.dangerNear > 0
+      ? { mark: 'warn', title: '안전', detail: `근처에 연안사고 위험구역 ${c.dangerNear}곳 — 테트라포드·갯바위 진입 금지` }
+      : { mark: 'ok', title: '안전', detail: '근처 해수부 포인트에 위험구역 표시가 없어요' },
+  );
+  return rows;
+}
+
+function CheckList({ spot }: { spot: ChallengeSpot }) {
+  const theme = useTheme();
+  const rows = checkRows(spot);
+  const done = rows.filter((r) => r.mark === 'ok').length;
+  const markStyle: Record<Mark, { bg: string; fg: string; ch: string }> = {
+    ok: { bg: theme.tintSoft, fg: theme.tint, ch: '✓' },
+    warn: { bg: theme.warningSoft, fg: theme.warning, ch: '!' },
+    unknown: { bg: theme.backgroundElement, fg: theme.textSecondary, ch: '?' },
+    info: { bg: theme.backgroundElement, fg: theme.textSecondary, ch: 'i' },
+  };
+  return (
+    <View style={[styles.checkBox, { borderColor: theme.border }]}>
+      <View style={styles.checkHead}>
+        <ThemedText type="smallBold">확인 현황</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">
+          {done}/{rows.length} 확인 · {CROSS_LABEL}
+        </ThemedText>
+      </View>
+      {rows.map((r) => {
+        const m = markStyle[r.mark];
+        return (
+          <View key={r.title} style={styles.checkRow} accessible accessibilityLabel={`${r.title}: ${r.detail}`}>
+            <View style={[styles.mark, { backgroundColor: m.bg }]}>
+              <ThemedText type="smallBold" style={{ color: m.fg }}>
+                {m.ch}
+              </ThemedText>
+            </View>
+            <View style={styles.flex}>
+              <ThemedText type="smallBold">{r.title}</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {r.detail}
+              </ThemedText>
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+const CROSS_LABEL = `${Number(CHALLENGE_CROSSCHECKED_AT.slice(5, 7))}/${Number(CHALLENGE_CROSSCHECKED_AT.slice(8, 10))} 자료 대조`;
+
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  checkBox: { borderWidth: 1, borderRadius: 12, padding: 12, gap: 10 },
+  checkHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  checkRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
+  mark: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   hero: { backgroundColor: Brand.navy, borderRadius: 14, padding: 16, gap: 12 },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   onNavy: { color: '#FFFFFF' },
