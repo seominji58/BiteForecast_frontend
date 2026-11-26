@@ -10,7 +10,7 @@ import { LocationVisibilityField } from '@/components/location-visibility';
 import { AuthGate } from '@/components/login-required';
 import { ErrorView, Loading, StackScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
-import { CATEGORY } from '@/lib/community';
+import { titleError, CATEGORY } from '@/lib/community';
 
 const CATEGORY_OPTIONS = (Object.keys(CATEGORY) as PostCategory[]).map((k) => ({
   value: k,
@@ -62,7 +62,8 @@ function EditPostInner() {
   const free = category === 'free';
 
   const save = () => {
-    if (title.trim().length < 2) return setError('제목을 2자 이상 입력해 주세요.');
+    const tErr = titleError(title);
+    if (tErr) return setError(tErr);
     if (!body.trim()) return setError('내용을 입력해 주세요.');
     setError(null);
     update.mutate(

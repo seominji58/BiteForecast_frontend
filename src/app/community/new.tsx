@@ -15,7 +15,7 @@ import { AuthGate } from '@/components/login-required';
 import { Card, ErrorView, Loading, StackScreen } from '@/components/screen';
 import { NO_SPECIES, SpeciesField, type SpeciesValue } from '@/components/species-field';
 import { ThemedText } from '@/components/themed-text';
-import { CATEGORY } from '@/lib/community';
+import { titleError, CATEGORY } from '@/lib/community';
 import { formatDateTime } from '@/lib/format';
 
 const CATEGORY_OPTIONS = (Object.keys(CATEGORY) as PostCategory[]).map((k) => ({
@@ -48,7 +48,8 @@ function NewPostScreenInner() {
   const free = !sharing && category === 'free';
 
   const submit = () => {
-    if (!title.trim()) return setError('제목을 입력해 주세요.');
+    const tErr = titleError(title);
+    if (tErr) return setError(tErr);
     if (!body.trim()) return setError('내용을 입력해 주세요.');
     if (photos.uploading) return setError('사진을 올리는 중이에요. 잠시 후 다시 눌러 주세요.');
     if (photos.failed) return setError('올리지 못한 사진이 있어요. 눌러서 다시 시도하거나 ✕로 빼 주세요.');

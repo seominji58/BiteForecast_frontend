@@ -32,3 +32,29 @@ export function shortDate(iso: string): string {
 export function whereLine(p: { region_name: string | null; place_name: string | null }): string | null {
   return [p.region_name, p.place_name].filter(Boolean).join(' · ') || null;
 }
+
+/** 이모티콘만으로 된 글자 (🎣 · 👨‍👩‍👧 · 🇰🇷). 서버 schemas/community.py 와 같은 범위 */
+export function isEmojiOnly(s: string): boolean {
+  if (!s) return false;
+  for (const ch of s) {
+    const o = ch.codePointAt(0)!;
+    const ok =
+      (o >= 0x1f000 && o <= 0x1faff) ||
+      (o >= 0x2600 && o <= 0x27bf) ||
+      (o >= 0x1f1e6 && o <= 0x1f1ff) ||
+      o === 0x200d ||
+      o === 0xfe0f ||
+      o === 0x20e3 ||
+      (o >= 0x1f3fb && o <= 0x1f3ff);
+    if (!ok) return false;
+  }
+  return true;
+}
+
+/** 글 제목 규칙: 일반 글자는 2자 이상, 이모티콘은 하나만 있어도 된다. 문제가 없으면 null */
+export function titleError(title: string): string | null {
+  const t = title.trim();
+  if (!t) return '제목을 입력해 주세요.';
+  if (Array.from(t).length < 2 && !isEmojiOnly(t)) return '제목은 2자 이상 입력해 주세요 (이모티콘은 하나만 있어도 돼요).';
+  return null;
+}
