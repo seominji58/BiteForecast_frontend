@@ -25,6 +25,7 @@ import type { AppIconName } from '@/constants/icons';
 import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
+import { distanceM, stampBucket } from '@/lib/stamp-distance';
 
 const SEA_ORDER = ['서해', '남해', '동해', '제주'];
 
@@ -52,7 +53,10 @@ type Kind = {
   icon: AppIconName;
   subtitle: string;
   rule: (s: Season) => string;
-  visit: (spot: Stamp, lat: number, lon: number) => Promise<ChallengeVisitResult>;
+  /** 도장 대상을 부르는 말 (거리 안내 문구) */
+  what: string;
+  /** within: 폰에서 잰 거리 구간(m) — 위치 좌표는 보내지 않는다 */
+  visit: (spot: Stamp, within: 100 | 300 | 500) => Promise<ChallengeVisitResult>;
   noInfo: string;
 };
 
@@ -216,8 +220,17 @@ function SpotSheet({ spot, season, kind, onClose }: { spot: Stamp | null; season
       Alert.alert('도장 찍기', c.error);
       return;
     }
+    const b =
+      spot.lat != null && spot.lon != null
+        ? stampBucket(distanceM(c.lat, c.lon, spot.lat, spot.lon), season.radius_m, kind.what)
+        : { error: '장소 위치를 알 수 없어요.' };
+    if ('error' in b) {
+      setBusy(false);
+      Alert.alert('도장 찍기', b.error);
+      return;
+    }
     try {
-      const r = await kind.visit(spot, c.lat, c.lon);
+      const r = await kind.visit(spot, b.within);
       await qc.invalidateQueries({ queryKey: ['challenge'] });
       qc.invalidateQueries({ queryKey: ['me'] });
       onClose();
@@ -359,7 +372,8 @@ export function Season1() {
         subtitle: '지자체·어촌계가 운영하는 바다낚시공원을 찾아가 도장을 모아요',
         rule: (s) =>
           `낚시공원 ${s.radius_m}m 안에서 「도장 찍기」를 누르면 도장을 받아요 · 처음 찍은 곳 +${s.points}P · 해상 특보 중이거나 해가 진 뒤엔 찍을 수 없어요 · 위치는 확인에만 쓰고 저장하지 않아요`,
-        visit: (spot, lat, lon) => api.visitChallenge(Number(spot.id), lat, lon),
+        what: '장소',
+        visit: (spot, within) => api.visitChallenge(Number(spot.id), within),
         noInfo: '운영 시간·요금은 확인 중이에요. 가기 전에 낚시공원에 전화로 확인하세요.',
       }}
     />
@@ -426,8 +440,9 @@ export function SeasonPorts() {
         subtitle: '낚시어선이 많이 드나드는 항구에서 배를 타고 도장을 모아요',
         rule: (s) =>
           `항구 ${s.radius_m}m 안에서 「도장 찍기」를 누르면 도장을 받아요 · 처음 찍은 곳 +${s.points}P · 해상 특보 중엔 찍을 수 없어요(출항 통제와 같아요) · 항구 안 방파제·테트라포드에서는 낚시하지 마세요`,
-        visit: (spot, lat, lon) =>
-          request<ChallengeVisitResult>('/challenge-ports/visit', { method: 'POST', body: { key: spot.id, lat, lon } }),
+        what: '항구',
+        visit: (spot, within) =>
+          request<ChallengeVisitResult>('/challenge-ports/visit', { method: 'POST', body: { key: spot.id, within_m: within } }),
         noInfo: '',
       }}
     />

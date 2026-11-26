@@ -16,7 +16,7 @@ import { read, write } from '@/lib/prefs';
 const KEY = 'biteforecast.permission_notice_v1';
 
 export const PERMISSIONS: { icon: AppIconName; name: string; use: string }[] = [
-  { icon: 'find-gps', name: '위치', use: '「내 주변」 낚시터 찾기, 탐험 도장 찍기 (위치는 저장하지 않아요)' },
+  { icon: 'find-gps', name: '위치', use: '「내 주변」 낚시터 찾기, 탐험 도장 찍기 (위치는 폰 안에서만 쓰고 서버로 보내지 않아요)' },
   { icon: 'write', name: '카메라', use: '낚시 기록·글 사진 찍기, 사진으로 어종 찾기' },
   { icon: 'cat-catch', name: '사진', use: '앨범 사진 첨부, 사진으로 어종 찾기 (위치 정보는 지우고 올려요)' },
   { icon: 'tide', name: '알림', use: '출조 날 기상특보, 즐겨찾기 낚시터 「좋음」 알림' },

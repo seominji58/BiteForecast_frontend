@@ -154,8 +154,9 @@ export const api = {
   placePhotos: (placeId: number) => request<PlacePhotos>(`/places/${placeId}/photos`),
   placeKakao: (placeId: number) => request<PlaceKakao>(`/places/${placeId}/kakao`),
   challenge: () => request<ChallengeSeason>('/challenge'),
-  visitChallenge: (placeId: number, lat: number, lon: number) =>
-    request<ChallengeVisitResult>(`/challenge/${placeId}/visit`, { method: 'POST', body: { lat, lon } }),
+  // 위치 좌표는 보내지 않고 폰에서 잰 거리 구간만 (원스토어 위치정보 미전송)
+  visitChallenge: (placeId: number, within: 100 | 300 | 500) =>
+    request<ChallengeVisitResult>(`/challenge/${placeId}/visit`, { method: 'POST', body: { within_m: within } }),
   placeNotices: (placeId: number) => request<PlaceNotice[]>(`/places/${placeId}/notices`),
   rockPoints: () => request<RockPoints>('/rock-points'),
   nearbyShops: (placeId: number) => request<NearbyShops>(`/places/${placeId}/nearby`),
