@@ -131,6 +131,7 @@ export default function HomeScreen() {
           <HeroButton icon="find-map" label="지도로 찾기" onPress={() => openMap()} />
           <HeroButton icon="find-gps" label="내 주변" onPress={() => openMap({ near: true })} />
           <HeroButton icon="place-wharf" label="배낚시 항구" onPress={() => openMap({ ports: true })} />
+          <HeroButton icon="cat-question" label="물어보기" onPress={() => router.push('/ask')} />
         </View>
       </View>
 
