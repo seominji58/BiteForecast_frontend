@@ -131,7 +131,7 @@ export default function HomeScreen() {
           <HeroButton icon="find-map" label="지도로 찾기" onPress={() => openMap()} />
           <HeroButton icon="find-gps" label="내 주변" onPress={() => openMap({ near: true })} />
           <HeroButton icon="place-wharf" label="배낚시 항구" onPress={() => openMap({ ports: true })} />
-          <HeroButton icon="cat-question" label="물어보기" onPress={() => router.push('/ask')} />
+          {/* 「물어보기」(챗봇)는 출시 후 규칙 기반 도우미로 다시 연다 (2026-11-26, OpenAI 는 어종 찾기만) */}
         </View>
       </View>
 
