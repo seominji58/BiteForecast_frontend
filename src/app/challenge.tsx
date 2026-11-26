@@ -16,7 +16,7 @@ import { BottomSheet } from '@/components/bottom-sheet';
 import { Button } from '@/components/form';
 import { useNavPicker } from '@/components/nav-picker';
 import { Card, StackScreen } from '@/components/screen';
-import { Season1 } from '@/components/challenge-season1';
+import { Season1, SeasonPorts } from '@/components/challenge-season1';
 import { SegmentTabs } from '@/components/segment-tabs';
 import { ThemedText } from '@/components/themed-text';
 import type { AppIconName } from '@/constants/icons';
@@ -121,18 +121,19 @@ function Season2Preview() {
 }
 
 export default function ChallengeScreen() {
-  const [tab, setTab] = useState<'s1' | 's2'>('s1');
+  const [tab, setTab] = useState<'s1' | 'boat' | 's2'>('s1');
   return (
     <StackScreen>
       <SegmentTabs
         tabs={[
-          { value: 's1', label: '시즌 1 · 낚시공원' },
-          { value: 's2', label: '시즌 2 · 준비 중' },
+          { value: 's1', label: '낚시공원' },
+          { value: 'boat', label: '배낚시 항구' },
+          { value: 's2', label: '준비 중' },
         ]}
         value={tab}
         onChange={setTab}
       />
-      {tab === 's1' ? <Season1 /> : <Season2Preview />}
+      {tab === 's1' ? <Season1 /> : tab === 'boat' ? <SeasonPorts /> : <Season2Preview />}
     </StackScreen>
   );
 }
