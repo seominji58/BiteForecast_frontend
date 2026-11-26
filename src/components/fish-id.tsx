@@ -12,15 +12,15 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { identifyFish, useFishIdStatus, type FishCandidate, type FishIdResult } from '@/api/fish-id';
-import { useDateRange } from '@/api/queries';
+import { useDateRange, useFishingRules } from '@/api/queries';
 import { AppIcon } from '@/components/app-icon';
 import { BottomSheet } from '@/components/bottom-sheet';
 import { Button } from '@/components/form';
-import { RulesLine } from '@/components/rules-line';
 import { SpeciesImage } from '@/components/species';
 import type { SpeciesValue } from '@/components/species-field';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
+import { inPeriod, periodText, rulesForSpecies } from '@/lib/rules';
 import { speciesByCode } from '@/lib/species';
 
 type State =
@@ -86,7 +86,6 @@ export function FishIdButton({ onPick }: { onPick: (v: SpeciesValue) => void }) 
 
 function ResultBody({ state, onPick, onRetry }: { state: State; onPick: (c: FishCandidate) => void; onRetry: () => void }) {
   const theme = useTheme();
-  const range = useDateRange();
   if (state.kind === 'idle') return null;
   const photo = state.uri ? <Image source={{ uri: state.uri }} style={styles.photo} contentFit="cover" /> : null;
 
@@ -114,54 +113,145 @@ function ResultBody({ state, onPick, onRetry }: { state: State; onPick: (c: Fish
   }
 
   const r = state.result;
+  const [top, ...others] = r.candidates;
   return (
     <View style={styles.body}>
-      {photo}
-      {!r.is_fish || !r.candidates.length ? (
-        <ThemedText>사진에서 물고기를 찾지 못했어요. 물고기 옆모습이 크게 나오게 다시 찍어 보세요.</ThemedText>
+      <View>
+        {photo}
+        <View style={styles.aiTag}>
+          <ThemedText type="smallBold" style={styles.aiTagText}>
+            AI 추정
+          </ThemedText>
+        </View>
+      </View>
+
+      {!r.is_fish || !top ? (
+        <View style={[styles.topCard, { borderColor: theme.border }]}>
+          <ThemedText type="smallBold">물고기를 찾지 못했어요</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            물고기 옆모습이 화면에 크게 나오게 다시 찍어 보세요.
+          </ThemedText>
+          <Button label="다른 사진으로 다시" variant="secondary" onPress={onRetry} />
+        </View>
       ) : (
         <>
-          <ThemedText type="smallBold">이 물고기로 보여요 · 맞는 것을 눌러 고르세요</ThemedText>
-          {r.candidates.map((c, i) => {
-            const item = speciesByCode(c.code);
-            return (
-              <Pressable
-                key={`${c.name}-${i}`}
-                accessibilityRole="button"
-                accessibilityLabel={`${c.name}, 확실한 정도 ${c.confidence}, 이 어종으로 고르기`}
-                onPress={() => onPick(c)}
-                style={({ pressed }) => [styles.cand, { borderColor: i === 0 ? theme.tint : theme.border, opacity: pressed ? 0.7 : 1 }]}>
-                <SpeciesImage code={c.code} size={48} />
-                <View style={styles.flex}>
-                  <View style={styles.candHead}>
-                    <ThemedText type="smallBold">{c.name}</ThemedText>
-                    <View style={[styles.conf, { backgroundColor: c.confidence === '높음' ? theme.tintSoft : theme.backgroundElement }]}>
-                      <ThemedText type="small" themeColor={c.confidence === '높음' ? 'tint' : 'textSecondary'}>
-                        {c.confidence === '높음' ? '가능성 높음' : c.confidence === '보통' ? '가능성 보통' : '가능성 낮음'}
-                      </ThemedText>
-                    </View>
-                  </View>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {c.features}
-                    {c.code ? '' : ' · 목록에 없는 어종 (직접 입력으로 저장)'}
+          <View style={[styles.topCard, { borderColor: theme.tint }]}>
+            <ThemedText type="small" themeColor="textSecondary">
+              가장 가까운 어종
+            </ThemedText>
+            <View style={styles.topRow}>
+              <SpeciesImage code={top.code} size={56} />
+              <View style={styles.flex}>
+                <View style={styles.nameRow}>
+                  <ThemedText type="subtitle" style={styles.topName}>
+                    {top.name}
                   </ThemedText>
-                  {item && i === 0 ? <RulesLine species={item} today={range.data?.today} /> : null}
+                  <Confidence level={top.confidence} />
                 </View>
-              </Pressable>
-            );
-          })}
+                <ThemedText type="small" themeColor="textSecondary">
+                  {top.features}
+                </ThemedText>
+              </View>
+            </View>
+            <RuleText code={top.code} />
+            <Button label={`${top.name.replace(/\(.*\)/, '')} 선택`} onPress={() => onPick(top)} />
+          </View>
+
+          {others.length ? (
+            <View style={styles.others}>
+              <ThemedText type="small" themeColor="textSecondary">
+                다른 후보
+              </ThemedText>
+              {others.map((c, i) => (
+                <Pressable
+                  key={`${c.name}-${i}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${c.name}, 가능성 ${c.confidence}, 이 어종으로 고르기`}
+                  onPress={() => onPick(c)}
+                  style={({ pressed }) => [styles.otherRow, { borderTopColor: theme.border, opacity: pressed ? 0.6 : 1 }]}>
+                  <SpeciesImage code={c.code} size={36} />
+                  <View style={styles.flex}>
+                    <View style={styles.nameRow}>
+                      <ThemedText type="smallBold">{c.name}</ThemedText>
+                      <Confidence level={c.confidence} />
+                    </View>
+                    <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                      {c.code ? c.features : '목록에 없는 어종 · 직접 입력으로 저장'}
+                    </ThemedText>
+                  </View>
+                  <ThemedText type="small" themeColor="tint">
+                    고르기
+                  </ThemedText>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
         </>
       )}
-      {r.photo_tip ? (
+
+      {/* 첫 후보가 확실하면 다시 찍기 안내는 생략 */}
+      {r.photo_tip && top?.confidence !== '높음' ? (
         <ThemedText type="small" themeColor="textSecondary">
           📷 {r.photo_tip}
         </ThemedText>
       ) : null}
-      <View style={[styles.notice, { backgroundColor: theme.warningSoft }]}>
-        <ThemedText type="small">{r.notice}</ThemedText>
+
+      <View style={[styles.footer, { borderTopColor: theme.border }]}>
+        <ThemedText type="small" themeColor="warning">
+          AI 추정이라 틀릴 수 있어요. 먹어도 되는지는 알려 드리지 않아요 — 모르는 물고기는 먹지 마세요.
+        </ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">
+          위치 정보를 지운 사진을 OpenAI로 보내 판별하고, 입질예보 서버에는 저장하지 않아요 · 오늘 {r.remaining}번 남음
+        </ThemedText>
       </View>
-      <ThemedText type="small" themeColor="textSecondary">
-        사진은 위치 정보를 지운 뒤 AI(OpenAI)로 보내 판별해요. 입질예보 서버에는 저장하지 않아요 · 오늘 {r.remaining}번 남음
+    </View>
+  );
+}
+
+/** 가능성: 색 점 + 글자 (높음 초록 · 보통 주황 · 낮음 회색) */
+function Confidence({ level }: { level: FishCandidate['confidence'] }) {
+  const theme = useTheme();
+  const color = level === '높음' ? theme.tint : level === '보통' ? theme.warning : theme.textSecondary;
+  return (
+    <View style={styles.conf}>
+      <View style={[styles.dot, { backgroundColor: color }]} />
+      <ThemedText type="small" style={{ color }}>
+        가능성 {level}
+      </ThemedText>
+    </View>
+  );
+}
+
+/** 금어기·금지체장 한 줄 (상자 없이). 목록 밖 어종이면 그리지 않는다 */
+function RuleText({ code }: { code: string | null }) {
+  const theme = useTheme();
+  const rules = useFishingRules();
+  const today = useDateRange().data?.today;
+  const item = speciesByCode(code);
+  if (!item || !rules.data || !today) return null;
+  const { bans, sizes } = rulesForSpecies(rules.data, item.code);
+  const nowBan = bans.find((b) => b.periods.some((p) => inPeriod(p, today)));
+  const text = nowBan
+    ? `지금 금어기예요 · ${nowBan.periods
+        .filter((p) => inPeriod(p, today))
+        .map(periodText)
+        .join('·')}`
+    : [
+        sizes.length ? `${sizes.map((x) => x.limit).join('·')} 이하는 놓아주세요` : null,
+        bans.length
+          ? `금어기 ${bans
+              .flatMap((b) => b.periods)
+              .map(periodText)
+              .join('·')}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(' · ') || '법정 금어기·금지체장 없음';
+  return (
+    <View style={[styles.rule, { backgroundColor: nowBan ? theme.dangerSoft : theme.backgroundElement }]}>
+      <AppIcon name="regulation" size={16} />
+      <ThemedText type="small" themeColor={nowBan ? 'danger' : 'text'} style={styles.flex}>
+        {text}
       </ThemedText>
     </View>
   );
@@ -180,10 +270,26 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   body: { gap: 12, paddingBottom: 8 },
-  photo: { width: '100%', height: 180, borderRadius: 12 },
+  photo: { width: '100%', height: 160, borderRadius: 14 },
+  aiTag: {
+    position: 'absolute',
+    left: 10,
+    top: 10,
+    backgroundColor: 'rgba(8,28,50,0.72)',
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 2,
+  },
+  aiTagText: { color: '#FFFFFF' },
+  topCard: { borderWidth: 1.5, borderRadius: 14, padding: 14, gap: 10 },
+  topRow: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  topName: { fontSize: 20 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  dot: { width: 7, height: 7, borderRadius: 4 },
+  rule: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8 },
+  others: { gap: 0 },
+  otherRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth },
+  footer: { gap: 6, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10 },
   loading: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center', paddingVertical: 12 },
-  cand: { flexDirection: 'row', gap: 12, borderWidth: 1.5, borderRadius: 12, padding: 10, alignItems: 'flex-start' },
-  candHead: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  conf: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 1 },
-  notice: { borderRadius: 10, padding: 10 },
+  conf: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 });
