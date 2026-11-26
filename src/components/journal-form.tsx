@@ -11,6 +11,7 @@ import { PhotoPicker, usePhotoUploads } from '@/components/photo-picker';
 import { PlaceField } from '@/components/place-field';
 import { Card } from '@/components/screen';
 import { checkCatch } from '@/lib/journal-check';
+import { FishIdButton } from '@/components/fish-id';
 import { SpeciesField, type SpeciesValue } from '@/components/species-field';
 import { ThemedText } from '@/components/themed-text';
 
@@ -95,6 +96,7 @@ export function JournalForm({ initial, submitLabel, submitting, serverError, onS
           <>
             <Field label="어종" required={speciesRequired}>
               <SpeciesField value={species} onChange={setSpecies} />
+              <FishIdButton onPick={setSpecies} />
             </Field>
             <View style={styles.row}>
               <View style={styles.flex}>
