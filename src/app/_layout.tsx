@@ -58,6 +58,7 @@ export default function RootLayout() {
             <Stack.Screen name="rules" options={{ title: '금어기·금지체장' }} />
             <Stack.Screen name="my-records" options={{ title: '내 낚시 요약' }} />
             <Stack.Screen name="my-places" options={{ title: '내 낚시터' }} />
+            <Stack.Screen name="challenge" options={{ title: '전국 낚시 탐험' }} />
             <Stack.Screen name="spot/new" options={{ title: '내 포인트 추가' }} />
             <Stack.Screen name="my-points" options={{ title: '칭호·포인트' }} />
             <Stack.Screen name="profile-edit" options={{ title: '닉네임 변경' }} />
