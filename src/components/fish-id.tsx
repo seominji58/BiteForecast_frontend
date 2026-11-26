@@ -6,7 +6,6 @@
  * - 로그인 + 서버에 키가 있을 때만 보인다. 하루 횟수 제한은 서버가 센다
  */
 import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
@@ -21,6 +20,7 @@ import type { SpeciesValue } from '@/components/species-field';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
 import { inPeriod, periodText, rulesForSpecies } from '@/lib/rules';
+import { pickPhotos } from '@/lib/pick-photo';
 import { speciesByCode } from '@/lib/species';
 
 type State =
@@ -37,9 +37,8 @@ export function FishIdButton({ onPick }: { onPick: (v: SpeciesValue) => void }) 
   if (!status.data?.enabled) return null;
 
   const start = async () => {
-    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
-    if (res.canceled || !res.assets[0]) return;
-    const asset = res.assets[0];
+    const [asset] = await pickPhotos({ limit: 1, title: '물고기 사진' });
+    if (!asset) return;
     setState({ kind: 'loading', uri: asset.uri });
     try {
       const result = await identifyFish(asset);

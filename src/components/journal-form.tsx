@@ -221,7 +221,7 @@ export function buildInput(r: Raw): JournalInput | string {
   let length: number | null = null;
   if (r.length.trim()) {
     length = Number(r.length.trim().replace(',', '.'));
-    if (!Number.isFinite(length) || length <= 0 || length > 300) return '최대 길이는 0보다 크고 300cm 이하로 입력해 주세요.';
+    if (!Number.isFinite(length) || length <= 0 || length > 600) return '최대 길이는 0보다 크고 600cm 이하로 입력해 주세요.';
     length = Math.round(length * 10) / 10;
   }
 

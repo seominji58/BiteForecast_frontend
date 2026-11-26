@@ -1,5 +1,7 @@
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+
+import { pickPhotos } from '@/lib/pick-photo';
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 
@@ -37,13 +39,10 @@ function exifTime(asset: ImagePicker.ImagePickerAsset): string | null {
  * 업로드 중이거나 실패한 사진이 있으면 저장 버튼을 막을 수 있도록 상태를 함께 내보낸다.
  */
 export function usePhotoUploads(purpose: PhotoPurpose, initial: Photo[] = []) {
-  const [items, setItems] = useState<Item[]>(() =>
-    initial.map((p) => ({ key: `s${p.id}`, status: 'done', progress: 1, photo: p })),
-  );
+  const [items, setItems] = useState<Item[]>(() => initial.map((p) => ({ key: `s${p.id}`, status: 'done', progress: 1, photo: p })));
   const seq = useRef(0);
 
-  const patch = (key: string, v: Partial<Item>) =>
-    setItems((list) => list.map((it) => (it.key === key ? { ...it, ...v } : it)));
+  const patch = (key: string, v: Partial<Item>) => setItems((list) => list.map((it) => (it.key === key ? { ...it, ...v } : it)));
 
   const start = (key: string, asset: ImagePicker.ImagePickerAsset) => {
     patch(key, { status: 'uploading', progress: 0, error: undefined });
@@ -55,15 +54,8 @@ export function usePhotoUploads(purpose: PhotoPurpose, initial: Photo[] = []) {
   const add = async () => {
     const remaining = MAX_PHOTOS - items.length;
     if (remaining <= 0) return;
-    const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsMultipleSelection: true,
-      selectionLimit: remaining,
-      quality: 0.8,
-      exif: true,
-    });
-    if (res.canceled) return;
-    const assets = res.assets.slice(0, remaining);
+    const assets = await pickPhotos({ limit: remaining });
+    if (!assets.length) return;
     const added = assets.map((asset) => ({
       key: `n${++seq.current}`,
       status: 'uploading' as const,
@@ -150,11 +142,7 @@ export function PhotoPicker({ state, disabled }: { state: PhotoUploads; disabled
           accessibilityLabel={`사진 추가 (${state.items.length}/${MAX_PHOTOS})`}
           disabled={disabled}
           onPress={onAdd}
-          style={({ pressed }) => [
-            styles.thumb,
-            styles.add,
-            { borderColor: theme.tint, opacity: disabled ? 0.4 : pressed ? 0.7 : 1 },
-          ]}>
+          style={({ pressed }) => [styles.thumb, styles.add, { borderColor: theme.tint, opacity: disabled ? 0.4 : pressed ? 0.7 : 1 }]}>
           <UiIcon name="photo" size={IconSize.row} />
           <ThemedText type="small" themeColor="tint">
             {state.items.length}/{MAX_PHOTOS}
