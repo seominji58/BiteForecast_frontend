@@ -1,5 +1,6 @@
 import { request } from '@/api/client';
 import type {
+  PlaceNotice,
   PushPrefs,
   Account,
   Amenities,
@@ -150,6 +151,7 @@ export const api = {
   placePhotoIndex: () => request<PlacePhotoIndex>('/place-photos'),
   placePhotos: (placeId: number) => request<PlacePhotos>(`/places/${placeId}/photos`),
   placeKakao: (placeId: number) => request<PlaceKakao>(`/places/${placeId}/kakao`),
+  placeNotices: (placeId: number) => request<PlaceNotice[]>(`/places/${placeId}/notices`),
   rockPoints: () => request<RockPoints>('/rock-points'),
   nearbyShops: (placeId: number) => request<NearbyShops>(`/places/${placeId}/nearby`),
   catchSeasons: () => request<CatchSeasons>('/meta/catch-seasons'),

@@ -11,6 +11,7 @@ import {
   useDateRange,
   useFavorites,
   usePlaceKakao,
+  usePlaceNotices,
   usePlaces,
   usePlacesSummary,
   useSetFavorite,
@@ -34,6 +35,7 @@ import { DataBasis, FishingIndexCard, IndexChips } from '@/components/sea-detail
 import { SeaChart } from '@/components/sea-chart';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { PlaceNotices } from '@/components/place-notices';
 import { ZoneNotice } from '@/components/zone-notice';
 import { Brand, Layout } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -41,7 +43,7 @@ import { useAuth } from '@/lib/auth';
 import { nearLabel, navTarget } from '@/lib/navigate';
 import { nearby, PLACE_TYPE_LABEL, placeKindNote, placeName } from '@/lib/place';
 import { pushRecentPlace, useHomePlace } from '@/lib/prefs';
-import type { Place, PlaceCompare } from '@/api/types';
+import type { Place, PlaceCompare, PlaceNotice } from '@/api/types';
 import { AppIcon } from '@/components/app-icon';
 import type { AppIconName } from '@/constants/icons';
 
@@ -71,6 +73,7 @@ export default function PlaceDetailScreen() {
   const summary = usePlacesSummary(today);
   const cal = summary.data?.places.find((x) => x.place_id === placeId);
   const kakao = usePlaceKakao(placeId);
+  const notices = usePlaceNotices(placeId);
   const [sheet, setSheet] = useState<Sheet>(null);
   const [trip, setTrip] = useState(false);
 
@@ -128,7 +131,7 @@ export default function PlaceDetailScreen() {
         {pc ? (
           <>
             {/* 안전: 위험구역·특보를 한 줄씩, 누르면 자세히 */}
-            <SafetyStrip pc={pc} onOpen={() => setSheet('safety')} />
+            <SafetyStrip pc={pc} notices={notices.data ?? []} onOpen={() => setSheet('safety')} />
             {/* 공식 낚시지수: 어종 칩 한 줄 (누르면 시간대·환경 범위 시트) */}
             <IndexChips pc={pc} onMore={() => setSheet('index')} />
             {/* 오늘 바다: 물때·파고·바람·날씨 하루 그래프 (지금 값 크게) */}
@@ -182,6 +185,7 @@ export default function PlaceDetailScreen() {
             <ZoneNotice regulation={pc.regulation} />
             <MarineWarningBanner w={pc.warning} />
             <MarineIssuesCard />
+            <PlaceNotices notices={notices.data ?? []} />
           </BottomSheet>
           <BottomSheet open={sheet === 'index'} title="공식 바다낚시지수" onClose={() => setSheet(null)}>
             <FishingIndexCard pc={pc} />
@@ -287,7 +291,7 @@ function ActionRow({
 }
 
 /** 안전 한 카드: 위험구역·특보를 한 줄씩. 누르면 자세한 안내 시트 */
-function SafetyStrip({ pc, onOpen }: { pc: PlaceCompare; onOpen: () => void }) {
+function SafetyStrip({ pc, notices, onOpen }: { pc: PlaceCompare; notices: PlaceNotice[]; onOpen: () => void }) {
   const theme = useTheme();
   const zones = pc.regulation.items.filter((i) => i.restriction_type === 'access' || i.restriction_type === 'coastal_danger');
   const w = warningSummary(pc.warning);
@@ -321,6 +325,14 @@ function SafetyStrip({ pc, onOpen }: { pc: PlaceCompare; onOpen: () => void }) {
           </ThemedText>
           {w.sub ? ` · ${w.sub}` : ''}
         </ThemedText>
+        {notices.length ? (
+          <ThemedText type="small" numberOfLines={1}>
+            <ThemedText type="smallBold" themeColor="warning">
+              공공데이터 안내
+            </ThemedText>
+            {` · ${notices.map((n) => n.title).join(' · ')}`}
+          </ThemedText>
+        ) : null}
       </View>
       <ThemedText themeColor="textSecondary">›</ThemedText>
     </Pressable>

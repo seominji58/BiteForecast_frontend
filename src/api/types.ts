@@ -863,6 +863,17 @@ export type MarineIssues = {
   source: string;
 };
 
+/** 낚시터 공공데이터 안내 (국립공원·국가어항·해변·시군 낚시통제구역). 판정이 아닌 공식 자료 안내 */
+export type PlaceNotice = {
+  kind: 'park' | 'harbor' | 'beach' | 'zone';
+  title: string;
+  detail: string;
+  source_name: string | null;
+  source_url: string | null;
+  source_date: string | null;
+  zone_items: { name: string; area: string | null; since: string | null; rule: string | null }[];
+};
+
 /** 알림 종류별 켜기·끄기 (서버 기본: 전부 켜짐) */
 export type PushPrefs = {
   fav_good: boolean;

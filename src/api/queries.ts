@@ -233,6 +233,10 @@ export const useRockPoints = (enabled: boolean) =>
 export const usePlaceKakao = (placeId: number) =>
   useQuery({ queryKey: ['place-kakao', placeId], queryFn: () => api.placeKakao(placeId), staleTime: 24 * 3600_000, retry: false });
 
+/** 낚시터 공공데이터 안내 (하루 보관, 없으면 빈 목록) */
+export const usePlaceNotices = (placeId: number) =>
+  useQuery({ queryKey: ['place-notices', placeId], queryFn: () => api.placeNotices(placeId), staleTime: 24 * 3600_000, retry: false });
+
 export const usePlacePhotos = (placeId: number | null, enabled = true) =>
   useQuery({
     queryKey: ['place-photos', placeId],
