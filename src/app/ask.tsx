@@ -79,26 +79,20 @@ function AskBody() {
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
       <ScrollView ref={scroll} contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
-        {msgs.length === 0 ? (
-          <View style={styles.intro}>
-            <AppIcon name="cat-question" size={40} />
-            <ThemedText type="sectionTitle">무엇이든 물어보세요</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary" style={styles.centerText}>
-              기상청 예보·특보, 국립해양조사원 바다낚시지수·물때, 금어기 자료를 찾아서 답해요.
-            </ThemedText>
-            <View style={styles.suggest}>
-              {suggest.map((s) => (
-                <Pressable
-                  key={s}
-                  accessibilityRole="button"
-                  onPress={() => send(s)}
-                  style={({ pressed }) => [styles.chip, { borderColor: theme.border, opacity: pressed ? 0.6 : 1 }]}>
-                  <ThemedText type="small">{s}</ThemedText>
-                </Pressable>
-              ))}
-            </View>
+        {/* 첫 화면: 챗봇 인사 말풍선 + 참고하는 자료 */}
+        <Bot>
+          <ThemedText type="smallBold">안녕하세요, 입질예보예요 👋</ThemedText>
+          <ThemedText>바다 상황·물때·낚시지수·금어기, 궁금한 걸 편하게 물어보세요.</ThemedText>
+          <View style={styles.srcRow}>
+            {['기상청', '국립해양조사원', '수산자원관리법'].map((x) => (
+              <View key={x} style={[styles.srcTag, { backgroundColor: theme.background }]}>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {x}
+                </ThemedText>
+              </View>
+            ))}
           </View>
-        ) : null}
+        </Bot>
 
         {msgs.map((m, i) =>
           m.role === 'user' ? (
@@ -106,7 +100,7 @@ function AskBody() {
               <ThemedText style={styles.mineText}>{m.content}</ThemedText>
             </View>
           ) : (
-            <View key={i} style={[styles.bubble, styles.theirs, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+            <Bot key={i}>
               <ThemedText themeColor={m.error ? 'danger' : 'text'}>{m.content}</ThemedText>
               {m.places?.length ? (
                 <View style={styles.placeRow}>
@@ -123,19 +117,45 @@ function AskBody() {
                   ))}
                 </View>
               ) : null}
-            </View>
+            </Bot>
           ),
         )}
         {busy ? (
-          <View
-            style={[styles.bubble, styles.theirs, styles.typing, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
-            <ActivityIndicator color={theme.tint} />
-            <ThemedText type="small" themeColor="textSecondary">
-              자료를 찾고 있어요…
-            </ThemedText>
-          </View>
+          <Bot>
+            <View style={styles.typing}>
+              <ActivityIndicator color={theme.tint} size="small" />
+              <ThemedText type="small" themeColor="textSecondary">
+                자료를 찾고 있어요…
+              </ThemedText>
+            </View>
+          </Bot>
         ) : null}
       </ScrollView>
+
+      {/* 추천 질문: 처음에만, 입력창 바로 위에 가로로 */}
+      {msgs.length === 0 ? (
+        <ScrollView
+          horizontal
+          style={styles.suggestBar}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.suggest}
+          keyboardShouldPersistTaps="handled">
+          {suggest.map((q) => (
+            <Pressable
+              key={q}
+              accessibilityRole="button"
+              onPress={() => send(q)}
+              style={({ pressed }) => [
+                styles.chip,
+                { borderColor: theme.tint, backgroundColor: theme.tintSoft, opacity: pressed ? 0.6 : 1 },
+              ]}>
+              <ThemedText type="small" themeColor="tint">
+                {q}
+              </ThemedText>
+            </Pressable>
+          ))}
+        </ScrollView>
+      ) : null}
 
       <View style={[styles.footer, { borderTopColor: theme.border, backgroundColor: theme.background }]}>
         <View style={[styles.inputRow, { borderColor: theme.border, backgroundColor: theme.backgroundElement }]}>
@@ -160,10 +180,25 @@ function AskBody() {
           </Pressable>
         </View>
         <ThemedText type="small" themeColor="textSecondary" style={styles.note}>
-          AI 답은 틀릴 수 있어요 · 출조 판단은 기상청 특보로 · 먹어도 되는지는 답하지 않아요{left != null ? ` · 오늘 ${left}번 남음` : ''}
+          OpenAI 기반 AI · 답이 틀릴 수 있어요 · 출조 판단은 기상청 특보로{left != null ? ` · 오늘 ${left}번` : ''}
         </ThemedText>
       </View>
     </KeyboardAvoidingView>
+  );
+}
+
+/** 챗봇 말풍선 (왼쪽 입질예보 아이콘) */
+function Bot({ children }: { children: React.ReactNode }) {
+  const theme = useTheme();
+  return (
+    <View style={styles.botRow}>
+      <View style={styles.avatar}>
+        <AppIcon name="fishing-index" size={18} />
+      </View>
+      <View style={[styles.bubble, styles.theirs, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+        {children}
+      </View>
+    </View>
   );
 }
 
@@ -183,13 +218,17 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   centerText: { textAlign: 'center' },
   list: { padding: Layout.screenPadding, gap: 10, paddingBottom: 24 },
-  intro: { alignItems: 'center', gap: 10, paddingVertical: 24 },
-  suggest: { gap: 8, alignSelf: 'stretch', marginTop: 8 },
-  chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10, alignItems: 'center' },
-  bubble: { maxWidth: '86%', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, gap: 8 },
+  suggestBar: { flexGrow: 0, flexShrink: 0 },
+  suggest: { gap: 8, alignItems: 'center', paddingHorizontal: Layout.screenPadding, paddingVertical: 8 },
+  chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
+  botRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-end' },
+  avatar: { width: 30, height: 30, borderRadius: 15, backgroundColor: Brand.navy, alignItems: 'center', justifyContent: 'center' },
+  srcRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  srcTag: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
+  bubble: { maxWidth: '82%', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, gap: 8 },
   mine: { alignSelf: 'flex-end', backgroundColor: Brand.navy, borderBottomRightRadius: 4 },
   mineText: { color: '#FFFFFF' },
-  theirs: { alignSelf: 'flex-start', borderWidth: 1, borderBottomLeftRadius: 4 },
+  theirs: { flexShrink: 1, borderWidth: 1, borderBottomLeftRadius: 4 },
   typing: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   placeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   placeBtn: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
