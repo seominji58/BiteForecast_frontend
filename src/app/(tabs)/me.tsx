@@ -53,7 +53,7 @@ function Guest() {
       <RecentPlacesSection />
 
       <Card style={styles.menu}>
-        <MenuRow icon="trophy" label="전국 낚시 탐험" sub="명소를 찾아가 도장 모으기 · 미리보기" href="/challenge" />
+        <MenuRow icon="trophy" label="전국 낚시 탐험" sub="바다낚시공원 도장 모으기 · 시즌 1" href="/challenge" />
         <MenuRow icon="regulation" label="설정·정보" sub="데이터 출처, 이용 안내, 약관" href="/settings" last />
       </Card>
     </>
@@ -117,7 +117,7 @@ function SignedIn() {
         <MenuRow icon="place-rock" label="내 낚시터" sub="직접 찍은 포인트·찜한 곳·최근 본 곳" href="/my-places" />
         <MenuRow icon="total-fish" label="내 낚시 요약·도감" sub="첫 포획, 어종별 최대어" href="/my-records" />
         <MenuRow icon="medal" label="칭호·포인트" sub="등급, 포인트 쌓는 법·내역" href="/my-points" />
-        <MenuRow icon="trophy" label="전국 낚시 탐험" sub="명소를 찾아가 도장 모으기 · 미리보기" href="/challenge" />
+        <MenuRow icon="trophy" label="전국 낚시 탐험" sub="바다낚시공원 도장 모으기 · 시즌 1" href="/challenge" />
         <MenuRow icon="regulation" label="설정·정보" sub="차단한 사용자, 약관, 회원 탈퇴" href="/settings" last />
       </Card>
 

@@ -40,6 +40,7 @@ export const POINT_REASON_LABEL: Record<PointReason, string> = {
   PERSONAL_BEST: '같은 어종 최대어 갱신',
   POST_CREATED: '커뮤니티 글',
   COMMENT_CREATED: '댓글',
+  CHALLENGE_VISIT: '탐험 도장',
 };
 
 /** 값이 없으면 0 이 아니라 「자료 없음」 (TC-02) */

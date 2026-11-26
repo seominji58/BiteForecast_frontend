@@ -1,5 +1,7 @@
 import { request } from '@/api/client';
 import type {
+  ChallengeSeason,
+  ChallengeVisitResult,
   PlaceNotice,
   PushPrefs,
   Account,
@@ -151,6 +153,9 @@ export const api = {
   placePhotoIndex: () => request<PlacePhotoIndex>('/place-photos'),
   placePhotos: (placeId: number) => request<PlacePhotos>(`/places/${placeId}/photos`),
   placeKakao: (placeId: number) => request<PlaceKakao>(`/places/${placeId}/kakao`),
+  challenge: () => request<ChallengeSeason>('/challenge'),
+  visitChallenge: (placeId: number, lat: number, lon: number) =>
+    request<ChallengeVisitResult>(`/challenge/${placeId}/visit`, { method: 'POST', body: { lat, lon } }),
   placeNotices: (placeId: number) => request<PlaceNotice[]>(`/places/${placeId}/notices`),
   rockPoints: () => request<RockPoints>('/rock-points'),
   nearbyShops: (placeId: number) => request<NearbyShops>(`/places/${placeId}/nearby`),

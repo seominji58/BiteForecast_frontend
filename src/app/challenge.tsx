@@ -1,5 +1,8 @@
 /**
- * 낚시 탐험 30선 — 화면 미리보기 (2026-11-26).
+ * 전국 낚시 탐험 (2026-11-26): 시즌 1 = 공식 바다낚시공원 도장(components/challenge-season1),
+ * 시즌 2 = 항구·방파제·해변 후보 34곳 미리보기(아래, 검증 끝나면 열림).
+ *
+ * 시즌 2 미리보기 — 낚시 탐험 30선 화면 (2026-11-26).
  * 명산 100처럼 바다낚시 명소를 찾아가 도장을 모으는 기능의 화면 구조만 먼저 보여 준다.
  * - 데이터: lib/challenge-data.ts (조사 문서의 후보 34곳, 지어낸 값 없음)
  * - 서버·방문 기록 저장은 아직 없음 → 진행률은 0, 「방문 인증」은 정식 오픈 후
@@ -13,6 +16,7 @@ import { BottomSheet } from '@/components/bottom-sheet';
 import { Button } from '@/components/form';
 import { useNavPicker } from '@/components/nav-picker';
 import { Card, StackScreen } from '@/components/screen';
+import { Season1 } from '@/components/challenge-season1';
 import { SegmentTabs } from '@/components/segment-tabs';
 import { ThemedText } from '@/components/themed-text';
 import type { AppIconName } from '@/constants/icons';
@@ -47,7 +51,7 @@ function useStatusColor() {
   return (s: ChallengeStatus) => (s === '조건부' || s === '검증 완료' ? theme.tint : s === '보류' ? theme.warning : theme.textSecondary);
 }
 
-export default function ChallengeScreen() {
+function Season2Preview() {
   const theme = useTheme();
   const [sea, setSea] = useState<ChallengeSea>('동해');
   const [picked, setPicked] = useState<ChallengeSpot | null>(null);
@@ -56,17 +60,17 @@ export default function ChallengeScreen() {
   const spots = CHALLENGE_SPOTS.filter((s) => s.sea === sea);
 
   return (
-    <StackScreen>
+    <>
       {/* 진행률 (도장첩 표지) */}
       <View style={styles.hero}>
         <View style={styles.heroTop}>
           <AppIcon name="medal" size={36} />
           <View style={styles.flex}>
             <ThemedText type="sectionTitle" style={styles.onNavy}>
-              전국 낚시 탐험
+              시즌 2 후보 · 항구·방파제·해변
             </ThemedText>
             <ThemedText type="small" style={styles.onNavySub}>
-              바다낚시 명소를 찾아가 도장을 하나씩 모아요
+              낚시해도 되는 곳인지 확인을 마치면 열려요
             </ThemedText>
           </View>
           <View style={styles.previewPill}>
@@ -112,6 +116,23 @@ export default function ChallengeScreen() {
       <Legend />
 
       <SpotSheet spot={picked} onClose={() => setPicked(null)} />
+    </>
+  );
+}
+
+export default function ChallengeScreen() {
+  const [tab, setTab] = useState<'s1' | 's2'>('s1');
+  return (
+    <StackScreen>
+      <SegmentTabs
+        tabs={[
+          { value: 's1', label: '시즌 1 · 낚시공원' },
+          { value: 's2', label: '시즌 2 · 준비 중' },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
+      {tab === 's1' ? <Season1 /> : <Season2Preview />}
     </StackScreen>
   );
 }

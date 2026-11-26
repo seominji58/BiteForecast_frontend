@@ -172,7 +172,14 @@ export type RecordSummary = {
 };
 
 export type PointReason =
-  'JOURNAL_CREATED' | 'DETAIL_FILLED' | 'PHOTO_ATTACHED' | 'FIRST_PLACE' | 'PERSONAL_BEST' | 'POST_CREATED' | 'COMMENT_CREATED';
+  | 'JOURNAL_CREATED'
+  | 'DETAIL_FILLED'
+  | 'PHOTO_ATTACHED'
+  | 'FIRST_PLACE'
+  | 'PERSONAL_BEST'
+  | 'POST_CREATED'
+  | 'COMMENT_CREATED'
+  | 'CHALLENGE_VISIT';
 
 export type PointHistoryItem = {
   id: number;
@@ -864,6 +871,31 @@ export type MarineIssues = {
 };
 
 /** 낚시터 공공데이터 안내 (국립공원·국가어항·해변·시군 낚시통제구역). 판정이 아닌 공식 자료 안내 */
+/** 전국 낚시 탐험 도장 (시즌 1: 공식 바다낚시공원) */
+export type ChallengeSpot = {
+  place_id: number;
+  name: string;
+  region: string;
+  sea: string;
+  lat: number | null;
+  lon: number | null;
+  info: {
+    status: string | null;
+    fee: string | null;
+    hours: string | null;
+    closed: string | null;
+    reservation: string | null;
+    phone: string | null;
+    url: string | null;
+    note: string | null;
+    checked_at: string | null;
+  } | null;
+  visited_at: string | null;
+  visits: number;
+};
+export type ChallengeSeason = { season: number; title: string; radius_m: number; points: number; spots: ChallengeSpot[]; visited: number };
+export type ChallengeVisitResult = { place_id: number; first: boolean; points: number; visited: number; total: number };
+
 export type PlaceNotice = {
   kind: 'park' | 'harbor' | 'beach' | 'zone';
   title: string;
