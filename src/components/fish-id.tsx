@@ -161,7 +161,7 @@ function ResultBody({ state, onPick, onRetry }: { state: State; onPick: (c: Fish
         <ThemedText type="small">{r.notice}</ThemedText>
       </View>
       <ThemedText type="small" themeColor="textSecondary">
-        사진은 위치 정보를 지운 뒤 AI(OpenAI)로 보내 판별하고 저장하지 않아요 · 오늘 {r.remaining}번 남음
+        사진은 위치 정보를 지운 뒤 AI(OpenAI)로 보내 판별해요. 입질예보 서버에는 저장하지 않아요 · 오늘 {r.remaining}번 남음
       </ThemedText>
     </View>
   );
